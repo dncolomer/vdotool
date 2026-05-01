@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Audio Test</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --primary-dark: #357abd;
+            --gray-light: #f5f5f5;
+            --gray: #666;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: var(--gray-light);
+            color: #333;
+        }
+
+        h1 {
+            color: var(--primary-dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .controls {
+            display: grid;
+            gap: 1rem;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            resize: vertical;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+        }
+
+        button {
+            padding: 0.8rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        #speak-button {
+            background: var(--primary);
+            color: white;
+        }
+
+        #speak-button:hover {
+            background: var(--primary-dark);
+        }
+
+        #pause-button, #resume-button, #stop-button {
+            background: white;
+            border: 1px solid var(--gray);
+            color: var(--gray);
+        }
+
+        #pause-button:hover, #resume-button:hover, #stop-button:hover {
+            background: var(--gray-light);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <h1>TTS Audio Stream Demo</h1>
+    <div class="controls">
+        <textarea id="text-input" placeholder="Enter text to speak..."></textarea>
+        <select id="voice-select"></select>
+        <div class="button-group">
+            <button id="speak-button">Speak</button>
+            <button id="pause-button">Pause</button>
+            <button id="resume-button">Resume</button>
+            <button id="stop-button">Stop</button>
+        </div>
+    </div>
+    <script>
+        const textInput = document.getElementById('text-input');
+        const voiceSelect = document.getElementById('voice-select');
+        const speakButton = document.getElementById('speak-button');
+        const pauseButton = document.getElementById('pause-button');
+        const resumeButton = document.getElementById('resume-button');
+        const stopButton = document.getElementById('stop-button');
+        let voices = [];
+
+        function loadVoices() {
+            voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = voices
+                .map((voice, index) => `<option value="${index}">${voice.name} (${voice.lang})</option>`)
+                .join('');
+        }
+
+        speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
+
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            const selectedVoice = voices[voiceSelect.value];
+            if (selectedVoice) utterance.voice = selectedVoice;
+            
+            utterance.addEventListener('start', () => {
+                speakButton.disabled = true;
+                console.log('Speech started');
+            });
+
+            utterance.addEventListener('end', () => {
+                speakButton.disabled = false;
+                console.log('Speech ended');
+            });
+
+            speechSynthesis.speak(utterance);
+        }
+
+        speakButton.addEventListener('click', () => {
+            const text = textInput.value;
+            if (text) speak(text);
+        });
+
+        pauseButton.addEventListener('click', () => speechSynthesis.pause());
+        resumeButton.addEventListener('click', () => speechSynthesis.resume());
+        stopButton.addEventListener('click', () => {
+            speechSynthesis.cancel();
+            speakButton.disabled = false;
+        });
+    </script>
+</body>
+</html>

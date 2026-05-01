@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebXR AR 6DoF Sender</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+	body {
+		font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+		background: #0f1724;
+		color: #e6f1ff;
+		min-height: 100vh;
+		overflow: hidden;
+	}
+	/* VDO.Ninja video layer (captures and shows webcam) */
+	#video-layer {
+		position: fixed;
+		top: 0; left: 0;
+		width: 100%; height: 100%;
+		z-index: 0;
+		background: #000;
+	}
+	#video-layer iframe {
+		width: 100%;
+		height: 100%;
+		border: none;
+		display: block;
+		background: #000;
+	}
+	/* Intro screen */
+	#intro {
+		position: fixed;
+		top: 0; left: 0;
+		width: 100%; height: 100%;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			padding: 20px;
+			text-align: center;
+			gap: 12px;
+			background: radial-gradient(circle at 30% 20%, rgba(78, 205, 196, 0.12), transparent 35%),
+				radial-gradient(circle at 70% 60%, rgba(255, 102, 170, 0.12), transparent 35%),
+				#0f1724;
+			z-index: 100;
+		}
+		#intro.hidden { display: none; }
+		h1 { color: #4ecdc4; margin: 0 0 6px 0; font-size: 22px; }
+		p { color: #9fb1c7; margin: 0 0 10px 0; line-height: 1.4; max-width: 360px; font-size: 14px; }
+		#status { color: #f39c12; font-size: 14px; }
+		#status.ok { color: #4ecdc4; }
+		.input-group {
+			width: 100%;
+			max-width: 300px;
+			margin: 10px 0;
+		}
+		.input-group label {
+			display: block;
+			font-size: 12px;
+			color: #9fb1c7;
+			margin-bottom: 6px;
+			text-align: left;
+		}
+		.input-group input {
+			width: 100%;
+			padding: 12px;
+			border: 1px solid #3d455a;
+			border-radius: 8px;
+			background: #111827;
+			color: #e6f1ff;
+			font-size: 16px;
+		}
+		#start-btn {
+			padding: 18px 38px;
+			font-size: 18px;
+			font-weight: bold;
+			background: #4ecdc4;
+			color: #0f1724;
+			border: none;
+			border-radius: 12px;
+			cursor: pointer;
+			box-shadow: 0 12px 30px rgba(78, 205, 196, 0.25);
+			margin-top: 10px;
+		}
+		#start-btn:disabled { background: #445268; color: #8894a7; cursor: not-allowed; box-shadow: none; }
+	/* HUD - visible during AR session */
+	#hud {
+		position: fixed;
+		bottom: 14px; left: 10px; right: 10px;
+		padding: 12px;
+			background: rgba(0, 0, 0, 0.8);
+			border-radius: 10px;
+			font-family: monospace;
+			font-size: 11px;
+			color: #4ecdc4;
+			z-index: 200;
+			display: none;
+			pointer-events: auto;
+		}
+		#hud.active { display: block; }
+		#hud .row { margin: 2px 0; }
+		#hud .label { color: #888; }
+		/* Exit button */
+		#exit-btn {
+			position: fixed;
+			top: 16px; right: 16px;
+			padding: 12px 18px;
+			background: rgba(231, 76, 60, 0.92);
+			border: none;
+			border-radius: 10px;
+			color: #fff;
+			font-weight: 700;
+			font-size: 14px;
+			z-index: 200;
+			display: none;
+			cursor: pointer;
+			pointer-events: auto;
+		}
+		#exit-btn.active { display: block; }
+		/* VDO.Ninja iframe - fullscreen camera */
+		#vdo-frame {
+			width: 100%;
+			height: 100%;
+			border: none;
+			display: block;
+		}
+		/* Overlay container for dom-overlay */
+	#overlay {
+		position: fixed;
+		top: 0; left: 0;
+		width: 100%; height: 100%;
+		z-index: 5;
+		pointer-events: none;
+	}
+	#overlay > * {
+		pointer-events: auto;
+	}
+</style>
+</head>
+<body>
+
+<!-- VDO.Ninja layer: handles the actual webcam/video stream -->
+<div id="video-layer">
+	<iframe
+		id="vdo-frame"
+		allow="autoplay; camera; microphone; fullscreen; picture-in-picture; xr-spatial-tracking"
+		title="VDO.Ninja push"
+		playsinline
+	></iframe>
+</div>
+
+<!-- DOM Overlay container - contains everything that should appear over WebXR -->
+<div id="overlay">
+
+<div id="intro">
+	<h1>WebXR AR 6DoF Sender</h1>
+	<p>Streams camera + 6DoF pose data via VDO.Ninja. Requires ARCore (Android) or ARKit (iOS) support.</p>
+
+	<div class="input-group">
+		<label for="stream-id">Stream ID</label>
+		<input id="stream-id" type="text" placeholder="Enter stream ID">
+	</div>
+
+	<button id="start-btn" disabled>Checking AR support...</button>
+	<div id="status"></div>
+</div>
+
+<button id="exit-btn">Exit AR</button>
+<div id="hud">
+	<div class="row"><span class="label">Pos:</span> <span id="pos">--</span></div>
+	<div class="row"><span class="label">Rot:</span> <span id="rot">--</span></div>
+	<div class="row"><span class="label">Rate:</span> <span id="rate">--</span></div>
+	<div class="row"><span class="label">Sent:</span> <span id="sent">0</span> <span class="label">Dropped:</span> <span id="dropped">0</span></div>
+	<div class="row" style="margin-top:8px;">
+		<span class="label">Vertical FOV:</span> <span id="fov-value">40</span>°
+		<input type="range" id="fov-slider" min="20" max="120" value="40" style="width:100%;margin-top:4px;">
+	</div>
+	<div class="row" style="font-size:9px;color:#666;">↑ increase if AR moves too fast, ↓ decrease if AR moves too slow</div>
+</div>
+
+</div><!-- end overlay -->
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+const intro = document.getElementById("intro");
+const startBtn = document.getElementById("start-btn");
+const statusEl = document.getElementById("status");
+const exitBtn = document.getElementById("exit-btn");
+const hud = document.getElementById("hud");
+const streamIdInput = document.getElementById("stream-id");
+const vdoFrame = document.getElementById("vdo-frame");
+
+let renderer, scene, camera, arButton;
+let animId = null;
+
+// Stats
+let poseCount = 0;
+let lastTick = performance.now();
+let fps = 0;
+let messagesSent = 0;
+let messagesDropped = 0;
+
+// Throttling
+let lastSendTime = 0;
+const MIN_SEND_INTERVAL = 33; // ~30 Hz
+let pendingPose = null;
+
+// Scene objects
+let cube, torus, cone;
+
+// Orientation state (non-immersive fallback so VDO can own the camera)
+let hasOrientation = false;
+const currentPose = {
+	position: new THREE.Vector3(0, 0, 0),
+	quaternion: new THREE.Quaternion()
+};
+
+function buildRenderer() {
+	renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+	renderer.setPixelRatio(window.devicePixelRatio);
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.setClearColor(0x000000, 0);
+	renderer.domElement.id = "ar-canvas";
+	renderer.domElement.style.position = "fixed";
+	renderer.domElement.style.top = "0";
+	renderer.domElement.style.left = "0";
+	renderer.domElement.style.width = "100%";
+	renderer.domElement.style.height = "100%";
+	renderer.domElement.style.zIndex = "2";
+	renderer.domElement.style.pointerEvents = "none";
+	document.body.appendChild(renderer.domElement);
+}
+
+// FOV - Direct vertical FOV control
+// Three.js PerspectiveCamera uses VERTICAL FOV
+// Let user calibrate directly since camera FOV varies by device and orientation
+let currentFOV = 40; // Starting guess - adjust until AR matches camera motion
+
+function updateCameraFOV(verticalFOV) {
+	currentFOV = verticalFOV;
+
+	console.log(`Camera vertical FOV set to: ${verticalFOV}°`);
+
+	if (camera) {
+		camera.fov = verticalFOV;
+		camera.updateProjectionMatrix();
+	}
+	// Send vertical FOV to receiver so it can match
+	if (vdoFrame && vdoFrame.contentWindow) {
+		vdoFrame.contentWindow.postMessage({ arFOV: verticalFOV }, '*');
+	}
+}
+
+function buildScene() {
+	scene = new THREE.Scene();
+
+	const aspectRatio = window.innerWidth / window.innerHeight;
+	console.log(`Initial FOV: ${currentFOV}° vertical, aspect: ${aspectRatio.toFixed(2)}`);
+
+	camera = new THREE.PerspectiveCamera(currentFOV, aspectRatio, 0.1, 100);
+	camera.position.set(0, 0, 0);
+
+	// Lighting
+	const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+	scene.add(hemi);
+	const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+	dir.position.set(5, 10, 5);
+	scene.add(dir);
+
+	// === OBJECTS SPREAD IN 360° AT VARIOUS DISTANCES ===
+	// All objects use MeshBasicMaterial for consistent visibility
+
+	// FRONT (-Z direction)
+	cube = new THREE.Mesh(
+		new THREE.BoxGeometry(1, 1, 1),
+		new THREE.MeshBasicMaterial({ color: 0xff0000 })
+	);
+	cube.position.set(0, 0, -8); // 8m in front
+	scene.add(cube);
+
+	// FRONT-RIGHT
+	const sphere = new THREE.Mesh(
+		new THREE.SphereGeometry(0.8, 32, 32),
+		new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+	);
+	sphere.position.set(5, 1, -6); // 5m right, 6m forward
+	scene.add(sphere);
+
+	// RIGHT (+X direction)
+	torus = new THREE.Mesh(
+		new THREE.TorusGeometry(1, 0.3, 16, 32),
+		new THREE.MeshBasicMaterial({ color: 0xffff00 })
+	);
+	torus.position.set(10, 0, 0); // 10m to the right
+	scene.add(torus);
+
+	// BACK-RIGHT
+	const cylinder = new THREE.Mesh(
+		new THREE.CylinderGeometry(0.5, 0.5, 3, 32),
+		new THREE.MeshBasicMaterial({ color: 0x00ffff })
+	);
+	cylinder.position.set(6, 0, 8); // Behind and right
+	scene.add(cylinder);
+
+	// BACK (+Z direction)
+	cone = new THREE.Mesh(
+		new THREE.ConeGeometry(1, 2, 32),
+		new THREE.MeshBasicMaterial({ color: 0xff00ff })
+	);
+	cone.position.set(0, 0, 12); // 12m behind
+	scene.add(cone);
+
+	// BACK-LEFT
+	const octahedron = new THREE.Mesh(
+		new THREE.OctahedronGeometry(1),
+		new THREE.MeshBasicMaterial({ color: 0xff8800 })
+	);
+	octahedron.position.set(-7, 1, 7); // Behind and left
+	scene.add(octahedron);
+
+	// LEFT (-X direction)
+	const dodecahedron = new THREE.Mesh(
+		new THREE.DodecahedronGeometry(0.8),
+		new THREE.MeshBasicMaterial({ color: 0x8800ff })
+	);
+	dodecahedron.position.set(-10, 0, 0); // 10m to the left
+	scene.add(dodecahedron);
+
+	// FRONT-LEFT
+	const icosahedron = new THREE.Mesh(
+		new THREE.IcosahedronGeometry(0.7),
+		new THREE.MeshBasicMaterial({ color: 0x0088ff })
+	);
+	icosahedron.position.set(-5, -1, -7); // Front-left, slightly lower
+	scene.add(icosahedron);
+
+	// UP (above)
+	const ring = new THREE.Mesh(
+		new THREE.TorusGeometry(2, 0.2, 16, 32),
+		new THREE.MeshBasicMaterial({ color: 0xffffff })
+	);
+	ring.position.set(0, 8, 0); // 8m above
+	ring.rotation.x = Math.PI / 2; // Flat horizontal
+	scene.add(ring);
+
+	// DOWN (below) - Ground grid
+	const grid = new THREE.GridHelper(50, 50, 0x4ecdc4, 0x333333);
+	grid.position.y = -2; // 2m below camera
+	grid.material.opacity = 0.5;
+	grid.material.transparent = true;
+	scene.add(grid);
+
+	console.log('Scene built with', scene.children.length, 'objects in 360° space');
+}
+
+function sendPose(poseData) {
+	const now = Date.now();
+	const timeSinceLastSend = now - lastSendTime;
+
+	if (timeSinceLastSend < MIN_SEND_INTERVAL) {
+		pendingPose = poseData;
+		messagesDropped++;
+		document.getElementById('dropped').textContent = messagesDropped;
+		return;
+	}
+
+	const poseToSend = pendingPose || poseData;
+	pendingPose = null;
+	doSendPose(poseToSend);
+	lastSendTime = now;
+
+	setTimeout(flushPendingPose, MIN_SEND_INTERVAL);
+}
+
+function flushPendingPose() {
+	if (pendingPose && Date.now() - lastSendTime >= MIN_SEND_INTERVAL) {
+		const pose = pendingPose;
+		pendingPose = null;
+		doSendPose(pose);
+		lastSendTime = Date.now();
+	}
+}
+
+function doSendPose(poseData) {
+	if (vdoFrame && vdoFrame.contentWindow) {
+		try {
+			const msg = { sensors: { pose: poseData, UUID: 'webxr-sender' } };
+			vdoFrame.contentWindow.postMessage(msg, '*');
+			messagesSent++;
+			document.getElementById('sent').textContent = messagesSent;
+		} catch (e) {
+			console.error('postMessage failed:', e);
+		}
+	}
+}
+
+function animate(time) {
+	const now = performance.now();
+
+	// Build a pose from latest orientation (no positional tracking)
+	if (hasOrientation) {
+		const p = currentPose.position;
+		const o = currentPose.quaternion;
+		document.getElementById('pos').textContent =
+			`X ${p.x.toFixed(2)} Y ${p.y.toFixed(2)} Z ${p.z.toFixed(2)}`;
+		document.getElementById('rot').textContent =
+			`x${o.x.toFixed(2)} y${o.y.toFixed(2)} z${o.z.toFixed(2)} w${o.w.toFixed(2)}`;
+
+		sendPose({
+			t: Date.now(),
+			p: { x: p.x, y: p.y, z: p.z },
+			q: { x: o.x, y: o.y, z: o.z, w: o.w },
+			fov: currentFOV  // Include FOV so receiver can match
+		});
+	}
+
+	// FPS counter
+	poseCount++;
+	if (now - lastTick > 1000) {
+		fps = poseCount;
+		poseCount = 0;
+		lastTick = now;
+		document.getElementById('rate').textContent = `${fps} fps`;
+	}
+
+	// Apply orientation to camera
+	if (camera && hasOrientation) {
+		camera.quaternion.copy(currentPose.quaternion);
+	}
+
+	// Objects stay FIXED in world space - no animation
+	// This ensures sender and receiver views match exactly
+
+	renderer.render(scene, camera);
+	animId = requestAnimationFrame(animate);
+}
+
+function startSensors() {
+	// Reusable quaternions for orientation calculation
+	const zee = new THREE.Vector3(0, 0, 1);
+	const q0 = new THREE.Quaternion();
+	const q1 = new THREE.Quaternion(-Math.sqrt(0.5), 0, 0, Math.sqrt(0.5)); // -90deg around X
+	const euler = new THREE.Euler();
+
+	function handleOrientation(evt) {
+		if (evt.alpha === null) return;
+
+		const alpha = THREE.MathUtils.degToRad(evt.alpha); // Z axis (compass)
+		const beta = THREE.MathUtils.degToRad(evt.beta);   // X axis (tilt front/back)
+		const gamma = THREE.MathUtils.degToRad(evt.gamma); // Y axis (tilt left/right)
+
+		// Standard Three.js device orientation conversion
+		euler.set(beta, alpha, -gamma, 'YXZ');
+		currentPose.quaternion.setFromEuler(euler);
+
+		// Rotate to align camera (phone held upright, looking through rear camera)
+		currentPose.quaternion.multiply(q1);
+
+		// Adjust for screen orientation
+		const screenOrientation = window.screen?.orientation?.angle || window.orientation || 0;
+		q0.setFromAxisAngle(zee, -THREE.MathUtils.degToRad(screenOrientation));
+		currentPose.quaternion.multiply(q0);
+
+		hasOrientation = true;
+	}
+
+	if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+		DeviceOrientationEvent.requestPermission().then(result => {
+			if (result === "granted") {
+				window.addEventListener("deviceorientation", handleOrientation, true);
+			} else {
+				statusEl.textContent = "Motion permission denied; pose data unavailable.";
+			}
+		}).catch(err => {
+			statusEl.textContent = "Motion permission error: " + err;
+		});
+	} else {
+		window.addEventListener("deviceorientation", handleOrientation, true);
+	}
+}
+
+function startVDO() {
+	const streamId = streamIdInput.value.trim();
+	if (!streamId) return;
+
+	// Construct URL for VDO.Ninja - data relay only (no camera needed here)
+	const pathParts = window.location.pathname.split('/');
+	pathParts.pop();
+	pathParts.pop();
+	const basePath = pathParts.join('/') || '';
+	// Full webcam capture lives inside the iframe; parent only overlays Three.js
+	// facing=environment for rear camera
+	const url = `${window.location.origin}${basePath}/?push=${encodeURIComponent(streamId)}&facing=environment&webxrbridge=1&autostart=1&mute=1`;
+
+	console.log('VDO.Ninja URL:', url);
+	vdoFrame.src = url;
+}
+
+async function startAR() {
+	const streamId = streamIdInput.value.trim();
+	if (!streamId) {
+		statusEl.textContent = 'Please enter a stream ID';
+		return;
+	}
+
+	try {
+		startBtn.disabled = true;
+		startBtn.textContent = "Starting...";
+
+		// Build renderer and scene
+		if (!renderer) {
+			buildRenderer();
+			buildScene();
+			hud.classList.add('active');
+			exitBtn.classList.add('active');
+		}
+
+		// Start VDO.Ninja for data relay + video
+		startVDO();
+
+		// Start sensors + animation loop
+		startSensors();
+		if (!animId) {
+			animId = requestAnimationFrame(animate);
+		}
+
+		intro.classList.add('hidden');
+	} catch (e) {
+		statusEl.textContent = "Failed to start AR: " + e.message;
+		startBtn.disabled = false;
+		startBtn.textContent = "Start AR Stream";
+	}
+}
+
+async function checkSupport() {
+	startBtn.disabled = false;
+	startBtn.textContent = "Start AR Stream";
+	statusEl.textContent = "Uses device motion for pose; camera stays with VDO.Ninja.";
+	statusEl.classList.add('ok');
+}
+
+// Event listeners
+startBtn.addEventListener('click', startAR);
+
+// FOV calibration slider - direct vertical FOV control
+document.getElementById('fov-slider').addEventListener('input', (e) => {
+	const fov = parseInt(e.target.value);
+	document.getElementById('fov-value').textContent = fov;
+	updateCameraFOV(fov);
+});
+
+exitBtn.addEventListener('click', () => {
+	if (animId) {
+		cancelAnimationFrame(animId);
+		animId = null;
+	}
+	hud.classList.remove('active');
+	exitBtn.classList.remove('active');
+	intro.classList.remove('hidden');
+	startBtn.disabled = false;
+	startBtn.textContent = "Start AR Stream";
+});
+
+window.addEventListener('resize', () => {
+	if (camera && renderer) {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
+		renderer.setSize(window.innerWidth, window.innerHeight);
+	}
+});
+
+// Check AR support on load
+await checkSupport();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VDO.Ninja Notifications</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1565c0">
+
+	<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon" />
+	<link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="/notifications/media/favicon-32x32.png" />
+	<link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="/notifications/media/favicon-16x16.png" />
+	<link id="favicon3" rel="icon" href="/notifications/media/favicon.ico" />
+  
+  <style>body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #121212;
+  color: #e0e0e0;
+}
+#subscription-status-panel {
+  margin-top: 20px;
+  margin-bottom: 20px;
+}
+
+#subscription-status-details .status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#subscription-status-details p {
+  margin: 0;
+}
+
+#subscription-status-details .status {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#subscription-status-details p {
+  margin: 0;
+}
+
+#sw-connection-status {
+  font-weight: bold;
+}
+
+#sw-connection-status.connected {
+  color: #4caf50;
+}
+
+#sw-connection-status.polling {
+  color: #ff9800;
+}
+
+#sw-connection-status.disconnected {
+  color: #f44336;
+}
+
+#unsubscribe-button {
+  align-self: flex-start;
+  margin-top: 5px;
+}
+#connection-status-display {
+  font-weight: bold;
+}
+
+#connection-status-display.connected {
+  color: #4caf50;
+}
+
+#connection-status-display.polling {
+  color: #ff9800;
+}
+
+#connection-status-display.disconnected {
+  color: #f44336;
+}
+
+#unsubscribe-button {
+  align-self: flex-start;
+  margin-top: 5px;
+}
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+.header {
+  background-color: #1565c0;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  border-radius: 5px 5px 0 0;
+  margin-bottom: 30px;
+}
+
+.notification-card {
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  padding: 20px;
+  margin-bottom: 30px;
+  border: 1px solid #333;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+input[type="text"], select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  font-size: 16px;
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+}
+
+small {
+  color: #aaa;
+}
+
+button {
+  background-color: #1565c0;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #0d47a1;
+}
+
+button.secondary {
+  background-color: #424242;
+  color: #e0e0e0;
+}
+
+button.secondary:hover {
+  background-color: #616161;
+}
+
+button.danger {
+  background-color: #c62828;
+}
+
+button.danger:hover {
+  background-color: #b71c1c;
+}
+
+.status {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 4px;
+}
+
+.status.active {
+  background-color: rgba(33, 150, 243, 0.15);
+  border-left: 4px solid #2196F3;
+}
+
+.status.inactive {
+  background-color: #2a2a2a;
+  border-left: 4px solid #9e9e9e;
+}
+
+.notification-history {
+  margin-top: 30px;
+}
+
+.notification-item {
+  padding: 15px;
+  background-color: #1e1e1e;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  border: 1px solid #333;
+}
+
+.notification-item .time {
+  color: #999;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.notification-item .content {
+  flex: 1;
+}
+
+.notification-item .actions {
+  margin-left: 15px;
+}
+
+.notification-icon {
+  margin-right: 15px;
+  font-size: 24px;
+}
+
+.tabs {
+  display: flex;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #444;
+}
+
+.tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  color: #aaa;
+}
+
+.tab.active {
+  border-bottom-color: #2196F3;
+  color: #2196F3;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+.info-box {
+  background-color: rgba(255, 248, 225, 0.1);
+  border-left: 4px solid #ffca28;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 20px;
+  border-top: 1px solid #444;
+  color: #999;
+}
+
+.status.warning {
+  background-color: rgba(255, 152, 0, 0.15);
+  border-left: 4px solid #ff9800;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Add animation for shake effect */
+@keyframes shake {
+  0% { transform: translateX(0); }
+  10% { transform: translateX(-5px); }
+  20% { transform: translateX(5px); }
+  30% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  50% { transform: translateX(-5px); }
+  60% { transform: translateX(5px); }
+  70% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+  90% { transform: translateX(-5px); }
+  100% { transform: translateX(0); }
+}
+
+.shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Add styles for the visual notification popup */
+.notification-popup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  width: 350px;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  padding: 15px;
+  border-left: 4px solid #2196F3;
+  animation: slide-in 0.3s ease;
+  color: #e0e0e0;
+  opacity: 0.95;
+  backdrop-filter: blur(4px);
+  border: 1px solid #2196F3;
+}
+
+.notification-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.notification-popup-title {
+  margin: 0;
+  font-size: 18px;
+  color: #2196F3;
+}
+
+.notification-popup-close {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+}
+
+.notification-popup-body {
+  margin-bottom: 15px;
+}
+
+.notification-popup-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.notification-popup-actions button {
+  margin-left: 10px;
+  padding: 8px 15px;
+  font-size: 14px;
+}
+
+/* Add a pulsating glow effect to the active status */
+.status.active {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(33, 150, 243, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+}
+
+/* Add styles for a fullscreen flash effect */
+.notification-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(33, 150, 243, 0.2);
+  z-index: 9999;
+  pointer-events: none;
+  animation: flash 0.5s ease-out;
+}
+
+@keyframes flash {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+code {
+  background-color: #333;
+  padding: 2px 4px;
+  border-radius: 3px;
+  color: #ff9800;
+}
+
+a {
+  color: #64b5f6;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Add highlight for new notifications in history */
+.notification-item.new {
+  border-left: 4px solid #2196F3;
+  animation: highlight-new 2s ease;
+}
+
+@keyframes highlight-new {
+  0% { background-color: rgba(33, 150, 243, 0.3); }
+  100% { background-color: #1e1e1e; }
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>VDO.Ninja Notifications</h1>
+      <p>Get notified when someone joins your rooms</p>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" data-tab="setup">Setup</div>
+      <div class="tab" data-tab="history">Notification History</div>
+      <div class="tab" data-tab="settings">Settings</div>
+	  <div class="tab" data-tab="developer">Developers</div>
+    </div>
+	<content>
+		<div class="tab-content active" id="setup-tab">
+		  <div class="notification-card">
+			<h2>Subscribe to Notifications</h2>
+			
+			<div class="form-group">
+			  <label for="topic-input">Notification Topic:</label>
+			  <input type="text" id="topic-input" placeholder="Enter a topic name">
+			  <small>This is the value that will be used with ?poke=xxx in your room URL</small>
+			</div>
+			
+			<button id="subscribe-btn">Subscribe to Notifications</button>
+			
+			<div id="notification-status"></div>
+		  </div>
+		  
+		  <div class="notification-card">
+			<h2>How to Use</h2>
+			<ol>
+			  <li>Enter a notification topic above and click Subscribe.</li>
+			  <li>Or have a topic automatically generated from your VDO.Ninja room invite link.</li>
+			  <li>Add <code>&amp;poke=YOUR_TOPIC</code> to your VDO.Ninja room URL.</li>
+			  <li>When someone joins that room, you'll receive a notification.</li>
+			  <li><strong>Important:</strong> Allow Notifications for this site, or keep this page open.</li>
+			</ol>
+			
+			<div class="form-group">
+			  <label>Example Room URL:</label>
+			  <input type="text" id="example-url" readonly>
+			</div>
+			
+			<div class="info-box">
+			  <p>For easier setup, use the "Create from VDO.Ninja URL" option below. It will automatically generate a topic based on your room settings and give you a ready-to-use link.</p>
+			</div>
+		  </div>
+		  
+		  <div class="notification-card">
+		    <h2>Create from VDO.Ninja URL</h2>
+			  <div class="info-box">
+				<p>Enter your VDO.Ninja URL to automatically create a notification topic</p>
+			  </div>
+			  
+			  <div class="form-group">
+				<label for="vdo-url-input">VDO.Ninja URL:</label>
+				<input type="text" id="vdo-url-input" placeholder="https://vdo.ninja/?room=yourroom">
+			  </div>
+			  
+			  <button id="parse-url-btn">Create Notification Topic</button>
+			  
+			  <div id="parsed-url-output" style="margin-top: 15px; display: none;">
+				<div class="form-group">
+				  <label>Generated Topic:</label>
+				  <input type="text" id="generated-topic" readonly>
+				</div>
+				<div class="form-group">
+				  <label>Notification URL for Guests:</label>
+				  <input type="text" id="notification-url" readonly>
+				  <button id="copy-url-btn" class="secondary" style="margin-top: 10px;">Copy URL</button>
+				</div>
+				<button id="use-generated-topic" style="margin-top: 10px;">Use This Topic</button>
+			  </div>
+		  </div>
+		  
+		  <div class="notification-card">
+			  <h2>Test Notifications</h2>
+			  <p>Click a button below to test the notification system.</p>
+			  <button id="fake-notification-btn">Fake Test Notification</button> <button id="test-notification-btn">Send Real Notification</button> 
+			</div>
+		</div>
+		
+		<div class="tab-content" id="history-tab">
+		  <div class="notification-card">
+			<h2>Recent Notifications</h2>
+			<div id="notification-history">
+			  <p>No notifications yet.</p>
+			</div>
+		  </div>
+		</div>
+		
+		<div class="tab-content" id="settings-tab">
+		  <div class="notification-card">
+			<h2>Notification Settings</h2>
+			
+			<div class="form-group">
+			  <label for="notification-sound">Notification Sound:</label>
+			  <select id="notification-sound">
+				<option value="default">Default Sound</option>
+				<option value="chime">Chime</option>
+				<option value="bell">Bell</option>
+				<option value="none">No Sound</option>
+			  </select>
+			</div>
+			
+			<div class="form-group">
+			  <label>
+				<input type="checkbox" id="desktop-notifications" checked>
+				Enable Desktop Notifications
+			  </label>
+			</div>
+			
+			<button id="clear-history" class="secondary">Clear Notification History</button>
+			<button id="unsubscribe-all" class="danger">Unsubscribe from All Topics</button>
+		  </div>
+		</div>
+		
+		
+		<div class="tab-content" id="developer-tab">
+			<div class="notification-card">
+			  <h2>Developer Integration</h2>
+			  <p>Learn how to integrate with the VDO.Ninja notification system using Server-Sent Events (SSE).</p>
+			  
+			  <div class="info-box">
+				<p>This API allows developers to subscribe to room join events programmatically using SSE.</p>
+			  </div>
+			  
+			  <h3>SSE Endpoint</h3>
+			  <div class="form-group">
+				<label>Base URL:</label>
+				<input type="text" value="https://notify.vdo.ninja" readonly>
+			  </div>
+			  
+			  <h3>Connection Example</h3>
+			  <pre style="background-color: #2a2a2a; padding: 15px; border-radius: 4px; overflow: auto;">
+		// Basic SSE connection
+		const topic = "your_notification_topic";
+		const evtSource = new EventSource(\`https://notify.vdo.ninja/events?topic=\${topic}\`);
+
+		// Handle connection
+		evtSource.addEventListener('connect', (event) => {
+		  console.log('Connected to notification service', JSON.parse(event.data));
+		});
+
+		// Listen for notifications
+		evtSource.addEventListener('notification', (event) => {
+		  const notification = JSON.parse(event.data);
+		  console.log('New notification received:', notification);
+		  // Handle notification - show alert, update UI, etc.
+		});
+
+		// Handle errors and reconnection
+		evtSource.onerror = (error) => {
+		  console.error('SSE connection error:', error);
+		  
+		  // Implement reconnection logic here
+		  if (evtSource.readyState === EventSource.CLOSED) {
+			// Connection closed, try to reconnect
+			setTimeout(() => {
+			  // Reconnect logic
+			}, 2000);
+		  }
+		};
+
+		// To disconnect
+		function disconnect() {
+		  if (evtSource) {
+			evtSource.close();
+			evtSource = null;
+		  }
+		}</pre>
+			  
+			  <h3>Fallback Polling</h3>
+			  <p>For browsers that don't support SSE or in cases where long-lived connections are problematic:</p>
+			  
+			  <pre style="background-color: #2a2a2a; padding: 15px; border-radius: 4px; overflow: auto;">
+		// Polling fallback example
+		async function pollForNotifications(topic, lastPollTime) {
+		  try {
+			const response = await fetch(
+			  \`https://notify.vdo.ninja/poll?topic=\${topic}&since=\${lastPollTime}\`
+			);
+			const data = await response.json();
+			
+			if (data.error) {
+			  console.error('Error during polling:', data.error);
+			} else if (data.notifications && data.notifications.length > 0) {
+			  data.notifications.forEach(notification => {
+				console.log('New notification:', notification);
+				// Handle notification
+			  });
+			}
+			
+			return Date.now(); // Return current time for next poll
+		  } catch (error) {
+			console.error('Error during fallback polling:', error);
+			return lastPollTime; // Keep the same lastPollTime on error
+		  }
+		}
+
+		// Start polling every minute
+		let lastPollTime = Date.now();
+		const pollingInterval = setInterval(async () => {
+		  lastPollTime = await pollForNotifications('your_topic', lastPollTime);
+		}, 60000);</pre>
+			  
+			  <h3>Best Practices</h3>
+			  <ul style="margin-left: 20px; line-height: 1.6;">
+				<li><strong>Exponential Backoff:</strong> Implement exponential backoff for reconnection attempts to avoid overwhelming the server.</li>
+				<li><strong>Fallback Mechanism:</strong> Always provide a polling fallback for browsers that don't support SSE.</li>
+				<li><strong>Topic Security:</strong> Use a secure hash function to generate topics from sensitive room data.</li>
+				<li><strong>Error Handling:</strong> Properly handle network errors and reconnection scenarios.</li>
+				<li><strong>Offline Detection:</strong> Detect when the client goes offline and handle reconnection appropriately when back online.</li>
+				<li><strong>Testing:</strong> Periodically test the connection to ensure it's still alive, as some proxies might silently kill long-lived connections.</li>
+			  </ul>
+			  
+			  <h3>API Reference</h3>
+			  <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+				<tr style="background-color: #333; text-align: left;">
+				  <th style="padding: 10px;">Endpoint</th>
+				  <th style="padding: 10px;">Description</th>
+				</tr>
+				<tr style="border-bottom: 1px solid #444;">
+				  <td style="padding: 10px;"><code>/events?topic={topic}</code></td>
+				  <td style="padding: 10px;">SSE endpoint for real-time notifications</td>
+				</tr>
+				<tr style="border-bottom: 1px solid #444;">
+				  <td style="padding: 10px;"><code>/poll?topic={topic}&since={timestamp}</code></td>
+				  <td style="padding: 10px;">Polling endpoint for fetching notifications since a timestamp</td>
+				</tr>
+				<tr>
+				  <td style="padding: 10px;"><code>/?notify={topic}&message={message}</code></td>
+				  <td style="padding: 10px;">Send a notification to a topic</td>
+				</tr>
+			  </table>
+			  
+			  <div class="info-box" style="margin-top: 20px;">
+				<h4 style="margin-top: 0;">Complete Integration</h4>
+				<p>For a complete integration example, check out the <code>NotificationManager</code> class in the source code of this page.</p>
+			  </div>
+			</div>
+		</div>
+    </content>
+
+
+	<div class="footer">
+	  <p>VDO.Ninja Notifications | <a href="https://vdo.ninja" target="_blank">Return to VDO.Ninja</a></p>
+	</div>
+  </div>
+  
+  <script src="notifications.js?v=36"></script>
+  <script src="app.js?v=32"></script>
+</body>
+</html>

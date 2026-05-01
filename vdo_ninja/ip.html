@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Address Decoder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-family: monospace;
+        }
+        textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+        }
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            color: #777;
+            font-size: 0.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>IP Address Decoder</h1>
+        
+        <div class="input-group">
+            <label for="obfuscatedInput">Obfuscated Username:</label>
+            <input type="text" id="obfuscatedInput" placeholder="Enter encoded string (with or without timestamp part)">
+        </div>
+        
+        <button id="decodeButton">Decode IP Address</button>
+        
+        <div class="result">
+            <label for="decodedOutput">Decoded IP Address:</label>
+            <textarea id="decodedOutput" readonly></textarea>
+        </div>
+    </div>
+    
+    <footer>
+        <p>IP Address Decoder Tool</p>
+    </footer>
+
+    <script>
+        function decodeIpAddress(obfuscatedUsername) {
+            try {
+                // Get the obfuscated part (remove timestamp part if it exists)
+                let encoded = obfuscatedUsername;
+                if (obfuscatedUsername.includes(':')) {
+                    encoded = obfuscatedUsername.split(':')[1];
+                }
+                
+                // 1. Move last character to the beginning
+                if (encoded.length > 1) {
+                    const lastChar = encoded.charAt(encoded.length - 1);
+                    encoded = lastChar + encoded.substring(0, encoded.length - 1);
+                }
+                
+                // 2. Restore base64 standard format
+                encoded = encoded
+                    .replace(/-/g, '+')
+                    .replace(/_/g, '/');
+                
+                // Add padding if needed
+                while (encoded.length % 4) {
+                    encoded += '=';
+                }
+                
+                // 3. Decode base64
+                const decoded = atob(encoded);
+                
+                // 4. Remove the salt
+                const salt = "x";
+                if (decoded.endsWith(salt)) {
+                    return decoded.substring(0, decoded.length - salt.length);
+                }
+                return decoded;
+            } catch (e) {
+                console.error('Error decoding IP:', e);
+                return 'Error: ' + e.message;
+            }
+        }
+
+        document.getElementById('decodeButton').addEventListener('click', function() {
+            const obfuscatedUsername = document.getElementById('obfuscatedInput').value.trim();
+            if (!obfuscatedUsername) {
+                document.getElementById('decodedOutput').value = 'Please enter an obfuscated username';
+                return;
+            }
+            
+            const decodedIp = decodeIpAddress(obfuscatedUsername);
+            document.getElementById('decodedOutput').value = decodedIp || 'Failed to decode';
+        });
+
+        // Add sample data functionality
+        function addSampleData() {
+            const sampleButton = document.createElement('button');
+            sampleButton.textContent = 'Try Sample Data';
+            sampleButton.style.marginLeft = '10px';
+            sampleButton.style.backgroundColor = '#2196F3';
+            
+            document.getElementById('decodeButton').after(sampleButton);
+            
+            sampleButton.addEventListener('click', function() {
+                document.getElementById('obfuscatedInput').value = 'l0VwNVdlNjE0LjEyOS44OS4yMTF4';
+                document.getElementById('decodeButton').click();
+            });
+        }
+        
+        addSampleData();
+    </script>
+</body>
+</html>

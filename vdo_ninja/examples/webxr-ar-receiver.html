@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>WebXR AR 6DoF Receiver</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+			background: #000;
+			color: #e6f1ff;
+			overflow: hidden;
+		}
+		#container {
+			position: relative;
+			width: 100vw;
+			height: 100vh;
+		}
+		/* Video layer - bottom */
+		#video-layer {
+			position: absolute;
+			top: 0; left: 0;
+			width: 100%; height: 100%;
+			z-index: 1;
+			background: #000;
+		}
+		#video-layer iframe {
+			width: 100%;
+			height: 100%;
+			border: none;
+		}
+		/* 3D layer - on top with transparency */
+		#three-canvas {
+			position: absolute;
+			top: 0; left: 0;
+			width: 100%; height: 100%;
+			z-index: 2;
+			pointer-events: none;
+		}
+		/* UI layer - on top of everything */
+		#controls {
+			position: absolute;
+			top: 10px;
+			left: 10px;
+			background: rgba(0,0,0,0.85);
+			padding: 15px;
+			border-radius: 10px;
+			z-index: 100;
+			max-width: 320px;
+		}
+		#controls h3 {
+			margin-bottom: 10px;
+			color: #4ecdc4;
+			font-size: 16px;
+		}
+		#controls label {
+			display: block;
+			margin: 8px 0 4px;
+			font-size: 11px;
+			color: #9fb1c7;
+		}
+		#controls input[type="text"] {
+			width: 100%;
+			padding: 10px;
+			border: 1px solid #3d455a;
+			border-radius: 6px;
+			background: #111827;
+			color: #e6f1ff;
+			font-size: 14px;
+		}
+		#controls input[type="range"] {
+			width: 100%;
+		}
+		#controls button {
+			margin-top: 12px;
+			padding: 12px 20px;
+			background: #4ecdc4;
+			border: none;
+			border-radius: 6px;
+			color: #0f1724;
+			font-weight: bold;
+			cursor: pointer;
+			width: 100%;
+		}
+		#controls button:hover {
+			background: #3dbdb5;
+		}
+		#stats {
+			position: absolute;
+			top: 10px;
+			right: 10px;
+			background: rgba(0,0,0,0.85);
+			padding: 12px;
+			border-radius: 10px;
+			z-index: 100;
+			font-family: monospace;
+			font-size: 11px;
+		}
+		#stats .row { margin: 2px 0; }
+		#stats .label { color: #888; }
+		#stats .value { color: #4ecdc4; }
+		.hidden { display: none !important; }
+		#no-video-msg {
+			position: absolute;
+			top: 50%; left: 50%;
+			transform: translate(-50%, -50%);
+			color: #666;
+			font-size: 14px;
+			z-index: 0;
+		}
+	</style>
+</head>
+<body>
+
+<div id="container">
+	<div id="no-video-msg">Waiting for video stream...</div>
+	<div id="video-layer"></div>
+	<canvas id="three-canvas"></canvas>
+
+	<div id="controls">
+		<h3>WebXR AR 6DoF Receiver</h3>
+		<label for="streamid">Stream ID</label>
+		<input type="text" id="streamid" placeholder="Enter stream ID">
+
+		<label>Pose Smoothing: <span id="smoothing-value">0.50</span></label>
+		<input type="range" id="smoothing" min="0" max="100" value="50">
+
+		<label>Position Scale: <span id="scale-value">1.0</span></label>
+		<input type="range" id="scale" min="10" max="500" value="100">
+
+		<button id="connect-btn">Connect</button>
+	</div>
+
+	<div id="stats" class="hidden">
+		<div class="row"><span class="label">Pos:</span> <span class="value" id="stat-pos">--</span></div>
+		<div class="row"><span class="label">Rot:</span> <span class="value" id="stat-rot">--</span></div>
+		<div class="row"><span class="label">FPS:</span> <span class="value" id="stat-fps">--</span></div>
+		<div class="row"><span class="label">Pose Age:</span> <span class="value" id="stat-age">--</span></div>
+		<div class="row"><span class="label">Messages:</span> <span class="value" id="stat-msgs">0</span></div>
+	</div>
+</div>
+
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+// Config - higher smoothing = more responsive (it's actually interpolation factor)
+let config = {
+	smoothing: 0.5,  // 0.5 = responsive, was 0.15 (too sluggish)
+	positionScale: 1.0
+};
+
+// Default vertical FOV - will be updated by sender
+const DEFAULT_VERTICAL_FOV = 40;
+
+// State
+let scene, camera, renderer;
+let iframe = null;
+
+// Pose tracking - camera at origin, matching sender
+let currentPose = {
+	position: new THREE.Vector3(0, 0, 0),
+	quaternion: new THREE.Quaternion()
+};
+let targetPose = {
+	position: new THREE.Vector3(0, 0, 0),
+	quaternion: new THREE.Quaternion()
+};
+let lastPoseTime = 0;
+let msgCount = 0;
+
+// Stats
+let frameCount = 0;
+let lastFpsTime = Date.now();
+let currentFps = 0;
+
+// Scene objects (for animation)
+let cube, sphere, torus, cone;
+
+function initScene() {
+	const canvas = document.getElementById('three-canvas');
+
+	scene = new THREE.Scene();
+	// Transparent background - video shows through
+
+	// Camera at origin - FOV will be updated by sender
+	const aspectRatio = window.innerWidth / window.innerHeight;
+	console.log(`Receiver initial FOV: ${DEFAULT_VERTICAL_FOV}° vertical`);
+
+	camera = new THREE.PerspectiveCamera(DEFAULT_VERTICAL_FOV, aspectRatio, 0.1, 100);
+	camera.position.set(0, 0, 0);
+
+	// Transparent renderer
+	renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+	renderer.setClearColor(0x000000, 0);
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+	// === OBJECTS SPREAD IN 360° - MUST MATCH SENDER EXACTLY ===
+
+	// FRONT (-Z direction)
+	cube = new THREE.Mesh(
+		new THREE.BoxGeometry(1, 1, 1),
+		new THREE.MeshBasicMaterial({ color: 0xff0000 })
+	);
+	cube.position.set(0, 0, -8);
+	scene.add(cube);
+
+	// FRONT-RIGHT
+	sphere = new THREE.Mesh(
+		new THREE.SphereGeometry(0.8, 32, 32),
+		new THREE.MeshBasicMaterial({ color: 0x00ff00 })
+	);
+	sphere.position.set(5, 1, -6);
+	scene.add(sphere);
+
+	// RIGHT (+X direction)
+	torus = new THREE.Mesh(
+		new THREE.TorusGeometry(1, 0.3, 16, 32),
+		new THREE.MeshBasicMaterial({ color: 0xffff00 })
+	);
+	torus.position.set(10, 0, 0);
+	scene.add(torus);
+
+	// BACK-RIGHT
+	const cylinder = new THREE.Mesh(
+		new THREE.CylinderGeometry(0.5, 0.5, 3, 32),
+		new THREE.MeshBasicMaterial({ color: 0x00ffff })
+	);
+	cylinder.position.set(6, 0, 8);
+	scene.add(cylinder);
+
+	// BACK (+Z direction)
+	cone = new THREE.Mesh(
+		new THREE.ConeGeometry(1, 2, 32),
+		new THREE.MeshBasicMaterial({ color: 0xff00ff })
+	);
+	cone.position.set(0, 0, 12);
+	scene.add(cone);
+
+	// BACK-LEFT
+	const octahedron = new THREE.Mesh(
+		new THREE.OctahedronGeometry(1),
+		new THREE.MeshBasicMaterial({ color: 0xff8800 })
+	);
+	octahedron.position.set(-7, 1, 7);
+	scene.add(octahedron);
+
+	// LEFT (-X direction)
+	const dodecahedron = new THREE.Mesh(
+		new THREE.DodecahedronGeometry(0.8),
+		new THREE.MeshBasicMaterial({ color: 0x8800ff })
+	);
+	dodecahedron.position.set(-10, 0, 0);
+	scene.add(dodecahedron);
+
+	// FRONT-LEFT
+	const icosahedron = new THREE.Mesh(
+		new THREE.IcosahedronGeometry(0.7),
+		new THREE.MeshBasicMaterial({ color: 0x0088ff })
+	);
+	icosahedron.position.set(-5, -1, -7);
+	scene.add(icosahedron);
+
+	// UP (above)
+	const ring = new THREE.Mesh(
+		new THREE.TorusGeometry(2, 0.2, 16, 32),
+		new THREE.MeshBasicMaterial({ color: 0xffffff })
+	);
+	ring.position.set(0, 8, 0);
+	ring.rotation.x = Math.PI / 2;
+	scene.add(ring);
+
+	// DOWN (below) - Ground grid
+	const grid = new THREE.GridHelper(50, 50, 0x4ecdc4, 0x333333);
+	grid.position.y = -2;
+	grid.material.opacity = 0.5;
+	grid.material.transparent = true;
+	scene.add(grid);
+
+	console.log('Scene initialized with', scene.children.length, 'objects in 360° space');
+
+	window.addEventListener('resize', onResize);
+}
+
+function onResize() {
+	const aspectRatio = window.innerWidth / window.innerHeight;
+	camera.aspect = aspectRatio;
+	// FOV is managed by sender - just update aspect ratio
+	camera.updateProjectionMatrix();
+	renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function connect() {
+	const streamId = document.getElementById('streamid').value.trim();
+	if (!streamId) {
+		alert('Please enter a Stream ID');
+		return;
+	}
+
+	// Construct URL - go up from /examples/
+	const pathParts = window.location.pathname.split('/');
+	pathParts.pop();
+	pathParts.pop();
+	const basePath = pathParts.join('/') || '';
+	// cleanoutput removes UI; autostart/muted to dodge autoplay blocks
+	// Sensor data forwarding to parent is automatic when VDO.Ninja is in an iframe
+	const url = `${window.location.origin}${basePath}/?view=${encodeURIComponent(streamId)}&cleanoutput&debug&autostart=1&mute=1`;
+
+	console.log('Connecting to:', url);
+
+	// Hide controls, show stats
+	document.getElementById('controls').classList.add('hidden');
+	document.getElementById('stats').classList.remove('hidden');
+
+	// Create iframe for video
+	const container = document.getElementById('video-layer');
+	iframe = document.createElement('iframe');
+	iframe.allow = 'autoplay; camera; microphone; fullscreen; picture-in-picture; display-capture';
+	iframe.setAttribute('playsinline', '');
+	iframe.src = url;
+	container.appendChild(iframe);
+
+	// Listen for pose messages
+	window.addEventListener('message', handleMessage);
+}
+
+function handleMessage(event) {
+	const data = event.data;
+
+	// Log all messages to debug
+	if (!window.msgLogCount) window.msgLogCount = 0;
+	window.msgLogCount++;
+
+	// Log first 10 messages fully, then every 50th
+	if (window.msgLogCount <= 10 || window.msgLogCount % 50 === 0) {
+		console.log('postMessage #' + window.msgLogCount, 'from:', event.origin, 'keys:', Object.keys(data || {}), data);
+	}
+
+	// Specifically log if sensors present
+	if (data && data.sensors) {
+		console.log('SENSOR DATA RECEIVED #' + msgCount, data.sensors);
+	}
+
+	// Handle pose data from VDO.Ninja
+	if (data.sensors && data.sensors.pose) {
+		msgCount++;
+		document.getElementById('stat-msgs').textContent = msgCount;
+
+		const pose = data.sensors.pose;
+
+		if (msgCount <= 3) {
+			console.log('Received pose #' + msgCount, pose);
+		}
+
+		// Update target pose
+		targetPose.position.set(
+			(pose.p?.x || 0) * config.positionScale,
+			(pose.p?.y || 0) * config.positionScale,
+			(pose.p?.z || 0) * config.positionScale
+		);
+		targetPose.quaternion.set(
+			pose.q?.x || 0,
+			pose.q?.y || 0,
+			pose.q?.z || 0,
+			pose.q?.w || 1
+		);
+
+		// Update FOV if sender provided it
+		if (pose.fov && pose.fov !== camera.fov) {
+			camera.fov = pose.fov;
+			camera.updateProjectionMatrix();
+			console.log('Updated camera FOV to match sender:', pose.fov);
+		}
+
+		lastPoseTime = Date.now();
+
+		if (msgCount === 1) {
+			document.getElementById('no-video-msg').style.display = 'none';
+		}
+	}
+}
+
+function animate(time) {
+	requestAnimationFrame(animate);
+
+	// Smooth interpolation toward target pose
+	const t = config.smoothing;
+	currentPose.position.lerp(targetPose.position, t);
+	currentPose.quaternion.slerp(targetPose.quaternion, t);
+
+	// Apply to camera
+	camera.position.copy(currentPose.position);
+	camera.quaternion.copy(currentPose.quaternion);
+
+	// Objects stay FIXED in world space - no animation
+	// This ensures they match sender's view exactly
+
+	renderer.render(scene, camera);
+
+	// Update stats
+	frameCount++;
+	const now = Date.now();
+	if (now - lastFpsTime >= 1000) {
+		currentFps = frameCount;
+		frameCount = 0;
+		lastFpsTime = now;
+	}
+
+	const pos = currentPose.position;
+	const rot = currentPose.quaternion;
+	const poseAge = lastPoseTime ? (now - lastPoseTime) : '--';
+
+	document.getElementById('stat-pos').textContent =
+		`${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)}`;
+	document.getElementById('stat-rot').textContent =
+		`${rot.x.toFixed(2)}, ${rot.y.toFixed(2)}, ${rot.z.toFixed(2)}`;
+	document.getElementById('stat-fps').textContent = currentFps;
+	document.getElementById('stat-age').textContent = typeof poseAge === 'number' ? `${poseAge}ms` : poseAge;
+}
+
+function setupUI() {
+	document.getElementById('connect-btn').addEventListener('click', connect);
+
+	document.getElementById('smoothing').addEventListener('input', function(e) {
+		config.smoothing = parseInt(e.target.value) / 100;
+		document.getElementById('smoothing-value').textContent = config.smoothing.toFixed(2);
+	});
+
+	document.getElementById('scale').addEventListener('input', function(e) {
+		config.positionScale = parseInt(e.target.value) / 100;
+		document.getElementById('scale-value').textContent = config.positionScale.toFixed(1);
+	});
+
+	// Auto-connect from URL params
+	const urlParams = new URLSearchParams(window.location.search);
+	const streamId = urlParams.get('streamid') || urlParams.get('view') || urlParams.get('id');
+	if (streamId) {
+		document.getElementById('streamid').value = streamId;
+		setTimeout(connect, 500);
+	}
+}
+
+// Initialize
+initScene();
+setupUI();
+requestAnimationFrame(animate);
+</script>
+
+</body>
+</html>

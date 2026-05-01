@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIDI Recorder</title>
+    <script src="../thirdparty/webmidi3.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #2c3e50;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%234a6b8a' fill-opacity='0.4' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E");
+            color: #ecf0f1;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: rgba(44, 62, 80, 0.8);
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #3498db;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        select, button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        select {
+            background-color: #34495e;
+            color: #ecf0f1;
+        }
+
+        button {
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        #status, #dataCount {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #debugInfo {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: rgba(52, 73, 94, 0.7);
+            border-radius: 5px;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        #debugInfo p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MIDI Recorder</h1>
+        <select id="midiInput"></select>
+        <button id="startRecord">Start Recording</button>
+        <button id="stopRecord" disabled>Stop Recording</button>
+        <button id="download" disabled>Download Data</button>
+        <div id="status"></div>
+        <div id="dataCount"></div>
+        <div id="debugInfo"></div>
+    </div>
+
+    <script>
+        let midiData = [];
+        let isRecording = false;
+        let selectedInput = null;
+
+        const midiInputSelect = document.getElementById('midiInput');
+        const startRecordButton = document.getElementById('startRecord');
+        const stopRecordButton = document.getElementById('stopRecord');
+        const downloadButton = document.getElementById('download');
+        const statusDiv = document.getElementById('status');
+        const dataCountDiv = document.getElementById('dataCount');
+        const debugInfoDiv = document.getElementById('debugInfo');
+
+        WebMidi
+            .enable({ sysex: true })
+            .then(onWebMidiEnabled)
+            .catch(err => {
+                console.error("WebMidi could not be enabled:", err);
+                debugInfoDiv.innerHTML += `<p>Error enabling WebMidi: ${err.message}</p>`;
+            });
+
+        function onWebMidiEnabled() {
+            console.log("WebMidi enabled!");
+            debugInfoDiv.innerHTML += "<p>WebMidi enabled successfully!</p>";
+            updateMidiInputs();
+            WebMidi.addListener("connected", updateMidiInputs);
+            WebMidi.addListener("disconnected", updateMidiInputs);
+        }
+
+        function updateMidiInputs() {
+            midiInputSelect.innerHTML = '';
+            WebMidi.inputs.forEach((input, index) => {
+                const option = new Option(input.name, input.id);
+                midiInputSelect.add(option);
+                console.log(`Input ${index}: ${input.name} (${input.id})`);
+                debugInfoDiv.innerHTML += `<p>Input ${index}: ${input.name} (${input.id})</p>`;
+            });
+            console.log("MIDI inputs updated:", WebMidi.inputs);
+            debugInfoDiv.innerHTML += `<p>Total MIDI inputs: ${WebMidi.inputs.length}</p>`;
+            
+            // Automatically select the first input if available
+            if (WebMidi.inputs.length > 0) {
+                midiInputSelect.selectedIndex = 0;
+                onMidiInputChange();
+            }
+        }
+
+        midiInputSelect.addEventListener('change', onMidiInputChange);
+
+        function onMidiInputChange() {
+            const selectedId = midiInputSelect.value;
+            console.log("Selected input ID:", selectedId);
+            debugInfoDiv.innerHTML += `<p>Selected input ID: ${selectedId}</p>`;
+
+            if (selectedInput) {
+                selectedInput.removeListener("midimessage");
+            }
+
+            selectedInput = WebMidi.getInputById(selectedId);
+            console.log("Selected input:", selectedInput);
+            debugInfoDiv.innerHTML += `<p>Selected input: ${selectedInput ? selectedInput.name : 'None'}</p>`;
+
+            startRecordButton.disabled = !selectedInput;
+            statusDiv.textContent = selectedInput ? `Selected: ${selectedInput.name}` : 'No input selected';
+        }
+
+        startRecordButton.addEventListener('click', () => {
+            if (!selectedInput) {
+                console.error("No MIDI input selected");
+                debugInfoDiv.innerHTML += "<p>Error: No MIDI input selected</p>";
+                return;
+            }
+            midiData = [];
+            isRecording = true;
+            updateButtonStates();
+
+            console.log("Starting recording on input:", selectedInput.name);
+            debugInfoDiv.innerHTML += `<p>Starting recording on input: ${selectedInput.name}</p>`;
+
+            selectedInput.addListener("midimessage", event => {
+                console.log("MIDI message received:", event.data);
+                if (isRecording) {
+                    midiData.push({
+                        timestamp: event.timestamp,
+                        data: Array.from(event.data)
+                    });
+                    updateDataCount();
+                    if (midiData.length >= 1000) {
+                        stopRecording();
+                    }
+                }
+            });
+
+            statusDiv.textContent = "Recording... (Send MIDI data to see it captured)";
+        });
+
+        stopRecordButton.addEventListener('click', stopRecording);
+
+        function stopRecording() {
+            console.log("Stopping recording");
+            debugInfoDiv.innerHTML += "<p>Stopping recording</p>";
+            isRecording = false;
+            updateButtonStates();
+            if (selectedInput) {
+                selectedInput.removeListener("midimessage");
+            }
+            statusDiv.textContent = "Recording stopped.";
+        }
+
+        downloadButton.addEventListener('click', () => {
+            console.log("Downloading data:", midiData);
+            const dataStr = JSON.stringify(midiData, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "midi_data.json";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        function updateButtonStates() {
+            startRecordButton.disabled = isRecording || !selectedInput;
+            stopRecordButton.disabled = !isRecording;
+            downloadButton.disabled = midiData.length === 0;
+        }
+
+        function updateDataCount() {
+            dataCountDiv.textContent = `MIDI messages captured: ${midiData.length}`;
+        }
+    </script>
+</body>
+</html>

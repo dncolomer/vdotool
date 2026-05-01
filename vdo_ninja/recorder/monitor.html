@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Self Monitor Audio | Listen to Your Input Devices</title>
+	<meta name="description" content="Pick a microphone, choose where to listen, and safely monitor your audio input with gain control and live waveform feedback.">
+	<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+	<link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="../media/favicon-32x32.png">
+	<link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="../media/favicon-16x16.png">
+	<link id="favicon3" rel="icon" href="../media/favicon.ico">
+	<link id="thumbnailUrl" itemprop="thumbnailUrl" href="../media/vdoNinja_logo_full.png">
+	<style>
+		body {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			min-height: 100vh;
+			margin: 0;
+			background-color: #1f1f1f;
+			font-family: "Helvetica Neue", Arial, sans-serif;
+			color: #f0f0f0;
+		}
+		#container {
+			width: 95%;
+			max-width: 900px;
+			padding: 24px;
+			background: #2b2b2b;
+			border-radius: 14px;
+			box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+		}
+		h1 {
+			margin: 0 0 16px 0;
+			font-size: 26px;
+			color: #ffffff;
+		}
+		p.note {
+			margin: 0 0 20px 0;
+			color: #cfcfcf;
+			font-size: 14px;
+			line-height: 1.4;
+		}
+		.controls {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 12px;
+			margin-bottom: 20px;
+		}
+		.controls label {
+			display: flex;
+			flex-direction: column;
+			font-size: 13px;
+			color: #b0b0b0;
+			min-width: 200px;
+			gap: 6px;
+		}
+		select, button, input[type="range"] {
+			padding: 10px 12px;
+			border-radius: 6px;
+			border: 1px solid #444;
+			background: #3a3a3a;
+			color: #f0f0f0;
+			font-size: 14px;
+			cursor: pointer;
+		}
+		select:focus, button:focus, input[type="range"]:focus {
+			outline: none;
+			border-color: #0099ff;
+		}
+		button.primary {
+			background: #0099ff;
+			border: none;
+			font-weight: 600;
+			min-width: 160px;
+		}
+		button.primary.muted {
+			background: #444;
+			color: #f0f0f0;
+		}
+		.flex-row {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+		.flex-row span.value {
+			min-width: 48px;
+			text-align: right;
+			font-variant-numeric: tabular-nums;
+		}
+		canvas {
+			width: 100%;
+			height: 160px;
+			background: #151515;
+			border-radius: 8px;
+			box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+		}
+		.checkbox-group {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			font-size: 13px;
+			color: #d0d0d0;
+		}
+		.checkbox-group input {
+			cursor: pointer;
+		}
+		.small {
+			font-size: 12px;
+			color: #888;
+		}
+		@media (max-width: 640px) {
+			.controls label {
+				min-width: 100%;
+			}
+			button.primary {
+				width: 100%;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div id="container">
+		<h1>Self Monitor Audio</h1>
+		<p class="note">
+			Select a microphone and click <strong>Unmute Monitor</strong> when you're ready to listen.
+			Browsers require a user interaction before audio can play, so the monitor starts muted.
+		</p>
+		<div class="controls">
+			<label>
+				Input device
+				<select id="inputSelect"></select>
+			</label>
+			<label>
+				Output device
+				<select id="outputSelect" disabled title="Change your speaker/earpiece if supported"></select>
+				<span class="small">Chrome/Edge over HTTPS or localhost support custom outputs.</span>
+			</label>
+			<label>
+				Monitor gain
+				<div class="flex-row">
+					<input id="gainControl" type="range" min="0" max="300" step="5" value="100">
+					<span class="value" id="gainValue">1.0×</span>
+				</div>
+			</label>
+		</div>
+		<div class="controls">
+			<button id="monitorToggle" class="primary muted">Unmute Monitor</button>
+			<label class="checkbox-group">
+				<input type="checkbox" id="noiseToggle" checked>
+				<span>Noise reduction</span>
+			</label>
+			<label class="checkbox-group">
+				<input type="checkbox" id="agcToggle" checked>
+				<span>Auto gain control</span>
+			</label>
+		</div>
+		<canvas id="waveform" width="900" height="160"></canvas>
+	</div>
+	<audio id="monitorAudio" autoplay></audio>
+	<script>
+		const inputSelect = document.getElementById("inputSelect");
+		const outputSelect = document.getElementById("outputSelect");
+		const monitorToggle = document.getElementById("monitorToggle");
+		const noiseToggle = document.getElementById("noiseToggle");
+		const agcToggle = document.getElementById("agcToggle");
+		const gainControl = document.getElementById("gainControl");
+		const gainValue = document.getElementById("gainValue");
+		const waveformCanvas = document.getElementById("waveform");
+		const monitorAudioEl = document.getElementById("monitorAudio");
+
+		const canvasCtx = waveformCanvas.getContext("2d");
+		let audioCtx = null;
+		let analyser = null;
+		let gainNode = null;
+		let monitorStreamDestination = null;
+		let mediaStream = null;
+		let isMonitoring = false;
+		let animationFrame = null;
+		let deviceLabelsReady = false;
+		let sourceNode = null;
+
+		function formatGainLabel(value) {
+			return `${(value / 100).toFixed(1)}×`;
+		}
+
+		function updateGainFromControl() {
+			const gain = gainControl.value / 100;
+			gainValue.textContent = formatGainLabel(gainControl.value);
+			if (gainNode && audioCtx) {
+				gainNode.gain.setTargetAtTime(isMonitoring ? gain : 0, audioCtx.currentTime, 0.01);
+			}
+		}
+
+		function drawWaveform() {
+			if (!analyser) {
+				return;
+			}
+			const bufferLength = analyser.fftSize;
+			const dataArray = new Uint8Array(bufferLength);
+			analyser.getByteTimeDomainData(dataArray);
+
+			canvasCtx.fillStyle = "#151515";
+			canvasCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+			canvasCtx.lineWidth = 2;
+			canvasCtx.strokeStyle = isMonitoring ? "#00d4ff" : "#666";
+			canvasCtx.beginPath();
+
+			const sliceWidth = (waveformCanvas.width * 1.0) / bufferLength;
+			let x = 0;
+
+			for (let i = 0; i < bufferLength; i++) {
+				const v = dataArray[i] / 128.0;
+				const y = (v * waveformCanvas.height) / 2;
+				i === 0 ? canvasCtx.moveTo(x, y) : canvasCtx.lineTo(x, y);
+				x += sliceWidth;
+			}
+
+			canvasCtx.lineTo(waveformCanvas.width, waveformCanvas.height / 2);
+			canvasCtx.stroke();
+			animationFrame = requestAnimationFrame(drawWaveform);
+		}
+
+		async function ensureAudioContext() {
+			if (!audioCtx) {
+				audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+				analyser = audioCtx.createAnalyser();
+				analyser.fftSize = 2048;
+				gainNode = audioCtx.createGain();
+				gainNode.gain.value = 0;
+				monitorStreamDestination = audioCtx.createMediaStreamDestination();
+				gainNode.connect(monitorStreamDestination);
+				monitorAudioEl.srcObject = monitorStreamDestination.stream;
+			}
+			if (audioCtx.state === "suspended") {
+				await audioCtx.resume();
+			}
+		}
+
+		function stopStream() {
+			if (mediaStream) {
+				mediaStream.getTracks().forEach(track => track.stop());
+				mediaStream = null;
+			}
+			if (sourceNode) {
+				try {
+					sourceNode.disconnect();
+				} catch (error) {
+					console.warn("Source disconnect warning:", error);
+				}
+				sourceNode = null;
+			}
+		}
+
+		async function startStream() {
+			try {
+				stopStream();
+				await ensureAudioContext();
+				const constraints = {
+					audio: {
+						deviceId: inputSelect.value ? { exact: inputSelect.value } : undefined,
+						echoCancellation: false,
+						noiseSuppression: noiseToggle.checked,
+						autoGainControl: agcToggle.checked
+					}
+				};
+				mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+				const source = audioCtx.createMediaStreamSource(mediaStream);
+				if (sourceNode) {
+					try {
+						sourceNode.disconnect();
+					} catch (error) {
+						console.warn("Previous source disconnect warning:", error);
+					}
+				}
+				sourceNode = source;
+				sourceNode.connect(analyser);
+				sourceNode.connect(gainNode);
+
+				if (!deviceLabelsReady) {
+					await populateDeviceLists();
+				}
+
+				updateGainFromControl();
+
+				if (!animationFrame) {
+					drawWaveform();
+				}
+			} catch (error) {
+				console.error("Failed to start stream:", error);
+				alert("Unable to access the selected audio device. Please check permissions and device availability.");
+			}
+		}
+
+		async function populateDeviceLists() {
+			try {
+				const devices = await navigator.mediaDevices.enumerateDevices();
+				const audioInputs = devices.filter(device => device.kind === "audioinput");
+				const audioOutputs = devices.filter(device => device.kind === "audiooutput");
+
+				const previousInput = inputSelect.value;
+				inputSelect.innerHTML = audioInputs.map(device => `<option value="${device.deviceId}">${device.label || "Microphone"}</option>`).join("");
+
+				if (previousInput) {
+					const match = Array.from(inputSelect.options).find(option => option.value === previousInput);
+					if (match) {
+						inputSelect.value = previousInput;
+					}
+				}
+
+				if (typeof monitorAudioEl.setSinkId === "function" && audioOutputs.length) {
+					const previousOutput = outputSelect.value;
+					outputSelect.innerHTML = audioOutputs.map(device => `<option value="${device.deviceId}">${device.label || "Speaker"}</option>`).join("");
+					outputSelect.disabled = false;
+					if (previousOutput) {
+						const matchOut = Array.from(outputSelect.options).find(option => option.value === previousOutput);
+						if (matchOut) {
+							outputSelect.value = previousOutput;
+						}
+					}
+				} else {
+					outputSelect.innerHTML = `<option value="">Default system output</option>`;
+					outputSelect.disabled = true;
+				}
+				deviceLabelsReady = devices.some(device => device.label);
+			} catch (error) {
+				console.warn("Unable to refresh device list:", error);
+			}
+		}
+
+		async function requestPermissions() {
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+				stream.getTracks().forEach(track => track.stop());
+				await populateDeviceLists();
+			} catch (error) {
+				console.warn("Microphone permission denied:", error);
+			}
+		}
+
+		monitorToggle.addEventListener("click", async () => {
+			await ensureAudioContext();
+			if (!mediaStream) {
+				await startStream();
+			}
+			const shouldMonitor = !isMonitoring;
+			isMonitoring = shouldMonitor;
+			monitorToggle.textContent = shouldMonitor ? "Mute Monitor" : "Unmute Monitor";
+			monitorToggle.classList.toggle("muted", !shouldMonitor);
+			updateGainFromControl();
+			try {
+				if (shouldMonitor) {
+					await monitorAudioEl.play();
+				} else {
+					monitorAudioEl.pause();
+				}
+			} catch (error) {
+				console.warn("Playback blocked until user interacts:", error);
+			}
+		});
+
+		gainControl.addEventListener("input", () => {
+			updateGainFromControl();
+		});
+
+		inputSelect.addEventListener("change", () => {
+			startStream();
+		});
+
+		noiseToggle.addEventListener("change", () => {
+			startStream();
+		});
+
+		agcToggle.addEventListener("change", () => {
+			startStream();
+		});
+
+		outputSelect.addEventListener("change", async () => {
+			if (typeof monitorAudioEl.setSinkId !== "function") {
+				return;
+			}
+			try {
+				await monitorAudioEl.setSinkId(outputSelect.value || "");
+			} catch (error) {
+				console.warn("Unable to set output device:", error);
+				alert("Failed to switch output device. Your browser may require HTTPS or does not support audio output switching.");
+				outputSelect.value = "";
+			}
+		});
+
+		window.addEventListener("beforeunload", () => {
+			stopStream();
+			if (audioCtx) {
+				audioCtx.close();
+			}
+			if (animationFrame) {
+				cancelAnimationFrame(animationFrame);
+			}
+		});
+
+		(async () => {
+			gainValue.textContent = formatGainLabel(gainControl.value);
+			canvasCtx.fillStyle = "#151515";
+			canvasCtx.fillRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+			await requestPermissions();
+			await startStream();
+		})();
+	</script>
+</body>
+</html>

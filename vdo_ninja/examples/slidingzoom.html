@@ -1,0 +1,176 @@
+<html>
+<head><title>PTZ Remote Controller</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+<meta content="utf-8" http-equiv="encoding" />
+<meta name="copyright" content="&copy; 2025 Steve Seguin" />
+<meta name="license" content="https://github.com/steveseguin/vdo.ninja/LICENSE.md" />
+<meta name="sourcecode" content="https://github.com/steveseguin/vdo.ninja" />
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://vdo.ninja/">
+<link rel="author" href="/about" />
+<link rel="me" href="https://vdo.ninja/about" />
+
+<meta id="metaTitle" name="title" content="VDO.Ninja" />
+<meta name="description" content="Bring live video from your smartphone, computer, or friends directly into your Studio. 100% free." />
+<meta name="author" content="Steve Seguin" />
+
+<meta name="msapplication-TileColor" content="#da532c" />
+<meta name="theme-color" content="#0f131d" />
+		
+<style>
+body {
+    padding: 0;
+    margin: 0;
+    background-color: #000;
+    width: 100%;
+    height: 100%;
+    color: white;
+    font-family: tahoma, arial;
+}
+
+a { color: white }
+
+iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+
+input {
+    padding: 10px;
+    width: 80%;
+    font-size: 1.2em;
+    z-index: 1000;
+}
+
+div {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+
+.slider-container {
+    width: 80%;
+    margin: 20px auto;
+    padding: 10px;
+    text-align: center;
+}
+
+.zoom-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 40px;
+    background: #444;
+    outline: none;
+    border-radius: 20px;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 60px;
+    height: 60px;
+    background: #4CAF50;
+    cursor: pointer;
+    border-radius: 30px;
+    border: none;
+}
+
+.zoom-slider::-moz-range-thumb {
+    width: 60px;
+    height: 60px;
+    background: #4CAF50;
+    cursor: pointer;
+    border-radius: 30px;
+    border: none;
+}
+</style>
+</head>
+<body>
+
+<div id="container1" style="width:100%;height:89%;display:none;"></div>
+<div id="container2" style="width:100%;height:10%;display:none;">
+    <div class="slider-container">
+        <input type="range" min="-100" max="100" value="0" class="zoom-slider" id="zoomSlider">
+    </div>
+</div>
+<div>
+    <h2>Remote Zoom Control interface</h2>
+    <input placeholder="Enter a view link. ie) https://vdo.ninja/?view=abc123" id="viewlink" type="text" onchange="loadIframes()" /><br>
+    <br>
+    This app is a custom remote client for VDO.Ninja's remote zoom control feature. It uses a slider for mobile friendly use.
+    <br>
+    <br>
+    notes: Make sure the remote sender adds <b>&ptz</b> and <b>&remote</b> to their URL, otherwise PTZ remote control will not be allowed.
+</div>
+<script>
+var iframe;
+var lastZoomValue = 0;
+
+function handleZoom(value) {
+    if (iframe) {
+        const delta = value - lastZoomValue;
+        if (delta !== 0) {
+            iframe.contentWindow.postMessage({"sendRequest":{zoom:delta}}, '*');
+            lastZoomValue = value;
+        }
+    }
+}
+
+var urlEdited = window.location.search.replace(/\?\?/g, "?");
+urlEdited = urlEdited.replace(/\?/g, "&");
+urlEdited = urlEdited.replace(/\&/, "?");
+
+if (urlEdited !== window.location.search) {
+    console.warn(window.location.search + " changed to " + urlEdited);
+    window.history.pushState({path: urlEdited.toString()}, '', urlEdited.toString());
+}
+var urlParams = new URLSearchParams(urlEdited);
+
+if (urlParams.has("view") || urlParams.has("v")) {
+    if (window.location.host) {
+        var path = window.location.host+window.location.pathname.replace("/examples/","/").split("/").slice(0,-1).join("/");
+    } else {
+        var path = "vdo.ninja";
+    }
+    document.getElementById("viewlink").value = "https://"+path+"/";
+    loadIframes();
+}
+
+function loadIframes() { 
+    var iframesrc = document.getElementById("viewlink").value;
+    
+    document.getElementById("viewlink").parentNode.parentNode.removeChild(document.getElementById("viewlink").parentNode);
+    document.getElementById("container1").style.display="inline-block";
+    document.getElementById("container2").style.display="inline-block";
+    
+    var params = window.location.search || "";
+        
+    if (iframesrc.includes("?")) {
+        params = params.slice(1);
+        iframesrc = iframesrc + "&" + params
+    } else {
+        iframesrc = iframesrc + params
+    }
+    
+    console.log(iframesrc);
+    
+    iframe = document.createElement("iframe");
+    iframe.allow = "encrypted-media;sync-xhr;usb;web-share;cross-origin-isolated;accelerometer;midi;geolocation;autoplay;camera;microphone;fullscreen;picture-in-picture;display-capture;gyroscope;";
+    iframe.src = iframesrc;
+    document.getElementById("container1").appendChild(iframe);
+
+    // Setup zoom slider events after iframe is loaded
+    document.getElementById('zoomSlider').addEventListener('input', function(e) {
+        handleZoom(parseInt(e.target.value));
+    });
+}
+</script>
+</body>
+</html>

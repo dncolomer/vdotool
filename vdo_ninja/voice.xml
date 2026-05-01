@@ -1,0 +1,6 @@
+<Response>
+<Say voice="woman">Thank you for using VIDEO NINJA. You will now join your group call.</Say>
+<Dial>
+    <Conference>vdo-ninja-group-call</Conference>
+</Dial>
+</Response>

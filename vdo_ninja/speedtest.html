@@ -1,0 +1,707 @@
+<!-- speedtest.html !-->
+<html>
+	<head>
+		<link rel="stylesheet" href="./lineawesome/css/line-awesome.min.css" />
+		<link rel="stylesheet" href="./speedtest.css?ver=7" />
+		<meta charset="utf8" />
+		<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon" />
+		<link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="./media/favicon-32x32.png" />
+		<link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="./media/favicon-16x16.png" />
+		<link id="favicon3" rel="icon" href="./media/favicon.ico" />
+		<link id="thumbnailUrl" itemprop="thumbnailUrl" href="./media/vdoNinja_logo_full.png" />
+		<link rel="alternate" type="text/markdown" href="/rawdoc.md" title="Developer and User Documentation">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="index, follow" />
+		<meta name="author" content="Steve Seguin" />
+		<meta name="copyright" content="&copy; 2024 Steve Seguin" />
+		<meta name="license" content="https://github.com/steveseguin/vdo.ninja/LICENSE.md" />
+		<meta name="sourcecode" content="https://github.com/steveseguin/vdo.ninja" />
+		<meta name="theme-color" content="#0f131d" />
+		<link rel="canonical" href="https://vdo.ninja/speedtest.html" />
+		<title>VDON Speed Test</title>
+		<meta id="metaTitle" name="title" content="VDON Speed Test" />
+		<meta name="description" content="Use the VDO.Ninja WebRTC speed test to measure bitrate, packet loss, and buffer delay before your live production." />
+
+		<meta name="twitter:card" content="summary_large_image">
+		<meta name="twitter:creator" content="@SteveSeguin">
+		<meta name="twitter:title" content="VDON Speed Test">
+		<meta name="twitter:description" content="Measure WebRTC bitrate, packet loss, and delay to validate stream quality with VDO.Ninja.">
+		<meta name="twitter:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
+
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://vdo.ninja/speedtest.html">
+		<meta property="og:title" content="VDON Speed Test">
+		<meta property="og:description" content="Use the VDO.Ninja WebRTC speed test to measure bitrate, packet loss, and buffer delay before your live production.">
+		<meta property="og:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
+		<meta property="og:image:width" content="1200">
+		<meta property="og:image:height" content="630">
+		<meta property="og:site_name" content="VDO.Ninja">
+	</head>
+	<body onload="applySpeedtestBranding(); loadIframe();">
+		<div id="mainapp">
+		<h1 id="speedtest-title">
+			VDO.Ninja's video streaming quality test
+		</h1>
+		<div id="container">
+		</div>
+		<div id="graphs">
+			<div class="graph">
+				<h2>Bitrate (kbps)</h2>
+				<span>0</span>
+				<canvas id="bitrate-graph"></canvas>
+			</div>
+
+			<div class="graph">
+				<h2>Buffer delay (ms)</h2>
+				<span>0</span>
+				<canvas id="buffer-graph"></canvas>
+			</div>
+
+			<div class="graph">
+				<h2>Packet Loss (%)</h2>
+				<span>0</span>
+				<canvas id="packetloss-graph"></canvas>
+			</div>
+		</div>
+		<div id="log" onclick="copyFunction(this.innerText)">
+			<h2>Log <i class="las la-clipboard"></i></h2>
+			<ul></ul>
+		</div>
+			<div id="explanation">
+				<h2>How to use</h2>
+			<ol>
+				<li>Select your camera.</li>
+				<li>Hit start</li>
+				<li>
+					Wait for the video to load side-by-side. *If it does not auto-load within 20s, refresh and try again.*
+				</li>
+				<li>
+					Stats will be printed to screen, along with graphs visualizing the most important metrics. You can also hold CTRL (cmd) + Click on the video to access even more stats.
+				</li>
+				<li>
+					Bitrate, Buffer delay, and packet loss are important connection	quality metrics. Monitor them for at least a minute.
+				</li>
+				<li>
+					Change the video bitrate by pressing the buttons below the video. It should approach 6000-kbps if the network allows.
+				</li>
+				<li>
+					Good packet loss will not exceed 0.1% and bad packet loss will exceed 1%. You can try testing against different global regions with the drop-down menu below.
+				</li>
+				<li>
+					Check out <a href="https://youtu.be/je2ljlvLzlY" target="_blank">this Youtube video</a> for more details and solutions to reduce packet loss if suffering from any.
+				</li>
+			</ol>
+			<h2>Unsupervised guest check option</h2>
+			<div class="guest-check">
+				You can also use <a target="_blank" id="checklink" href='./check.html'>this tool</a> to have a guest perform a system and connection test, with those results being available to you via a result's page for up to a week.<br />
+				You can either ask the remote guest to send you the link to their results page when they complete the test, or you can use <code>check.html?id=xxx</code> to pre-assign the test ID (ie: xxx), which will have the results then be available at <code>results.html?id=xxx</code>.
+				<br />If you have questions, <a href="https://discord.vdo.ninja" target="_blank">join the Discord here</a>.
+			</div>
+			<br />
+			<h3>More testing options below</h3>
+			<div id="screen"><a href="./speedtest?screen">Test screen-sharing performance here</a></div>
+			<div id="remote"></div>
+			<br />
+			Testing location: <select name="turnlist" id="turnlist" onchange="reloadTurn();" title="Select an exact location to test against">
+			  <option selected value="">Automatic</option>
+			  <option value="de1">Saarbruecken, Germany</option>
+			  <option value="de2">Frankfurt, Germany</option>
+			  <option value="fr1">Strasbourg, France</option>
+			  <option value="bra1">São Paulo, Brazil</option>
+			  <option value="pol1">Warsaw, Poland</option>
+			  <option value="cae1">Montreal, Canada</option>
+			  <option value="use1">Virgina, USA</option>
+			  <option disabled value="usc1">Chicago, USA</option>
+			  <option disabled value="usw1">Los Angeles, USA</option>
+			  <option value="usw2">Oregon, USA</option>
+			  <option value="aus1">Sydney, Australia</option>
+			  <option value="jap1">Tokyo, Japan</option>
+			  <option value="sing1">Singapore</option>
+			  <option value="ind1">Mumbai, India</option>
+			  <option value="pol1">Warsaw, Poland</option>
+				</select>
+				<br /><br /><br />
+			</div>
+			<div id="speedtest-legal-footer" aria-label="Legal links">
+				<a href="https://docs.vdo.ninja/help/privacy-and-security-details/vdo.ninja-terms-of-service" target="_blank" rel="noopener" title="Opens in new window">Terms of Service</a>
+				<span class="divider" aria-hidden="true">|</span>
+				<a href="https://docs.vdo.ninja/help/privacy-and-security-details/vdo.ninja-privacy-policy" target="_blank" rel="noopener" title="Opens in new window">Privacy Policy</a>
+			</div>
+			</div>
+		
+
+		<script>
+		
+			function getChromiumVersion() {
+				var raw = navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./);
+				return raw ? parseInt(raw[2], 10) : false;
+			}
+
+			function applySpeedtestBranding() {
+				var hostname = window.location.hostname.toLowerCase();
+				if ((hostname === "rtc.ninja") || (hostname === "www.rtc.ninja")) {
+					var heading = document.getElementById("speedtest-title");
+					if (heading) {
+						heading.textContent = "Video streaming test";
+					}
+				}
+			}
+				
+			//if (!getChromiumVersion()){
+			//	alert("This speedtest is optimized for Chromium-based browsers; graphs will not work for Firefox or Safari browsers.");
+			//}
+		
+			(function (w) {
+				w.URLSearchParams =
+					w.URLSearchParams ||
+					function (searchString) {
+						var self = this;
+						self.searchString = searchString;
+						self.get = function (name) {
+							var results = new RegExp("[\?&]" + name + "=([^&#]*)").exec(
+								self.searchString
+							);
+							if (results == null) {
+								return null;
+							} else {
+								return decodeURI(results[1]) || 0;
+							}
+						};
+					};
+			})(window);
+			var urlParams = new URLSearchParams(window.location.search);
+			
+			var quality_reason = "";
+			var encoder = "";
+			var Round_Trip_Time_ms = "";
+			var recordResults = false;
+			var speedtestPublisherParams = [
+				"quality", "width", "w", "height", "h", "aspectratio", "ar",
+				"frameRate", "fr", "fps", "maxframerate", "mfr", "mfps",
+				"screensharefps", "ssfps", "screensharequality", "ssq",
+				"codec", "codecs", "videocodec", "h264profile",
+				"videobitrate", "bitrate", "vb",
+				"outboundvideobitrate", "outboundbitrate", "ovb",
+				"maxvideobitrate", "maxbitrate", "maxvb", "mvb",
+				"keyframeinterval", "keyframerate", "keyframe", "fki",
+				"contenthint", "contenttype", "content", "hint",
+				"screensharecontenthint", "sscontenthint", "screensharecontenttype", "sscontent", "sshint"
+			];
+			var speedtestViewerParams = [
+				"codec", "codecs", "videocodec",
+				"videobitrate", "bitrate", "vb",
+				"maxvideobitrate", "maxbitrate", "maxvb", "mvb"
+			];
+			var speedtestParamAliases = [
+				{ alias: "q", target: "quality", conflicts: ["quality"] },
+				{ alias: "resolution", target: "quality", conflicts: ["quality"] },
+				{ alias: "framerate", target: "fr", conflicts: ["frameRate", "fr", "fps"] },
+				{ alias: "targetbitrate", target: "bitrate", conflicts: ["videobitrate", "bitrate", "vb"] },
+				{ alias: "targetvideobitrate", target: "bitrate", conflicts: ["videobitrate", "bitrate", "vb"] }
+			];
+			
+			function hasAddedParam(addedParams, params) {
+				for (var i = 0; i < params.length; i++) {
+					if (addedParams[params[i]]) {
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function hasUrlParam(params) {
+				for (var i = 0; i < params.length; i++) {
+					if (urlParams.has(params[i])) {
+						return true;
+					}
+				}
+				return false;
+			}
+			
+			function appendSpeedtestParams(srcString, allowedParams) {
+				var addedParams = {};
+				for (var i = 0; i < allowedParams.length; i++) {
+					var param = allowedParams[i];
+					if (urlParams.has(param)) {
+						srcString += "&" + encodeURIComponent(param) + "=" + encodeURIComponent(urlParams.get(param) || "");
+						addedParams[param] = true;
+					}
+				}
+				for (var j = 0; j < speedtestParamAliases.length; j++) {
+					var alias = speedtestParamAliases[j];
+					if (allowedParams.indexOf(alias.target) >= 0 && !hasAddedParam(addedParams, alias.conflicts) && urlParams.has(alias.alias)) {
+						srcString += "&" + encodeURIComponent(alias.target) + "=" + encodeURIComponent(urlParams.get(alias.alias) || "");
+						addedParams[alias.target] = true;
+					}
+				}
+				return srcString;
+			}
+			
+			function copyFunction(copyText) {
+				alert("Log copied to the clipboard.");
+				try {
+					copyText.select();
+					copyText.setSelectionRange(0, 99999);
+					document.execCommand("copy");
+				} catch (e) {
+					var dummy = document.createElement("input");
+					document.body.appendChild(dummy);
+					dummy.value = copyText;
+					dummy.select();
+					document.execCommand("copy");
+					document.body.removeChild(dummy);
+					return false;
+				}
+				
+			}
+			
+			function printValues(obj) {
+				var out = "";
+				for (var key in obj) {
+					if (typeof obj[key] === "object") {
+						out += "<br />";
+						out += printValues(obj[key]);
+					} else {
+						if (key.startsWith("_")) {
+						} else {
+							out += "<b>" + key + "</b>: " + obj[key] + "<br />";
+						}
+					}
+				}
+				return out;
+			}
+
+			function logData(type, data) {
+				var log = document.getElementById("log").getElementsByTagName("ul")[0];
+				var entry = document.createElement('li');
+				entry.textContent =
+					"[" + new Date().toLocaleTimeString() + "] " + type + " : " + data;
+				log.prepend(entry);
+			}
+		
+			function reloadTurn(){
+				console.log("Reloading to change TURN servers");
+				loadIframe(document.getElementById("turnlist").value);
+			}
+			
+			function updateTurnlist(value){
+				var select = document.getElementById("turnlist");
+				var selected = select.value;
+				
+				select.innerHTML = "";
+				
+				var opt = document.createElement("option");
+				opt.value = ""
+				opt.title = "Choose the closest location automatically";
+				opt.innerHTML = "Automatic";
+				select.appendChild(opt);
+				if (selected == ""){
+					opt.selected = true;
+				}
+				
+				for (var i =0;i<value.length;i++){
+					var opt = document.createElement("option");
+					opt.value = value[i].locale;
+					opt.title = value[i].name;
+					opt.innerHTML = value[i].name;
+					select.appendChild(opt);
+					if (selected == opt.value){
+						opt.selected = true;
+					}
+				}
+			}
+			
+
+			function loadIframe(zone="") {
+				// this is pretty important if you want to avoid camera permission popup problems. YOu need to load the iFRAME after  you load the parent body. A quick solution is like: <body onload=>loadIframe();"> !!!
+
+				document.getElementById("container").innerHTML = "";
+
+				var streamID = "";
+				var possible = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+				for (var i = 0; i < 7; i++) {
+					streamID += possible.charAt(
+						Math.floor(Math.random() * possible.length)
+					);
+				}
+				
+				if (urlParams.has("sid")) {
+					streamID = urlParams.get("sid");
+				}
+				
+				document.getElementById("remote").innerHTML = "<a style='color:#CCC' target='_blank' href='./monitor?sid="+streamID+"'>Remote Monitoring Link</a><br />";
+
+				var iframe = document.createElement("iframe");
+				var iframeContainer = document.createElement("span");
+
+				iframe.allow="autoplay;camera;microphone;display-capture;screen-wake-lock;";
+				iframe.allowtransparency="true";
+				iframe.allowfullscreen ="true";
+
+				//iframe.allow = "autoplay";
+				var srcString =	"./?push=" + streamID + "&cleanish&privacy";
+				srcString = appendSpeedtestParams(srcString, speedtestPublisherParams);
+				srcString += "&"+testType+"&audiodevice=0&fullscreen&transparent&darkmode&remote&speedtest="+zone;
+				
+				if (urlParams.has("turn")) {
+					srcString = srcString + "&turn=" + urlParams.get("turn");
+				}
+
+				// we are changing some text on page load, just to demonstrate what's possible.
+				iframe.onload = function (e) {
+					e.target.contentWindow.postMessage(
+						{
+							function: "changeHTML",
+							target: "add_camera",
+							value: "Select your Camera",
+						},
+						"*"
+					);
+				};
+				iframe.src = srcString;
+
+				iframeContainer.appendChild(iframe);
+
+				var title = document.createElement("h3");
+				title.innerText = "Local video feed";
+				iframeContainer.appendChild(title);
+
+				var feeds = document.createElement("div");
+				feeds.id = "feeds";
+
+				document.getElementById("container").appendChild(feeds);
+				document.getElementById("feeds").appendChild(iframeContainer);
+
+				setInterval(function (iframe1) {
+					try {
+						iframe1.contentWindow.postMessage({ getStats: true }, "*");
+					} catch(e){
+						clearInterval(this);
+					}
+				}, 1000, iframe);
+
+				var iframe = document.createElement("iframe");
+				var iframeContainer = document.createElement("span");
+
+				iframe.allow = "autoplay";
+				// I've removed &privacy from the view link, and left it just on the push link. This hopefully solves compatibility issues
+				var srcString = "./?view=" + streamID + "&cleanish&noaudio&scale=0&speedtest="+zone; // No TURN servers set on the reciever. Don't want to query for TURN servers needlessly.
+				srcString = appendSpeedtestParams(srcString, speedtestViewerParams);
+
+				if (urlParams.has("turn")) {
+					srcString = srcString + "&turn=" + urlParams.get("turn");
+				}
+
+				if (urlParams.has("buffer")) {
+					srcString = srcString + "&buffer=" + urlParams.get("buffer");
+				}
+				
+				if (urlParams.has("record")) {
+					recordResults = true;
+				}
+
+				iframe.src = srcString;
+
+				iframeContainer.appendChild(iframe);
+
+				var title = document.createElement("h3");
+				title.innerText = "Server video feed";
+				iframeContainer.appendChild(title);
+
+				document.getElementById("feeds").appendChild(iframeContainer);
+
+				var button = document.createElement("br");
+				document.getElementById("container").appendChild(button);
+
+				var buttonContainer = document.createElement("div");
+				buttonContainer.id = "controls";
+
+				var button = document.createElement("button");
+				button.innerHTML = "Low Bitrate";
+				button.className = "grey";
+				button.onclick = function () {
+					iframe.contentWindow.postMessage({ bitrate: 30 }, "*");
+					bitrate.target = 30;
+				};
+				buttonContainer.appendChild(button);
+
+				var button = document.createElement("button");
+				button.innerHTML = "High Bitrate";
+				button.className = "grey";
+				button.onclick = function () {
+					iframe.contentWindow.postMessage({ bitrate: 6000 }, "*");
+					bitrate.target = 6000;
+				};
+				buttonContainer.appendChild(button);
+
+				var button = document.createElement("button");
+				button.innerHTML = "Default Bitrate";
+				button.className = "grey active";
+				button.onclick = function () {
+					iframe.contentWindow.postMessage({ bitrate: -1 }, "*");
+					bitrate.target = 3000;
+				};
+				buttonContainer.appendChild(button);
+
+				var button = document.createElement("button");
+				button.innerHTML = "Disconnect";
+				button.className = "red";
+				button.style.display = "none";
+				button.onclick = function () {
+					iframe.contentWindow.postMessage({ close: true }, "*");
+				};
+				buttonContainer.appendChild(button);
+
+				document.getElementById("container").appendChild(buttonContainer);
+
+				setInterval(function (iframe1) {
+					try {
+						iframe1.contentWindow.postMessage({ getStats: true }, "*");
+					} catch(e){
+						clearInterval(this);
+					}
+				}, 1000, iframe);
+
+				var eventMethod = window.addEventListener
+					? "addEventListener"
+					: "attachEvent";
+				var eventer = window[eventMethod];
+				var messageEvent = eventMethod === "attachEvent" ? "onmessage" : "message";
+				var previousResolution;
+
+				eventer(messageEvent, function (e) {
+					if ("action" in e.data) {
+					
+					
+						if (e.data.action == "view-stats-updated"){
+							return;
+						}
+						
+						if (e.data.action == "setVideoBitrate"){
+							logData("Target Video Bitrate",e.data.value);
+						}
+						
+						if (e.data.action == "available-speedtest-servers"){
+							//console.warn("Speedtest server list loaded");
+							updateTurnlist(e.data.value);
+						} else {
+							//logData(e.data.action, e.data.value);
+						}
+
+						if (e.data.action == "new-view-connection") {
+							buttonContainer.querySelectorAll(
+								"#controls button:last-child"
+							)[0].style.display = "inline";
+						}
+
+						if (e.data.action == "setVideoBitrate") {
+							buttonContainer.querySelectorAll("button").forEach((button) => {
+								button.classList.remove("active");
+							});
+							if (e.data.value == 30) {
+								document
+									.querySelectorAll("#controls button")[0]
+									.classList.add("active");
+							}
+							if (e.data.value == 6000) {
+								document
+									.querySelectorAll("#controls button")[1]
+									.classList.add("active");
+							}
+							if (e.data.value == -1) {
+								document
+									.querySelectorAll("#controls button")[2]
+									.classList.add("active");
+							}
+						}
+					}
+					if ("stats" in e.data) {
+						var out = "";
+						
+						for (var someValue in e.data.stats.inbound) {
+							out += printValues(e.data.stats.inbound[someValue]);
+						}
+						
+						for (var someValue in e.data.stats.outbound) {
+							if (e.data.stats.outbound[someValue].quality_limitation_reason){
+								if (quality_reason != e.data.stats.outbound[someValue].quality_limitation_reason) {
+									quality_reason = e.data.stats.outbound[someValue].quality_limitation_reason;
+									logData("Quality Limitation Reason", quality_reason);
+								}
+							}
+							
+							if (e.data.stats.outbound[someValue].encoder){
+								if (encoder != e.data.stats.outbound[someValue].encoder) {
+									encoder = e.data.stats.outbound[someValue].encoder;
+									logData("Encoder used", encoder);
+								}
+							} else if (e.data.stats.outbound[someValue].video_codec){
+								if (encoder != e.data.stats.outbound[someValue].video_codec) {
+									encoder = e.data.stats.outbound[someValue].video_codec;
+									logData("Encoder used", encoder);
+								}
+							}
+						}
+
+						for (var key in e.data.stats.inbound[streamID]){
+							if (typeof e.data.stats.inbound[streamID][key] == "object"){
+								//console.error(e.data.stats.inbound[streamID][key]);
+								if ("Bitrate_in_kbps" in e.data.stats.inbound[streamID][key]){
+									var bitrate = e.data.stats.inbound[streamID][key]["Bitrate_in_kbps"];
+									updateData("bitrate", bitrate);
+								}
+
+								if ("Jitter_Buffer_ms" in e.data.stats.inbound[streamID][key]){
+									var buffer = e.data.stats.inbound[streamID][key]["Jitter_Buffer_ms"];
+									updateData("buffer", buffer);
+								} else if ("Buffer_Delay_in_ms" in e.data.stats.inbound[streamID][key]){
+									var buffer = e.data.stats.inbound[streamID][key]["Buffer_Delay_in_ms"];
+									updateData("buffer", buffer);
+								} else if ("Added_Buffer_Delay_ms" in e.data.stats.inbound[streamID][key]){
+									console.log("Added_Buffer_Delay_ms");
+									var buffer = e.data.stats.inbound[streamID][key]["Added_Buffer_Delay_ms"];
+									updateData("buffer", buffer);
+								}
+								
+								
+								if ("packetLoss_in_percentage" in e.data.stats.inbound[streamID][key]){
+									var packetloss = e.data.stats.inbound[streamID][key]["packetLoss_in_percentage"];
+									if (packetloss != undefined) {
+										packetloss = packetloss.toFixed(2);
+										updateData("packetloss", packetloss);
+									}
+								}
+
+								if ("Resolution" in e.data.stats.inbound[streamID][key]){
+									var resolution = e.data.stats.inbound[streamID][key]["Resolution"];
+									if (previousResolution != resolution) {
+										previousResolution = resolution;
+										logData("Resolution", resolution);
+									}
+								}
+							}
+						}
+						
+						if (recordResults){
+							var request = new XMLHttpRequest();
+							request.open('POST', "https://reports.vdo.ninja/record"); 
+							request.send(JSON.stringify(e.data.stats));
+						}
+					}
+				});
+			}
+
+			
+		
+			var testType= "webcam&css=speedtest.css";
+			if (urlParams.has("screen") || urlParams.has("ss") || urlParams.has("screenshare") || urlParams.has("screentest")) {
+				document.getElementById("screen").innerHTML = '<a href="./speedtest" style="color: #CCC;">Test webcam-streaming performance here</a>';
+				var screenQuality = hasUrlParam(["quality", "q", "resolution", "width", "w", "height", "h", "screensharequality", "ssq"]) ? "" : "quality=0&";
+				testType = screenQuality + "screenshare&css=speedtest.css"
+				document.getElementById("checklink").href = "./check.html?screen";
+			}
+			
+			
+			var bitrate = {
+				element: "bitrate-graph",
+				data: 0,
+				max: 6000,
+				target: 3000,
+			};
+			var frames;
+			var buffer = {
+				element: "buffer-graph",
+				data: 0,
+				max: 200,
+				target: 100,
+			};
+			var packetloss = {
+				element: "packetloss-graph",
+				data: 0,
+				max: 3,
+				target: 2,
+			};
+
+			function updateData(type, data) {
+				if (type == "bitrate") {
+					bitrate.data = data;
+					plotData("bitrate", bitrate);
+				}
+
+				if (type == "buffer") {
+					buffer.data = data;
+					plotData("buffer", buffer);
+				}
+
+				if (type == "packetloss") {
+					packetloss.data = data;
+					plotData("packetloss", packetloss);
+				}
+			}
+
+			function plotData(type, stat) {
+				var canvas;
+				var context;
+				var yScale;
+
+				canvas = document.getElementById(stat.element);
+				context = canvas.getContext("2d");
+
+				if (isNaN(stat.data)) {
+					stat.data = 0;
+				}
+
+				var text = (canvas.previousElementSibling.innerHTML = stat.data);
+
+				var height = context.canvas.height;
+				var width = context.canvas.width;
+
+				var borderWidth = 5;
+				var offset = borderWidth * 2;
+
+				// Create gradient
+				var grd = context.createLinearGradient(0, 0, 0, height);
+
+				if (type == "bitrate") {
+					// Higher values are green
+					grd.addColorStop(0, "#33C433");
+					grd.addColorStop(0.7, "#F3F304");
+					grd.addColorStop(0.9, "#F30404");
+				} else {
+					// Higher values are red
+					grd.addColorStop(0, "#F30404");
+					grd.addColorStop(0.3, "#F3F304");
+					grd.addColorStop(0.7, "#33C433");
+				}
+
+				context.strokeStyle = "white";
+				context.fillStyle = grd;
+				//context.fillStyle = "#009933";
+				//context.imageSmoothingEnabled = true;
+
+				yScale = height / stat.target;
+
+				if (stat.data > stat.target) {
+					stat.data = stat.target;
+				}
+
+				if (type == "packetloss" && stat.data == 0.0) {
+					stat.data = 0.1;
+				}
+
+				var x = width - 1;
+				var y = height - stat.data * yScale;
+				var w = 1;
+
+				context.fillStyle = grd;
+				context.fillRect(x, y, w, height);
+
+				// shift everything to the left:
+				var imageData = context.getImageData(1, 0, width - 1, height);
+				context.putImageData(imageData, 0, 0);
+				// now clear the right-most pixels:
+				context.clearRect(width - 1, 0, 1, height);
+			}
+		</script>
+	</body>
+</html>

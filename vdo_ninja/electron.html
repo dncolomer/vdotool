@@ -1,0 +1,908 @@
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<link rel="stylesheet" href="./lineawesome/css/line-awesome.min.css" />
+	<style>
+	html {
+		border:0;
+		margin:0;
+		outline:0;
+		overflow: hidden;
+	}
+
+	video {
+
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=), none;
+		user-select: none;
+		
+	}
+	body {
+		padding: 0 0px;
+		height: 100%;
+		width: 100%;
+		background-color: -webkit-linear-gradient(to top, #363644, 50%, #151b29);  /* Chrome 10-25, Safari 5.1-6 */
+		background: linear-gradient(to top, #363644, 50%, #151b29); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+		font-size: 2em;
+		font-family: Helvetica, Arial, sans-serif;
+		display: flex;
+		flex-flow: column;
+		border:0;
+		margin:0;
+		outline:0;
+	}
+
+	button.glyphicon-button:focus,
+	button.glyphicon-button:active:focus,
+	button.glyphicon-button.active:focus,
+	button.glyphicon-button.focus,
+	button.glyphicon-button:active.focus,
+	button.glyphicon-button.active.focus {
+	  outline: none !important;
+	}
+
+	#gobutton {
+		font-size: 20px;
+		font-weight: bold;
+		border: none;
+		background: #6aab23;
+		display: flex;
+		border-radius: 0px;
+		border-top-right-radius: 10px;
+		border-bottom-right-radius: 10px;
+		box-shadow: 0 12px 15px -10px #5ca70b, 0 2px 0px #6aab23;
+		color: white;
+		cursor: pointer;
+		box-sizing: border-box;
+		align-items: center;
+		padding: 0 1em;
+	}
+	#header{
+		width:100%;
+		background-color: #101520;
+	}
+	input#changeText {
+		font-size: 1em;
+		align-self: center;
+		width: 100%;
+		padding: 1em;
+		font-weight: bold;
+		background: white;
+		border: 4px solid white;
+		box-shadow: 0px 30px 40px -32px #6aab23, 0 2px 0px #6aab23;
+		border-top-left-radius: 10px;
+		border-bottom-left-radius: 10px;
+		transition: all 0.2s linear;
+		box-sizing: border-box;
+		border-bottom-right-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	input#changeText:focus {
+		outline: none;
+	}
+
+	.container{
+		font-size: 20px;
+		align-self:center;
+		margin: auto auto;
+	}
+	label {
+		font: white;
+		font-size: 1em;
+		color: white;
+	}
+	input[type='checkbox'] {
+		-webkit-appearance:none;
+		width:30px;
+		height:30px;
+		background:white;
+		border-radius:5px;
+		border:2px solid #555;
+		cursor: pointer;
+	}
+	input[type='checkbox']:checked {
+		background: #1A1;
+	}
+	#audioOutput, #lastUrls {
+		font-size: calc(16px + 0.3vw);
+		width: 730px;
+		height: 100%;
+		flex: 20;
+		border-radius: 10px;
+		padding: 1em;
+		background: #eaeaea;
+		cursor:pointer;
+	}
+	label[for="audioOutput"] {
+		font-size: 3em;
+		color: #FE53BB;
+		text-shadow: 0px 0px 30px #fe53bb;
+		padding-right: 10px;
+	}
+	label[for="changeText"] {
+		font-size: 3em;
+		color: #00F6FF;
+		text-shadow: 0px 0px 30px #00f6ff;
+		padding-top: 5px;
+		padding-right: 10px;
+	}
+
+	label[for="lastUrls"] {
+	font-size: 3em;
+		color: #1a1;
+		text-shadow: 0px 0px 30px #1a1;
+		padding-right: 10px;
+		cursor: pointer;
+	}
+
+	div#audioOutputContainer, #history {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		justify-content: center;
+		margin: 4em;
+	}
+		
+	@media only screen and (max-width: 1030px) {
+		body{
+			zoom: 0.9; 
+			-moz-transform: scale(0.9); 
+			-moz-transform-origin: 0 0;
+		}
+	}
+
+	#messageDiv {
+		font-size: .7em;
+		color: #DDD;
+		transition: all 0.5s linear;
+		font-style: italic;
+		opacity: 0;
+		text-align: center;
+		margin: 10px 0;
+	}
+
+	div#urlInput {
+		margin: 4em;
+		display: flex;
+		flex-direction: row;
+	}
+	@media only screen and (max-width: 940px) {
+		body{
+			zoom: 0.74; 
+			-moz-transform: scale(0.74); 
+			-moz-transform-origin: 0 0;
+			
+		}
+		.container{
+			max-width:99%;
+		}
+		div#urlInput {
+			margin: 2em;
+		}
+		div#audioOutputContainer, #history {
+			margin: 2em;
+		}
+	}
+	@media only screen and (max-width: 840px) {
+		body{
+			zoom: 0.64; 
+			-moz-transform: scale(0.64); 
+			-moz-transform-origin: 0 0;
+			
+		}
+		
+	}
+	
+	@media only screen and (max-height: 639px) {
+		div#urlInput {
+			margin: 2em;
+		}
+		div#audioOutputContainer, #history {
+			margin: 2em;
+		}
+	}
+	
+	@media only screen and (max-width: 767px) {
+		
+		div#urlInput {
+			margin:  2em 1em;
+		}
+		div#audioOutputContainer, #history {
+			margin:  2em 1em;
+		}
+	}
+	
+	
+	@media only screen and (max-height: 380px) {
+		div#urlInput {
+			margin: 1em;
+		}
+		div#audioOutputContainer, #history {
+			margin: 1em;
+		}
+	}
+	
+	
+
+	label[for="audioOutput"], label[for="lastUrls"] {
+		font-size: 3em;
+	}
+
+	#warning4mac, #electronVersion {
+		background: #8500f7;
+		box-shadow: 0px 0px 50px 10px #8500f7ab, inset 0px 0px 10px 2px #8d08ffba;
+		border: 2px solid #8500f7;
+		border-radius: 10px;
+		width: 90%;
+		padding:1em;
+		margin:0 auto;
+		color:white;
+		font-size:1.3em;
+		margin-bottom: 20px;
+	}
+
+	#warning4mac a, #electronVersion a {
+		color:white;
+	 }
+
+	 ul#lastUrls {
+		list-style: none;
+		background: #101520;
+		color: white;
+		padding: 1em;
+	}
+
+	ul#lastUrls li {
+		padding: 5px 0px;
+	}
+	ul#lastUrls li:nth-child(even) {
+		background-color: #182031;
+	}
+
+	#inputCombo {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		flex-grow: 1;
+	}
+	#version{
+		margin: 0 auto;
+		font-size: 30%;
+		display: inline-block;
+		color: #000A;
+		right: 3px;
+		position: absolute;
+		bottom: 0;
+	}
+#lastUrls {
+    /* Keep your original styles for the select element */
+    font-size: calc(16px + 0.3vw);
+    width: 730px;
+    height: 100%;
+    flex: 20;
+    border-radius: 10px;
+    padding: 1em;
+    background: #101520;
+    color: white;
+    cursor: pointer;
+}
+
+/* These styles target the dropdown list in Webkit browsers */
+#lastUrls::-webkit-listbox {
+    max-height: 200px !important;
+}
+
+/* For Firefox */
+#lastUrls {
+    scrollbar-width: thin;
+    scrollbar-color: #384861 #182031;
+}
+
+/* This will help force the height of the dropdown menu in many browsers */
+@supports (-moz-appearance:none) {
+    #lastUrls {
+        overflow: -moz-scrollbars-vertical;
+    }
+}
+	</style>
+</head>
+<body>
+	<div id="header" style="-webkit-app-region: drag; color:#6f6f6f;font-size:20px; line-height: 20px; padding: 5px 10px; letter-spacing: 3; font-weight: bold;">Electron Capture</div>
+	<div class="container" >
+		
+		<div id='warning4mac' style="display:none;"> ✨ Great News! OBS v26.1.2 <a href="https://github.com/obsproject/obs-browser/issues/209#issuecomment-748683083">now supports</a> VDO.Ninja without needing the Electron Capture app! 🥳</div>
+		<div id="electronVersion" style="display:none;">✨ Great News! <a href="https://github.com/steveseguin/electroncapture/releases/latest">Electron Capture <span id="currentElectronVersion"></span></a> is now available!<br>Update yours today to stay up-to-date with security patches.</div>
+		
+		<div id="messageDiv" style='display:block'><br /></div>
+		<div class="container">
+				<div id="urlInput" title="Put the link you want to load here">
+					<label for="changeText">
+						<i class="las la-play"></i>
+					</label>
+					<div id="inputCombo">
+						<input type="text" id="changeText" class="inputfield" value="http://vdo.ninja/" onchange="modURL" onkeyup="enterPressed(event, gohere);" />
+						<button  onclick="gohere();" id="gobutton">GO</button>
+					</div>
+				</div>
+				<div id="audioOutputContainer" title="This option will only work with the official vdo.ninja domain">
+					<label for="audioOutput"><i class="las la-headphones"></i></label><select id="audioOutput"></select>
+				</div>
+				<div id="history" title="History of past links used. You can clear this history using the button to the left">
+					<label for="lastUrls" onclick="resetHistory()">
+						<i class="las la-history"></i>
+					</label>
+					<select id="lastUrls" onchange="setUrl()"></select>
+				</div>
+	
+		</div>
+	</div>
+	<div id="version"></div>
+<script>
+/*
+*  Copyright (c) 2020 Steve Seguin. All Rights Reserved.
+*
+*  Use of this source code is governed by the APGLv3 open-source license
+*  that can be found in the LICENSE file in the root of the source
+*  tree. Alternative licencing options can be made available on request.
+*
+*/
+
+
+function setUrl(){
+	document.querySelector("#changeText").value = document.querySelector("#lastUrls").value;
+	gohere();
+}
+
+function createCustomScrollableDropdown() {
+    const originalSelect = document.querySelector('#lastUrls');
+    if (!originalSelect) return;
+    
+    // Create custom dropdown container
+    const dropdownContainer = document.createElement('div');
+    dropdownContainer.id = 'custom-lastUrls-container';
+    dropdownContainer.style.position = 'relative';
+    dropdownContainer.style.width = '730px';
+    dropdownContainer.style.flex = '20';
+    
+    // Create the dropdown header (what shows when closed)
+    const dropdownHeader = document.createElement('div');
+    dropdownHeader.id = 'custom-lastUrls-header';
+    dropdownHeader.style.fontSize = 'calc(16px + 0.3vw)';
+    dropdownHeader.style.padding = '1em';
+    dropdownHeader.style.borderRadius = '10px';
+    dropdownHeader.style.background = '#FFF';
+    dropdownHeader.style.color = '#000';
+    dropdownHeader.style.cursor = 'pointer';
+    dropdownHeader.textContent = originalSelect.options.length > 0 ? 
+                                originalSelect.options[0].text : 'History';
+    
+    // Create the dropdown list (what shows when opened)
+    const dropdownList = document.createElement('div');
+    dropdownList.id = 'custom-lastUrls-list';
+    dropdownList.style.display = 'none';
+    dropdownList.style.position = 'absolute';
+    dropdownList.style.width = '100%';
+    dropdownList.style.maxHeight = '200px';
+    dropdownList.style.overflowY = 'auto';
+    dropdownList.style.background = '#DDD';
+    dropdownList.style.borderRadius = '10px';
+    dropdownList.style.zIndex = '100';
+    
+    // Add options to the dropdown list
+    Array.from(originalSelect.options).forEach((option, index) => {
+        const item = document.createElement('div');
+        item.className = 'custom-lastUrls-item';
+        item.style.padding = '0.5em 1em';
+        item.style.cursor = 'pointer';
+        item.textContent = option.text;
+        item.dataset.value = option.value;
+        
+        if (index % 2 === 1) {
+            item.style.backgroundColor = '#FFF';
+        }
+        
+        item.addEventListener('click', function() {
+            dropdownHeader.textContent = this.textContent;
+            dropdownList.style.display = 'none';
+            
+            // Update the original select value and trigger its change event
+            originalSelect.value = this.dataset.value;
+            const event = new Event('change');
+            originalSelect.dispatchEvent(event);
+        });
+        
+        dropdownList.appendChild(item);
+    });
+    
+    // Toggle dropdown on header click
+    dropdownHeader.addEventListener('click', function() {
+        const isDisplayed = dropdownList.style.display === 'block';
+        dropdownList.style.display = isDisplayed ? 'none' : 'block';
+    });
+    
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!dropdownContainer.contains(e.target)) {
+            dropdownList.style.display = 'none';
+        }
+    });
+    
+    // Add everything to the container
+    dropdownContainer.appendChild(dropdownHeader);
+    dropdownContainer.appendChild(dropdownList);
+    
+    // Replace the original select with our custom dropdown
+    originalSelect.style.display = 'none';
+    originalSelect.parentNode.insertBefore(dropdownContainer, originalSelect);
+}
+
+function resetHistory(){
+	localStorage.clear();
+	document.querySelector('#lastUrls').innerHTML = '';
+	lastUrls = [];
+}
+
+(function (w) {
+    w.URLSearchParams = w.URLSearchParams || function (searchString) {
+        var self = this;
+        self.searchString = searchString;
+        self.get = function (name) {
+            var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(self.searchString);
+            if (results == null) {
+                return null;
+            }
+            else {
+                return decodeURI(results[1]) || 0;
+            }
+        };
+    }
+
+})(window)
+
+var urlParams = new URLSearchParams(window.location.search);
+
+if (location.hostname.toLowerCase() == "vdo.ninja"){
+	try {
+		if (navigator.userAgent.toLowerCase().indexOf(' electron/') > -1) { 
+			function compareVersions(version){
+			    document.getElementById("version").innerHTML = "Current version: "+version;
+				version = version.split(".");
+				fetch('https://api.github.com/repos/steveseguin/electroncapture/releases/latest')
+				  .then(response => response.json())
+				  .then(data => {
+					console.log("recentVersion: "+data.tag_name);
+					var recentVersion = data.tag_name.split(".");
+					var ood = false;
+					if (parseInt(recentVersion[0])>parseInt(version[0])){ 
+						ood = true;
+					} else if (parseInt(recentVersion[0])==parseInt(version[0])) {
+						if (parseInt(recentVersion[1])>parseInt(version[1])){
+							ood = true;
+						} else if (parseInt(recentVersion[1])==parseInt(version[1])) {
+							if (parseInt(recentVersion[2])>parseInt(version[2])){
+								ood = true;
+							} 
+						}
+					}
+					if (ood){
+						document.getElementById("electronVersion").style.display = "block";
+						document.getElementById("currentElectronVersion").innerText = data.tag_name;
+					}
+				  }).catch(console.error);
+			}
+			if (urlParams.has('version') || urlParams.has('ver')){
+				var ver = urlParams.get('version') || urlParams.get('ver') || false;
+				console.log("version: "+ver);
+				if (ver){
+					compareVersions(ver);
+				}
+			} else{
+				document.getElementById("version").innerHTML = "Elevate app privilleges to see current version";
+				try{
+					const ipcRenderer = require('electron').ipcRenderer;
+					console.log("ELECTRON DETECTED");
+					ipcRenderer.on('appVersion', function(event, version) {
+						console.log("version: "+version);
+						compareVersions(version);
+					})
+					ipcRenderer.send('getAppVersion');
+				} catch(e){}
+			}
+		}
+	} catch(e){console.error(e);}
+}
+
+var audioOutputSelect = document.querySelector('select#audioOutput');
+audioOutputSelect.disabled = !('sinkId' in HTMLMediaElement.prototype);
+audioOutputSelect.onclick = getPermssions;
+audioOutputSelect.onchange = updateOutputTarget;
+var listed = false;
+
+function updateOutputTarget(e){
+	console.log("change audio: "+audioOutputSelect.value);
+	var url = document.getElementById('changeText').value;
+	url=updateURLParameter(url, "sink", audioOutputSelect.value);
+	document.getElementById('changeText').value = url;
+}
+
+function getPermssions(e=null){
+	if (listed==true){
+		return;
+	} 
+	if (e!==null){
+		e.currentTarget.blur();
+	}
+	navigator.mediaDevices.getUserMedia({audio: true,video: false}).then((stream)=>{
+		navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(console.error); // list all devices
+		stream.getTracks().forEach(track => {
+		    track.stop();
+		});
+		listed=true;
+		audioOutputSelect.focus();
+
+	}).catch(function(err){
+		var errorMessage = "Failed to list available audio devices\n\n";
+		if (err && err.name === "NotFoundError") {
+			errorMessage += "No microphone detected. Please connect a microphone and refresh.";
+		} else if (err && err.name === "NotAllowedError") {
+			errorMessage += "Microphone permission denied. Please allow microphone access.";
+		} else if (err && err.name === "NotReadableError") {
+			errorMessage += "Microphone is in use by another application.";
+		} else {
+			errorMessage += "Please ensure you have a microphone connected and allowed permissions.";
+		}
+		document.getElementById("messageDiv").innerHTML = errorMessage;
+		document.getElementById("messageDiv").style.display="block";
+		setTimeout(function(){document.getElementById("messageDiv").style.opacity="1.0";},0);
+	});
+}
+
+function gotDevices(deviceInfos) {
+	for (let i = 0; i !== deviceInfos.length; ++i) {
+		const deviceInfo = deviceInfos[i];
+		const option = document.createElement('option');
+		option.value = deviceInfo.deviceId;
+		if (deviceInfo.kind === 'audiooutput'){
+			option.text = deviceInfo.label || `speaker ${audioOutputSelect.length + 1}`;
+			audioOutputSelect.appendChild(option);
+		} else {
+			console.log('Some other kind of source/device: ', deviceInfo);
+		}
+	}
+	listed=true;
+}
+
+function enterPressed(event, callback){
+  if (event.keyCode === 13){ // Number 13 is the "Enter" key on the keyboard
+    event.preventDefault(); // Cancel the default action, if needed
+    callback();
+  }
+}
+
+function checkForSpecialVideoDevices() {
+  if (navigator.userAgent.toLowerCase().indexOf(' electron/') > -1) {
+    navigator.mediaDevices.enumerateDevices().then(devices => {
+      const specialDevices = [
+        "OBS Virtual Camera",
+        "Streamlabs Desktop Virtual Webcam",
+        "vMix Video",
+        "Blackmagic",
+        "NDI Video"
+      ];
+
+      let detectedDevice = null;
+
+      for (const priorityDevice of specialDevices) {
+        for (const device of devices) {
+          if (device.kind === 'videoinput' && device.label.includes(priorityDevice)) {
+            detectedDevice = device;
+            break;
+          }
+        }
+        if (detectedDevice) break;
+      }
+
+      if (detectedDevice) {
+        createSpecialDeviceLink(detectedDevice.label);
+      }
+    }).catch(console.error);
+  }
+}
+
+function createSpecialDeviceLink(deviceLabel) {
+  const normalizedLabel = normalizeDeviceLabel(deviceLabel);
+  const link = document.createElement('a');
+  link.href = `./?vd=${normalizedLabel}&fullscreen&cleanoutput&webcam&autostart&push=JNVWFzC&bypass&ad=0&nohistory`;
+  link.textContent = `${deviceLabel} detected - Click to full-window it`;
+  link.style.position = 'fixed';
+  link.style.bottom = '10px';
+  link.style.left = '50%';
+  link.style.transform = 'translateX(-50%)';
+  link.style.backgroundColor = 'rgba(50, 50, 50, 0.7)';
+  link.style.color = '#e0e0e0';
+  link.style.padding = '8px 12px';
+  link.style.borderRadius = '20px';
+  link.style.fontSize = '14px';
+  link.style.textDecoration = 'none';
+  link.style.opacity = '0';
+  link.style.transition = 'opacity 2s ease-in-out';
+  link.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  link.style.fontFamily = 'Arial, sans-serif';
+  link.title = "Make this video device fully fill the window, making it perfect for screen capture.";
+
+  document.body.appendChild(link);
+  setTimeout(() => link.style.opacity = '1', 100);
+
+  // Add hover effect
+  link.onmouseenter = () => {
+    link.style.backgroundColor = 'rgba(70, 70, 70, 0.9)';
+  };
+  link.onmouseleave = () => {
+    link.style.backgroundColor = 'rgba(50, 50, 50, 0.7)';
+  };
+}
+
+function checkForAsioDevices() {
+  if (navigator.userAgent.toLowerCase().indexOf(' electron/') > -1) {
+    try {
+      // Try async first (works in sandbox mode)
+      if (window.electronApi && window.electronApi.isAsioAvailableAsync) {
+        window.electronApi.isAsioAvailableAsync().then(function(available) {
+          if (!available) return;
+          window.electronApi.getAsioDevicesAsync().then(function(asioDevices) {
+            if (asioDevices && asioDevices.length > 0) {
+              createAsioNotice(asioDevices);
+            }
+          }).catch(function(e) { console.warn("ASIO devices check failed:", e); });
+        }).catch(function(e) { console.warn("ASIO availability check failed:", e); });
+      }
+      // Fallback to sync (works when --node flag used)
+      else if (window.electronApi && window.electronApi.isAsioAvailable && window.electronApi.isAsioAvailable()) {
+        var asioDevices = window.electronApi.getAsioDevices();
+        if (asioDevices && asioDevices.length > 0) {
+          createAsioNotice(asioDevices);
+        }
+      }
+    } catch (e) {
+      console.warn("ASIO detection check failed:", e);
+    }
+  }
+}
+
+function createAsioNotice(asioDevices) {
+  var noticeText = asioDevices.length === 1
+    ? "ASIO: " + asioDevices[0].name
+    : "ASIO: " + asioDevices.length + " devices";
+
+  var notice = document.createElement('div');
+  notice.id = 'asioNotice';
+  notice.style.position = 'fixed';
+  notice.style.bottom = '45px';
+  notice.style.left = '50%';
+  notice.style.transform = 'translateX(-50%)';
+  notice.style.backgroundColor = 'rgba(0, 40, 0, 0.8)';
+  notice.style.color = '#6f6';
+  notice.style.padding = '8px 12px';
+  notice.style.borderRadius = '20px';
+  notice.style.fontSize = '14px';
+  notice.style.textDecoration = 'none';
+  notice.style.opacity = '0';
+  notice.style.transition = 'opacity 2s ease-in-out';
+  notice.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+  notice.style.fontFamily = 'Arial, sans-serif';
+  notice.title = "Professional low-latency audio input available via ASIO";
+
+  var textSpan = document.createElement('span');
+  textSpan.textContent = noticeText;
+
+  var linkSpan = document.createElement('span');
+  linkSpan.textContent = ' - ';
+
+  var link = document.createElement('a');
+  link.href = 'https://github.com/steveseguin/electroncapture#asio-audio-capture-windows-only';
+  link.target = '_blank';
+  link.textContent = 'Low-latency pro audio available';
+  link.style.color = '#0ff';
+
+  notice.appendChild(textSpan);
+  notice.appendChild(linkSpan);
+  notice.appendChild(link);
+
+  document.body.appendChild(notice);
+  setTimeout(() => notice.style.opacity = '1', 100);
+
+  console.log("ASIO devices available:", asioDevices.map(function(d) { return d.name; }));
+}
+function normalizeDeviceLabel(deviceName) {
+  return String(deviceName).replace(/[\W]+/g, "_").toLowerCase();
+}
+function getPermssions(e=null){
+  if (listed==true){
+    return;
+  } 
+  if (e!==null){
+    e.currentTarget.blur();
+  }
+  navigator.mediaDevices.getUserMedia({audio: true, video: false}).then((stream)=>{
+    navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(console.error);
+    stream.getTracks().forEach(track => {
+        track.stop();
+    });
+    listed=true;
+    audioOutputSelect.focus();
+
+  }).catch(function(err){
+    var errorMessage = "Failed to list available audio devices\n\n";
+    if (err && err.name === "NotFoundError") {
+      errorMessage += "No microphone detected. Please connect a microphone and refresh.";
+    } else if (err && err.name === "NotAllowedError") {
+      errorMessage += "Microphone permission denied. Please allow microphone access.";
+    } else if (err && err.name === "NotReadableError") {
+      errorMessage += "Microphone is in use by another application.";
+    } else {
+      errorMessage += "Please ensure you have a microphone connected and allowed permissions.";
+    }
+    document.getElementById("messageDiv").innerHTML = errorMessage;
+    document.getElementById("messageDiv").style.display="block";
+    setTimeout(function(){document.getElementById("messageDiv").style.opacity="1.0";},0);
+  });
+}
+
+function preloadCSS(url) {
+  const link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'style';
+  link.href = url;
+  document.head.appendChild(link);
+}
+
+function lazyPreloadCSS() {
+  const cssFiles = [
+    './main.css'
+  ];
+  cssFiles.forEach(preloadCSS);
+}
+
+
+
+var isMobile = false;
+if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){ // does not detect iPad Pros.
+	isMobile=true; // if iOS, default to H264?  meh.  let's not.
+} else {
+	// Near the end of your script, replace or add:
+	document.addEventListener('DOMContentLoaded', () => {
+	  getPermssions();
+	  checkForSpecialVideoDevices();
+	  checkForAsioDevices();
+	  setTimeout(lazyPreloadCSS, 2000);
+	});
+}
+// Windows can show the cursor, since it captures in a different way.
+//if (navigator.platform.indexOf("Win") != -1){
+//	document.getElementById("showcursor").checked=true;
+//}
+
+function updateURLParameter(url, param, paramVal){
+    var TheAnchor = null;
+    var newAdditionalURL = "";
+    var tempArray = url.split("?");
+    var baseURL = tempArray[0];
+    var additionalURL = tempArray[1];
+    var temp = "";
+
+    if (additionalURL){
+        var tmpAnchor = additionalURL.split("#");
+        var TheParams = tmpAnchor[0];
+            TheAnchor = tmpAnchor[1];
+        if (TheAnchor){additionalURL = TheParams;}
+
+        tempArray = additionalURL.split("&");
+
+        for (var i=0; i<tempArray.length; i++){
+            if(tempArray[i].split('=')[0] != param){
+                newAdditionalURL += temp + tempArray[i];
+                temp = "&";
+            }
+        }        
+    } else {
+        var tmpAnchor = baseURL.split("#");
+        var TheParams = tmpAnchor[0];
+            TheAnchor  = tmpAnchor[1];
+
+        if(TheParams){baseURL = TheParams;}
+    }
+
+	if (paramVal===false){
+		temp="";
+		if(TheAnchor){temp += "#" + TheAnchor;}
+		var rows_txt = temp
+	} else if  (paramVal===""){
+		if(TheAnchor){paramVal += "#" + TheAnchor;}
+		var rows_txt = temp + "" + param;
+	} else {
+		if(TheAnchor){paramVal += "#" + TheAnchor;}
+		var rows_txt = temp + "" + param + "=" + paramVal;
+	}
+    return baseURL + "?" + newAdditionalURL + rows_txt;
+}
+
+if (urlParams.has('name')){
+	var name  = urlParams.get('name');
+	if (name!="OBSNinja" && name!="VDONinja"){
+		document.getElementById('changeText').value = "https://vdo.ninja/?view="+name;
+	}
+} 
+
+function addUrlToHistory(url){
+	if (lastUrls == undefined){
+		lastUrls = [];
+	}
+	if ( lastUrls[0] != url ) {
+		lastUrls.unshift(url);
+		if (lastUrls.length == 100) {
+			lastUrls.pop();
+		}
+	}
+}
+
+function modURL(){
+	var url = document.getElementById('changeText').value;
+	url = url.trim();
+	if (url.startsWith("obs.ninja")){
+		url = "https://"+url;
+	} else if (url.startsWith("youtube.com")){
+		url = "https://"+url;
+	} else if (url.startsWith("twitch.tv")){
+		url = "https://"+url;
+	} else if (url.startsWith("vdo.ninja")){
+		url = "https://"+url;
+	} else if (url.startsWith("http://")){
+		// pass
+	} else if (url.startsWith("https://")){
+		// pass
+	} else if (url.startsWith("file:")){
+		alert("Warning:\n\nFor security purposes, local files need to be loaded via the command-line or via the right-click context menu -> Edit URL.\n\nThis is supported in Electron Capture 2.15.2 and newer.");
+	} else {
+		url = "https://"+url;
+	}
+	console.log(url);
+	return url;
+}
+function gohere(){
+	addUrlToHistory(document.getElementById('changeText').value);
+	localStorage.setItem('lastUrls', JSON.stringify(lastUrls));
+	var url = modURL();
+	if ((document.getElementById('changeText').value.includes("obs.ninja")) && (document.getElementById('changeText').value.includes("http"))  && (document.getElementById('changeText').value.includes("&sink"))){
+		alert("Notice: OBS.Ninja has been renamed to VDO.Ninja.\n\nPlease update your links accordingly for audio output to work correctly.");
+	} else if (!(document.getElementById('changeText').value.includes(window.location.hostname)) && (document.getElementById('changeText').value.includes("http"))  && (document.getElementById('changeText').value.includes("&sink"))){
+		alert("Notice: The &sink command is domain specific.\nVisit https://YOURDOMAIN.com/electron instead.");
+	}
+	window.location = url;
+};
+
+var lastUrls = JSON.parse(localStorage.getItem('lastUrls'));
+if (lastUrls != undefined) {
+    document.querySelector("#changeText").value = lastUrls[0];
+    if (lastUrls.length > 0) {
+        lastUrls.forEach((url) => {
+            var o = document.createElement('option');
+            o.value = url;
+            o.text = url;
+            document.querySelector("#lastUrls").appendChild(o);
+        });
+        // Create custom dropdown after populating
+        createCustomScrollableDropdown();
+    } else {
+        document.querySelector("#history").style.display = "none";
+    }
+} else {
+    document.querySelector("#history").style.display = "none";
+}
+getPermssions();
+</script>
+</body>
+</html>

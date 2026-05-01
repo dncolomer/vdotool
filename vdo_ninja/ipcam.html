@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="IP Camera streaming tool with secure E2EE P2P sharing via VDO.Ninja and WHIP support">
+    <title>IP Camera Stream</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            padding: 10px;
+            font-family: system-ui;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+		.preview-container {
+			flex: 1;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			position: relative;
+			overflow: hidden; /* Add this to prevent overflow */
+			min-height: 0; /* This is crucial for proper flexbox behavior */
+		}
+
+		#preview {
+			max-width: 100%;
+			max-height: 100%; /* Change from calc(100vh - 140px) to 100% */
+			object-fit: contain; /* Add this to maintain aspect ratio */
+			background: #000;
+			border-radius: 4px;
+			width: auto; /* Add this to prevent stretching */
+			height: auto; /* Add this to prevent stretching */
+		}
+
+		.stream-container {
+			flex: 1;
+			background: #2a2a2a;
+			padding: 10px;
+			border-radius: 8px;
+			display: flex;
+			flex-direction: column;
+			position: relative;
+			min-height: 0; /* Add this to prevent flex container from expanding */
+			overflow: hidden; /* Add this to prevent overflow */
+		}
+        .controls {
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .camera-url {
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #404040;
+            background: #1a1a1a;
+            color: white;
+            font-family: monospace;
+        }
+        button {
+            background: #404040;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        button:hover { 
+            background: #505050; 
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .stats {
+            position: absolute;
+            bottom: 45px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .publish-info {
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            color: white;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .modal-buttons button {
+            flex: 1;
+        }
+        .modal-buttons button.active {
+            outline: 2px solid #898989;
+        }
+        .modal-content {
+            display: none;
+        }
+        .modal-content.active {
+            display: block;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .modal input[type="text"], 
+        .modal input[type="url"], 
+        .modal input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .page-description {
+            text-align: center;
+            margin: 10px 0;
+            color: #898989;
+            font-size: 0.9em;
+            max-width: 800px;
+            margin: 0 auto 0px auto;
+			padding: 0 0 15px 0;
+			-webkit-app-region: drag;
+        }
+		.dragbar {
+			position: absolute;
+			top: 0;
+			left: 0;
+			height:50px;
+			width:100%;
+			-webkit-app-region: drag;
+		}
+        .modal h3 {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .modal .subtitle {
+            text-align: center;
+            color: #898989;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            padding: 0 20px;
+        }
+        .mode-description {
+            padding-bottom: 20px;
+            color: #a7a7a7;
+            text-align: center;
+        }
+		.view-link {
+			padding: 8px;
+			border-radius: 4px;
+			border: 1px solid #404040;
+			background: #1a1a1a;
+			color: white;
+			font-family: monospace;
+			width: 100%;
+		}
+		.view-link-container {
+			display: none;
+			margin-top: 5px;
+		}
+		.electron-banner {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			background: rgba(0, 0, 0, 0.85);
+			color: white;
+			padding: 12px;
+			display: none;
+			justify-content: space-between;
+			align-items: center;
+			z-index: 900;
+			backdrop-filter: blur(5px);
+			font-size: 14px;
+		}
+
+		.electron-banner a {
+			color: #4a9eff;
+			text-decoration: none;
+		}
+
+		.electron-banner a:hover {
+			text-decoration: underline;
+		}
+
+		.electron-banner-close {
+			background: none;
+			border: none;
+			color: #999;
+			cursor: pointer;
+			padding: 0 8px;
+			font-size: 20px;
+		}
+
+		.electron-banner-close:hover {
+			color: white;
+		}
+    </style>
+</head>
+<body>
+    <div class="page-description">
+        This tool allows you to stream IP camera feeds (MJPEG) to various streaming platforms. 
+        Configure your publishing settings first, then enter your camera's URL to begin streaming.
+    </div>
+	<div class="dragbar"></div>
+    
+    <div class="stream-container">
+		<div id="publishInfo" class="publish-info" style="display: none;">
+			<div id="publishInfoText"></div>
+			<div class="view-link-container" style="display: none;">
+				<input type="text" id="viewLink" readonly class="view-link">
+				<button onclick="copyViewLink()" class="copy-button">Copy</button>
+			</div>
+		</div>
+        <div class="controls">
+            <input type="url" class="camera-url" id="cameraUrl" placeholder="Enter MJPEG stream URL (e.g., http://192.168.0.100/api/stream/live?cam)">
+            <button id="previewStream">Preview</button>
+            <button id="publishStream" style="display: none;">Publish</button>
+            <button id="stopStream" disabled>Stop</button>
+            <button id="configurePublishing">Configure Publishing</button>
+        </div>
+        <div class="preview-container">
+            <img id="preview" alt="IP Camera Stream">
+            <div class="stats">
+                FPS: <span id="fpsCounter">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay">
+        <div class="modal">
+            <h3>Publishing Configuration</h3>
+            <div class="subtitle">
+                Configure how you want to publish your IP camera feed.
+            </div>
+            <div class="modal-buttons">
+                <button onclick="showMode('vdo')" title="Peer-to-peer encrypted streaming via VDO.Ninja">VDO.Ninja</button>
+                <button onclick="showMode('whip')" title="Stream to any WHIP-compatible service">WHIP</button>
+                <button onclick="showMode('twitch')" title="Stream directly to Twitch">Twitch</button>
+                <button onclick="showMode('preview')" title="Local preview only - no streaming">Preview</button>
+            </div>
+            <div class="mode-description" id="modeDescription"></div>
+            
+            <div class="modal-content" id="vdo-content">
+                <div class="input-group">
+                    <label>Stream ID (optional)</label>
+                    <input type="text" id="pushId" placeholder="Leave empty for auto-generated ID">
+                </div>
+                <div class="input-group">
+                    <label>Room Name (optional if Stream ID provided)</label>
+                    <input type="text" id="roomName">
+                </div>
+                <div class="input-group">
+                    <label>Password (optional)</label>
+                    <input type="password" id="password">
+                </div>
+                <button onclick="handleVDO()">Save Configuration</button>
+            </div>
+            
+            <div class="modal-content" id="twitch-content">
+                <div class="input-group">
+                    <label>Twitch Stream Token</label>
+                    <input type="password" id="twitchToken" required>
+                </div>
+                <button onclick="handleTwitch()">Save Configuration</button>
+            </div>
+            
+            <div class="modal-content" id="whip-content">
+                <div class="input-group">
+                    <label>WHIP URL</label>
+                    <input type="url" id="whipUrl" required>
+                </div>
+                <div class="input-group">
+                    <label>WHIP Token</label>
+                    <input type="password" id="whipToken">
+                </div>
+                <button onclick="handleWhip()">Save Configuration</button>
+            </div>
+            
+            <div class="modal-content" id="preview-content">
+                <p>Preview mode - no publishing. Click Save to continue.</p>
+                <button onclick="handlePreview()">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+	<div class="electron-banner">
+		<div>
+			For best compatibility with IP camera streams, we recommend using 
+			<a href="https://electroncapture.app" target="_blank">ElectronCapture</a> 
+			(available for Windows, Mac, and Linux).
+		</div>
+		<button class="electron-banner-close" onclick="dismissBanner()">×</button>
+	</div>
+    <script>
+		let streamActive = false;
+		let frameCount = 0;
+		let lastFrameTime = Date.now();
+		let frameInterval;
+		let publishConfig = null;
+		let isPublishing = false;
+		let currentBuffer = '';
+		let currentStreamId = null;
+		let buffer = '';
+		let boundary = null;
+		let useMediaTrackProcessor = false;
+
+
+        const preview = document.getElementById('preview');
+        const fpsCounter = document.getElementById('fpsCounter');
+        const previewStreamBtn = document.getElementById('previewStream');
+        const publishStreamBtn = document.getElementById('publishStream');
+        const stopStreamBtn = document.getElementById('stopStream');
+        const configurePublishingBtn = document.getElementById('configurePublishing');
+        const cameraUrl = document.getElementById('cameraUrl');
+        const publishInfo = document.getElementById('publishInfo');
+
+		function updatePublishInfo() {
+			if (!publishConfig) {
+				publishInfo.style.display = 'none';
+				return;
+			}
+
+			let info = '';
+			switch (publishConfig.mode) {
+				case 'vdo':
+					info = `Publishing to VDO.Ninja - ${publishConfig.push ? 'Stream ID: ' + publishConfig.push : 'Room: ' + publishConfig.room}`;
+					document.querySelector('.view-link-container').style.display = 'flex';
+					break;
+				case 'whip':
+					info = `Publishing to WHIP endpoint: ${publishConfig.whipUrl}`;
+					document.querySelector('.view-link-container').style.display = 'none';
+					break;
+				case 'twitch':
+					info = 'Publishing to Twitch';
+					document.querySelector('.view-link-container').style.display = 'none';
+					break;
+				case 'preview':
+					info = 'Preview mode - no publishing';
+					document.querySelector('.view-link-container').style.display = 'none';
+					break;
+			}
+			document.getElementById('publishInfoText').textContent = info;
+			publishInfo.style.display = 'block';
+		}
+
+        function updateUIState() {
+            const isPreviewMode = publishConfig?.mode === 'preview';
+            publishStreamBtn.style.display = isPreviewMode ? 'none' : 'inline-block';
+            previewStreamBtn.disabled = streamActive;
+            publishStreamBtn.disabled = !streamActive || isPublishing;
+            stopStreamBtn.disabled = !streamActive;
+            configurePublishingBtn.disabled = streamActive;
+            cameraUrl.disabled = streamActive;
+        }
+
+        function updateFPS() {
+            const currentTime = Date.now();
+            const elapsed = (currentTime - lastFrameTime) / 1000;
+            const fps = Math.round(frameCount / elapsed);
+            fpsCounter.textContent = fps;
+            frameCount = 0;
+            lastFrameTime = currentTime;
+        }
+
+        function createAndAppendIframe(url) {
+            const iframe = document.createElement('iframe');
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = 'none';
+            iframe.src = url;
+            document.body.appendChild(iframe);
+            return iframe;
+        }
+
+        function startPublishing() {
+			if (!publishConfig || isPublishing) return;
+			
+			// Always start with HTTPS for VDO.Ninja URLs
+			let iframeUrl;
+			// For VDO and WHIP modes, ensure we're using HTTPS
+			iframeUrl = new URL('https://vdo.ninja');
+			// Preserve the path from the current URL
+			let pathParts = location.pathname.split('/').filter(Boolean);
+			pathParts.pop();
+			iframeUrl.pathname = (pathParts.length ? '/' + pathParts.join('/') : '') + '/';
+
+			switch (publishConfig.mode) {
+				case 'vdo':
+					iframeUrl.searchParams.set('push', publishConfig.push);
+					if (publishConfig.room) iframeUrl.searchParams.set('room', publishConfig.room);
+					if (publishConfig.password) iframeUrl.searchParams.set('password', publishConfig.password);
+					break;
+				case 'whip':
+					iframeUrl.searchParams.set('whippush', publishConfig.whipUrl);
+					iframeUrl.searchParams.set('push', '');
+					if (publishConfig.whipToken) iframeUrl.searchParams.set('whippushtoken', publishConfig.whipToken);
+					break;
+				case 'twitch':
+					iframeUrl.searchParams.set('whippush', 'https://twitch.vdo.ninja');
+					iframeUrl.searchParams.set('push', '');
+					iframeUrl.searchParams.set('token', publishConfig.twitchToken);
+					break;
+				default:
+					return;
+			}
+
+			iframeUrl.searchParams.set('framegrab', '');
+			iframeUrl.searchParams.set('view', '');
+
+			window.publishingIframe = createAndAppendIframe(iframeUrl.toString());
+			isPublishing = true;
+			updateUIState();
+		}
+		
+		async function processStream(response, isElectron = false) {
+		  if (!response.ok) {
+			throw new Error('Stream initialization failed');
+		  }
+		  
+		  const boundary = isElectron ? response.boundary : extractBoundary(response.headers.get('content-type'));
+		  if (!boundary) {
+			throw new Error('No boundary found in content-type header');
+		  }
+
+		  if (isElectron) {
+			currentStreamId = response.streamId;
+			await processElectronStream(response);
+		  } else {
+			await processRegularStream(response, boundary);
+		  }
+		}
+		
+		function extractBoundary(contentType) {
+		  const match = contentType?.match(/boundary=([^;]+)/i);
+		  return match ? match[1] : null;
+		}
+
+		function findBoundary(buffer, boundaryBytes, startPos) {
+		  for (let i = startPos; i < buffer.length - boundaryBytes.length; i++) {
+			if (buffer[i] === boundaryBytes[0]) {
+			  let found = true;
+			  for (let j = 1; j < boundaryBytes.length; j++) {
+				if (buffer[i + j] !== boundaryBytes[j]) {
+				  found = false;
+				  break;
+				}
+			  }
+			  if (found) return i;
+			}
+		  }
+		  return -1;
+		}
+		
+		function processFrame(frameData) {
+		  let jpegStart = -1;
+		  for (let i = 0; i < frameData.length - 4; i++) {
+			if (frameData[i] === 0xFF && frameData[i + 1] === 0xD8) {
+			  jpegStart = i;
+			  break;
+			}
+		  }
+
+		  if (jpegStart !== -1) {
+			const jpegData = frameData.slice(jpegStart);
+			const base64Data = arrayBufferToBase64(jpegData);
+			const dataUrl = `data:image/jpeg;base64,${base64Data}`;
+			
+			preview.src = dataUrl;
+			frameCount++;
+			
+			if (isPublishing && window.publishingIframe) {
+			  window.publishingIframe.contentWindow.postMessage({
+				type: 'canvas-frame',
+				frame: dataUrl
+			  }, '*');
+			}
+		  }
+		}
+
+		async function processRegularStream(response, boundary) {
+		  const reader = response.body.getReader();
+		  let buffer = new Uint8Array(0);
+		  const boundaryBytes = new TextEncoder().encode(boundary);
+
+		  while (streamActive) {
+			try {
+			  const {done, value} = await reader.read();
+			  if (done) break;
+
+			  if (value) {
+				const newBuffer = new Uint8Array(buffer.length + value.length);
+				newBuffer.set(buffer);
+				newBuffer.set(value, buffer.length);
+				buffer = newBuffer;
+
+				let frameStart = 0;
+				while (true) {
+				  const boundaryPos = findBoundary(buffer, boundaryBytes, frameStart);
+				  if (boundaryPos === -1) {
+					if (buffer.length > boundaryBytes.length) {
+					  buffer = buffer.slice(buffer.length - boundaryBytes.length);
+					}
+					break;
+				  }
+
+				  const nextBoundary = findBoundary(buffer, boundaryBytes, boundaryPos + boundaryBytes.length);
+				  if (nextBoundary === -1) break;
+
+				  const frameData = buffer.slice(boundaryPos, nextBoundary);
+				  processFrame(frameData);
+				  
+				  buffer = buffer.slice(nextBoundary);
+				  frameStart = boundaryBytes.length;
+				}
+			  }
+			} catch (error) {
+			  console.error('Error processing stream:', error);
+			  break;
+			}
+		  }
+		}
+		
+		function arrayBufferToBase64(buffer) {
+		  const chunks = [];
+		  const chunkSize = 32768;
+		  for (let i = 0; i < buffer.length; i += chunkSize) {
+			chunks.push(String.fromCharCode.apply(null, 
+			  buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
+			));
+		  }
+		  return btoa(chunks.join(''));
+		}
+
+		async function processElectronStream(response) {
+		  let buffer = new Uint8Array(0);
+		  const boundaryBytes = new TextEncoder().encode(response.boundary);
+		  
+		  while (streamActive) {
+			try {
+			  const result = await window.electronApi.readStreamChunk(currentStreamId);
+			  if (result.done) break;
+
+			  if (result.value) {
+				const newData = new Uint8Array(result.value);
+				const newBuffer = new Uint8Array(buffer.length + newData.length);
+				newBuffer.set(buffer);
+				newBuffer.set(newData, buffer.length);
+				buffer = newBuffer;
+
+				let frameStart = 0;
+				while (true) {
+				  let boundaryPos = findBoundary(buffer, boundaryBytes, frameStart);
+				  if (boundaryPos === -1) {
+					if (buffer.length > boundaryBytes.length) {
+					  buffer = buffer.slice(buffer.length - boundaryBytes.length);
+					}
+					break;
+				  }
+
+				  const nextBoundary = findBoundary(buffer, boundaryBytes, boundaryPos + boundaryBytes.length);
+				  if (nextBoundary === -1) break;
+
+				  const frameData = buffer.slice(boundaryPos, nextBoundary);
+				  let jpegStart = -1;
+				  for (let i = 0; i < frameData.length - 4; i++) {
+					if (frameData[i] === 0xFF && frameData[i + 1] === 0xD8) {
+					  jpegStart = i;
+					  break;
+					}
+				  }
+
+				  if (jpegStart !== -1) {
+					const jpegData = frameData.slice(jpegStart);
+					const base64Data = arrayBufferToBase64(jpegData);
+					const dataUrl = `data:image/jpeg;base64,${base64Data}`;
+					
+					preview.src = dataUrl;
+					frameCount++;
+					
+					if (isPublishing && window.publishingIframe) {
+					  window.publishingIframe.contentWindow.postMessage({
+						type: 'canvas-frame',
+						frame: dataUrl
+					  }, '*');
+					}
+				  }
+
+				  buffer = buffer.slice(nextBoundary);
+				  frameStart = boundaryBytes.length;
+				}
+			  }
+			} catch (error) {
+			  console.error('Error processing stream:', error);
+			  break;
+			}
+		  }
+
+		  if (currentStreamId) {
+			await window.electronApi.closeStream(currentStreamId);
+			currentStreamId = null;
+		  }
+		}
+
+		async function startStreaming() {
+		  if (streamActive) return;
+
+		  const url = cameraUrl.value;
+		  if (!url) {
+			alert('Please enter a camera URL');
+			return;
+		  }
+
+		  streamActive = true;
+		  frameInterval = setInterval(updateFPS, 1000);
+		  updateUIState();
+
+		  try {
+			if (window.electronApi?.noCORSFetch) {
+			  const electronResponse = await window.electronApi.noCORSFetch({
+				url,
+				method: 'GET',
+				headers: {
+				  'Accept': 'multipart/x-mixed-replace'
+				}
+			  });
+			  bannerDismissed = true;
+			  checkElectronBanner();
+			  await processStream(electronResponse, true);
+			  return;
+			}
+
+			const response = await fetch(url, {
+			  method: 'GET',
+			  headers: {
+				'Accept': 'multipart/x-mixed-replace'
+			  }
+			});
+			bannerDismissed = true;
+			checkElectronBanner();
+			await processStream(response, false);
+		  } catch (error) {
+			const isSecureContext = window.isSecureContext;
+			const isHttps = url.toLowerCase().startsWith('https://');
+			
+			if (!isHttps && isSecureContext) {
+			  if (location.href.includes("vdo.ninja")) {
+				let insecure = "http://insecure.vdo.ninja" + location.pathname;
+				alert('Mixed Content Error:\n\nStream URL must use HTTPS when accessing from a secure page\n\nTry via '+insecure+' instead.');
+			  } else {
+				alert('Mixed Content Error:\n\nStream URL must use HTTPS when accessing from a secure page\n\nTry via ElectronCapture. Please download from:\nhttps://electroncapture.app');
+			  }
+			  return;
+			}
+			
+			if (error instanceof TypeError && error.message === 'Failed to fetch') {
+			  alert('Failed to connect to stream. If this is a CORS or mixed content issue, try using ElectronCapture: https://electroncapture.app');
+			  return;
+			}
+			
+			console.error('Stream error:', error);
+			alert('Failed to connect to stream. Please check the URL and try again.');
+		  } finally {
+			stopStreaming();
+		  }
+		}
+
+		function stopStreaming() {
+		  streamActive = false;
+		  isPublishing = false;
+		  clearInterval(frameInterval);
+		  fpsCounter.textContent = '0';
+		  
+		  if (currentStreamId) {
+			window.electronApi.closeStream(currentStreamId)
+			  .catch(console.error)
+			  .finally(() => {
+				currentStreamId = null;
+			  });
+		  }
+		  
+		  if (window.publishingIframe) {
+			window.publishingIframe.remove();
+			window.publishingIframe = null;
+		  }
+		  
+		  updateUIState();
+		}
+
+        function showMode(mode) {
+            document.querySelectorAll('.modal-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.modal-buttons button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`${mode}-content`).classList.add('active');
+            document.querySelector(`button[onclick="showMode('${mode}')"]`).classList.add('active');
+            
+            const descriptions = {
+                'vdo': 'Stream securely peer-to-peer using VDO.Ninja',
+                'whip': 'Stream to any WHIP-compatible service',
+                'twitch': 'Stream directly to your Twitch channel',
+                'preview': 'Local preview mode - no streaming'
+            };
+            document.getElementById('modeDescription').textContent = descriptions[mode];
+        }
+
+        function generatePushId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            return Array.from({length: 8}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+        }
+
+        function handleTwitch() {
+            const twitchToken = document.getElementById('twitchToken').value;
+            if (!twitchToken) {
+                alert('Twitch Stream Token is required');
+                return;
+            }
+            
+            publishConfig = {
+                mode: 'twitch',
+                twitchToken
+            };
+            
+            localStorage.setItem('lastTwitchToken', twitchToken);
+            localStorage.setItem('lastMode', 'twitch');
+            
+            document.querySelector('.modal-overlay').style.display = 'none';
+            updatePublishInfo();
+            updateUIState();
+        }
+
+		function handleVDO() {
+			const push = document.getElementById('pushId').value || generatePushId();
+			const room = document.getElementById('roomName').value;
+			const password = document.getElementById('password').value;
+			
+			if (!push && !room) {
+				alert('Either Stream ID or Room Name is required');
+				return;
+			}
+			
+			publishConfig = {
+				mode: 'vdo',
+				push,
+				room,
+				password
+			};
+
+			const viewUrl = new URL("https://vdo.ninja");
+			if (push) viewUrl.searchParams.set("view", push);
+			if (room) viewUrl.searchParams.set("room", room);
+			if (publishConfig.push && publishConfig.room) viewUrl.searchParams.set("solo", "");
+			if (password) viewUrl.searchParams.set("password", password);
+			viewUrl.searchParams.set("sharperscreen", "");
+			
+			document.getElementById('viewLink').value = viewUrl.toString();
+			document.querySelector('.view-link-container').style.display = 'flex';
+
+			localStorage.setItem('lastMode', 'vdo');
+			localStorage.setItem('lastVdoPush', push);
+			localStorage.setItem('lastVdoRoom', room);
+			
+			document.querySelector('.modal-overlay').style.display = 'none';
+			updatePublishInfo();
+			updateUIState();
+		}
+
+		function copyViewLink() {
+			const viewLink = document.getElementById('viewLink');
+			if (window.innerWidth <= 1600) {
+				const tempInput = document.createElement('input');
+				tempInput.value = viewLink.value;
+				document.body.appendChild(tempInput);
+				tempInput.select();
+				document.execCommand('copy');
+				document.body.removeChild(tempInput);
+			} else {
+				viewLink.select();
+				document.execCommand('copy');
+			}
+		}
+
+        function handleWhip() {
+            const whipUrl = document.getElementById('whipUrl').value;
+            const whipToken = document.getElementById('whipToken').value;
+            
+            if (!whipUrl) {
+                alert('WHIP URL is required');
+                return;
+            }
+            
+            publishConfig = {
+                mode: 'whip',
+                whipUrl,
+                whipToken
+            };
+            
+            localStorage.setItem('lastMode', 'whip');
+            localStorage.setItem('lastWhipUrl', whipUrl);
+            if (whipToken) localStorage.setItem('lastWhipToken', whipToken);
+            
+            document.querySelector('.modal-overlay').style.display = 'none';
+            updatePublishInfo();
+            updateUIState();
+        }
+
+        function handlePreview() {
+            publishConfig = {
+                mode: 'preview'
+            };
+            
+            localStorage.setItem('lastMode', 'preview');
+            document.querySelector('.modal-overlay').style.display = 'none';
+            updatePublishInfo();
+            updateUIState();
+        }
+
+        // Event Listeners
+        previewStreamBtn.addEventListener('click', startStreaming);
+        publishStreamBtn.addEventListener('click', startPublishing);
+        stopStreamBtn.addEventListener('click', stopStreaming);
+        configurePublishingBtn.addEventListener('click', () => {
+            document.querySelector('.modal-overlay').style.display = 'flex';
+        });
+
+        // Handle window unload
+        window.addEventListener('unload', stopStreaming);
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            // Load saved credentials
+            const lastMode = localStorage.getItem('lastMode') || 'preview';
+            const lastWhipUrl = localStorage.getItem('lastWhipUrl');
+            const lastWhipToken = localStorage.getItem('lastWhipToken');
+            const lastTwitchToken = localStorage.getItem('lastTwitchToken');
+            const lastVdoPush = localStorage.getItem('lastVdoPush');
+            const lastVdoRoom = localStorage.getItem('lastVdoRoom');
+            
+            if (lastWhipUrl) document.getElementById('whipUrl').value = lastWhipUrl;
+            if (lastWhipToken) document.getElementById('whipToken').value = lastWhipToken;
+            if (lastTwitchToken) document.getElementById('twitchToken').value = lastTwitchToken;
+            if (lastVdoPush) document.getElementById('pushId').value = lastVdoPush;
+            if (lastVdoRoom) document.getElementById('roomName').value = lastVdoRoom;
+            
+            // Show configuration modal if no config exists
+            if (!publishConfig) {
+                document.querySelector('.modal-overlay').style.display = 'flex';
+                showMode(lastMode);
+            }
+            
+            // Parse URL parameters if present
+            if (window.location.search) {
+                const params = new URLSearchParams(window.location.search);
+                const cameraSource = params.get('camera') || params.get('source') || params.get('url');
+                
+                if (cameraSource) {
+                    cameraUrl.value = decodeURIComponent(cameraSource);
+                }
+            }
+            
+            updateUIState();
+			checkElectronBanner();
+        });
+		
+		let bannerDismissed = false;
+
+		function checkElectronBanner() {
+			const banner = document.querySelector('.electron-banner');
+			const hasElectronApi = window.electronApi && window.electronApi.noCORSFetch;
+			
+			if (!bannerDismissed && !hasElectronApi && !streamActive) {
+				banner.style.display = 'flex';
+			} else {
+				banner.style.display = 'none';
+			}
+		}
+
+		function dismissBanner() {
+			bannerDismissed = true;
+			document.querySelector('.electron-banner').style.display = 'none';
+		}
+    </script>
+</body>
+</html>

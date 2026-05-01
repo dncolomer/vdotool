@@ -1,0 +1,31 @@
+{
+  "name": "VDO.Ninja",
+  "short_name": "VDO.Ninja",
+  "description": "Bring live video from your smartphone, computer, or friends directly into your Studio. 100% free.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff",
+  "theme_color": "#1a1a1a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "media/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any monochrome"
+    },
+    {
+      "src": "media/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any monochrome"
+    },
+    {
+      "src": "media/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any monochrome"
+    }
+  ]
+}

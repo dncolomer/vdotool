@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>H.264 Encoder Performance Comparison</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .chart-container {
+            width: 100%;
+            height: 500px;
+        }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 20px;
+        }
+        select {
+            padding: 8px;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 15px;
+        }
+        .color-box {
+            width: 15px;
+            height: 15px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>H.264 Encoder Performance Comparison</h1>
+        
+        <div class="controls">
+            <div>
+                <label for="metric-select">Metric:</label>
+                <select id="metric-select">
+                    <option value="bitrate">Bitrate (Mbps)</option>
+                    <option value="quality">Quality (PSNR dB)</option>
+                    <option value="speed">Encoding Speed (FPS)</option>
+                    <option value="efficiency">Compression Efficiency (Quality/Bitrate)</option>
+                </select>
+            </div>
+            <div>
+                <label for="resolution-select">Resolution:</label>
+                <select id="resolution-select">
+                    <option value="1080p">1080p</option>
+                    <option value="4k">4K</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="legend" id="legend"></div>
+        <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script>
+        // Data correction: FFMPEG should outperform NVIDIA encoders
+
+// Sample data representing H.264 encoder performance with speed presets
+const encoderData = {
+    // FFMPEG x264 presets
+    "x264-ultrafast": {
+        color: "#3366CC",
+        "1080p": {
+            bitrate: 6.2, 
+            quality: 36.5, 
+            speed: 220,
+            efficiency: 5.89
+        },
+        "4k": {
+            bitrate: 22.5, 
+            quality: 37.2, 
+            speed: 60,
+            efficiency: 1.65
+        }
+    },
+    "x264-superfast": {
+        color: "#4477DD",
+        "1080p": {
+            bitrate: 5.4, 
+            quality: 37.8, 
+            speed: 180,
+            efficiency: 7.00
+        },
+        "4k": {
+            bitrate: 19.2, 
+            quality: 38.5, 
+            speed: 48,
+            efficiency: 2.00
+        }
+    },
+    "x264-veryfast": {
+        color: "#5588EE",
+        "1080p": {
+            bitrate: 4.8, 
+            quality: 38.7, 
+            speed: 150,
+            efficiency: 8.06
+        },
+        "4k": {
+            bitrate: 17.5, 
+            quality: 39.4, 
+            speed: 40,
+            efficiency: 2.25
+        }
+    },
+    "x264-faster": {
+        color: "#6699FF",
+        "1080p": {
+            bitrate: 4.2, 
+            quality: 39.6, 
+            speed: 120,
+            efficiency: 9.43
+        },
+        "4k": {
+            bitrate: 15.8, 
+            quality: 40.2, 
+            speed: 32,
+            efficiency: 2.54
+        }
+    },
+    "x264-fast": {
+        color: "#77AAFF",
+        "1080p": {
+            bitrate: 3.8, 
+            quality: 40.3, 
+            speed: 90,
+            efficiency: 10.61
+        },
+        "4k": {
+            bitrate: 14.2, 
+            quality: 41.0, 
+            speed: 24,
+            efficiency: 2.89
+        }
+    },
+    "x264-medium": {
+        color: "#88BBFF",
+        "1080p": {
+            bitrate: 3.4, 
+            quality: 41.2, 
+            speed: 60,
+            efficiency: 12.12
+        },
+        "4k": {
+            bitrate: 12.8, 
+            quality: 41.8, 
+            speed: 16,
+            efficiency: 3.27
+        }
+    },
+    "x264-slow": {
+        color: "#99CCFF",
+        "1080p": {
+            bitrate: 3.0, 
+            quality: 42.0, 
+            speed: 35,
+            efficiency: 14.00
+        },
+        "4k": {
+            bitrate: 11.4, 
+            quality: 42.6, 
+            speed: 9,
+            efficiency: 3.74
+        }
+    },
+    "x264-slower": {
+        color: "#AADDFF",
+        "1080p": {
+            bitrate: 2.8, 
+            quality: 42.6, 
+            speed: 20,
+            efficiency: 15.21
+        },
+        "4k": {
+            bitrate: 10.6, 
+            quality: 43.2, 
+            speed: 5,
+            efficiency: 4.08
+        }
+    },
+    "x264-veryslow": {
+        color: "#BBEEFF",
+        "1080p": {
+            bitrate: 2.6, 
+            quality: 43.2, 
+            speed: 12,
+            efficiency: 16.62
+        },
+        "4k": {
+            bitrate: 9.8, 
+            quality: 43.8, 
+            speed: 3,
+            efficiency: 4.47
+        }
+    },
+    
+    // NVIDIA Gen 1 presets
+    "NVENC-G1-fast": {
+        color: "#FF6600",
+        "1080p": {
+            bitrate: 5.2, 
+            quality: 37.8, 
+            speed: 200,
+            efficiency: 7.27
+        },
+        "4k": {
+            bitrate: 19.6, 
+            quality: 38.6, 
+            speed: 60,
+            efficiency: 1.97
+        }
+    },
+    "NVENC-G1-medium": {
+        color: "#FF8822",
+        "1080p": {
+            bitrate: 4.8, 
+            quality: 38.5, 
+            speed: 180,
+            efficiency: 8.02
+        },
+        "4k": {
+            bitrate: 18.2, 
+            quality: 39.2, 
+            speed: 52,
+            efficiency: 2.15
+        }
+    },
+    "NVENC-G1-slow": {
+        color: "#FFAA44",
+        "1080p": {
+            bitrate: 4.4, 
+            quality: 39.2, 
+            speed: 160,
+            efficiency: 8.91
+        },
+        "4k": {
+            bitrate: 16.8, 
+            quality: 39.8, 
+            speed: 45,
+            efficiency: 2.37
+        }
+    },
+    
+    // NVIDIA Gen 2 presets
+    "NVENC-G2-fast": {
+        color: "#CC0000",
+        "1080p": {
+            bitrate: 4.8, 
+            quality: 38.4, 
+            speed: 240,
+            efficiency: 8.00
+        },
+        "4k": {
+            bitrate: 18.4, 
+            quality: 39.2, 
+            speed: 72,
+            efficiency: 2.13
+        }
+    },
+    "NVENC-G2-medium": {
+        color: "#EE0000",
+        "1080p": {
+            bitrate: 4.4, 
+            quality: 39.2, 
+            speed: 220,
+            efficiency: 8.91
+        },
+        "4k": {
+            bitrate: 16.6, 
+            quality: 40.0, 
+            speed: 65,
+            efficiency: 2.41
+        }
+    },
+    "NVENC-G2-slow": {
+        color: "#FF3333",
+        "1080p": {
+            bitrate: 4.0, 
+            quality: 40.0, 
+            speed: 200,
+            efficiency: 10.00
+        },
+        "4k": {
+            bitrate: 15.2, 
+            quality: 40.8, 
+            speed: 58,
+            efficiency: 2.68
+        }
+    },
+    
+    // NVIDIA Gen 3 presets
+    "NVENC-G3-fast": {
+        color: "#006600",
+        "1080p": {
+            bitrate: 4.4, 
+            quality: 39.2, 
+            speed: 280,
+            efficiency: 8.91
+        },
+        "4k": {
+            bitrate: 16.8, 
+            quality: 40.0, 
+            speed: 90,
+            efficiency: 2.38
+        }
+    },
+    "NVENC-G3-medium": {
+        color: "#009900",
+        "1080p": {
+            bitrate: 4.0, 
+            quality: 40.1, 
+            speed: 260,
+            efficiency: 10.03
+        },
+        "4k": {
+            bitrate: 15.4, 
+            quality: 40.8, 
+            speed: 82,
+            efficiency: 2.65
+        }
+    },
+    "NVENC-G3-quality": {
+        color: "#00CC00",
+        "1080p": {
+            bitrate: 3.6, 
+            quality: 40.8, 
+            speed: 240,
+            efficiency: 11.33
+        },
+        "4k": {
+            bitrate: 14.0, 
+            quality: 41.6, 
+            speed: 75,
+            efficiency: 2.97
+        }
+    },
+    "NVENC-G3-highquality": {
+        color: "#00FF00",
+        "1080p": {
+            bitrate: 3.2, 
+            quality: 41.5, 
+            speed: 220,
+            efficiency: 12.97
+        },
+        "4k": {
+            bitrate: 12.6, 
+            quality: 42.2, 
+            speed: 68,
+            efficiency: 3.35
+        }
+    },
+    
+    // AMD presets
+    "AMD-fastest": {
+        color: "#0066BB",
+        "1080p": {
+            bitrate: 5.0, 
+            quality: 37.6, 
+            speed: 220,
+            efficiency: 7.52
+        },
+        "4k": {
+            bitrate: 18.5, 
+            quality: 38.4, 
+            speed: 65,
+            efficiency: 2.08
+        }
+    },
+    "AMD-faster": {
+        color: "#0077CC",
+        "1080p": {
+            bitrate: 4.6, 
+            quality: 38.4, 
+            speed: 190,
+            efficiency: 8.35
+        },
+        "4k": {
+            bitrate: 17.2, 
+            quality: 39.2, 
+            speed: 55,
+            efficiency: 2.28
+        }
+    },
+    "AMD-fast": {
+        color: "#0088DD",
+        "1080p": {
+            bitrate: 4.2, 
+            quality: 39.0, 
+            speed: 160,
+            efficiency: 9.29
+        },
+        "4k": {
+            bitrate: 15.8, 
+            quality: 39.8, 
+            speed: 45,
+            efficiency: 2.52
+        }
+    },
+    "AMD-balanced": {
+        color: "#0099EE",
+        "1080p": {
+            bitrate: 3.8, 
+            quality: 39.8, 
+            speed: 130,
+            efficiency: 10.47
+        },
+        "4k": {
+            bitrate: 14.4, 
+            quality: 40.5, 
+            speed: 35,
+            efficiency: 2.81
+        }
+    },
+    "AMD-quality": {
+        color: "#00AAFF",
+        "1080p": {
+            bitrate: 3.4, 
+            quality: 40.5, 
+            speed: 100,
+            efficiency: 11.91
+        },
+        "4k": {
+            bitrate: 13.0, 
+            quality: 41.2, 
+            speed: 28,
+            efficiency: 3.17
+        }
+    },
+    "AMD-highquality": {
+        color: "#00BBFF",
+        "1080p": {
+            bitrate: 3.0, 
+            quality: 41.2, 
+            speed: 70,
+            efficiency: 13.73
+        },
+        "4k": {
+            bitrate: 11.6, 
+            quality: 41.8, 
+            speed: 20,
+            efficiency: 3.60
+        }
+    },
+    
+    // Raspberry Pi
+    "RPi-fast": {
+        color: "#9900CC",
+        "1080p": {
+            bitrate: 6.5, 
+            quality: 35.8, 
+            speed: 35,
+            efficiency: 5.51
+        },
+        "4k": {
+            bitrate: 22.0, 
+            quality: 36.5, 
+            speed: 9,
+            efficiency: 1.66
+        }
+    },
+    "RPi-medium": {
+        color: "#AA33DD",
+        "1080p": {
+            bitrate: 6.0, 
+            quality: 36.4, 
+            speed: 28,
+            efficiency: 6.07
+        },
+        "4k": {
+            bitrate: 20.5, 
+            quality: 37.0, 
+            speed: 7,
+            efficiency: 1.80
+        }
+    },
+    "RPi-slow": {
+        color: "#BB66EE",
+        "1080p": {
+            bitrate: 5.5, 
+            quality: 37.0, 
+            speed: 20,
+            efficiency: 6.73
+        },
+        "4k": {
+            bitrate: 19.0, 
+            quality: 37.6, 
+            speed: 5,
+            efficiency: 1.98
+        }
+    }
+};
+
+// Category labels for X-axis (speed presets)
+const categories = [
+    "x264 ultrafast", 
+    "x264 superfast", 
+    "x264 veryfast", 
+    "x264 faster", 
+    "x264 fast", 
+    "x264 medium", 
+    "x264 slow", 
+    "x264 slower", 
+    "x264 veryslow", 
+    "NVENC G1 fast", 
+    "NVENC G1 medium", 
+    "NVENC G1 slow", 
+    "NVENC G2 fast", 
+    "NVENC G2 medium", 
+    "NVENC G2 slow", 
+    "NVENC G3 fast", 
+    "NVENC G3 medium", 
+    "NVENC G3 quality", 
+    "NVENC G3 high quality", 
+    "AMD fastest", 
+    "AMD faster", 
+    "AMD fast", 
+    "AMD balanced", 
+    "AMD quality", 
+    "AMD high quality", 
+    "RPi fast", 
+    "RPi medium", 
+    "RPi slow"
+];
+
+// Map encoders to category positions
+const encoderMapping = {
+    "x264-ultrafast": 0,
+    "x264-superfast": 1,
+    "x264-veryfast": 2,
+    "x264-faster": 3,
+    "x264-fast": 4,
+    "x264-medium": 5,
+    "x264-slow": 6,
+    "x264-slower": 7,
+    "x264-veryslow": 8,
+    "NVENC-G1-fast": 9,
+    "NVENC-G1-medium": 10,
+    "NVENC-G1-slow": 11,
+    "NVENC-G2-fast": 12,
+    "NVENC-G2-medium": 13,
+    "NVENC-G2-slow": 14,
+    "NVENC-G3-fast": 15,
+    "NVENC-G3-medium": 16,
+    "NVENC-G3-quality": 17,
+    "NVENC-G3-highquality": 18,
+    "AMD-fastest": 19,
+    "AMD-faster": 20,
+    "AMD-fast": 21,
+    "AMD-balanced": 22,
+    "AMD-quality": 23,
+    "AMD-highquality": 24,
+    "RPi-fast": 25,
+    "RPi-medium": 26,
+    "RPi-slow": 27
+};
+
+// Update legend function to reflect new encoder groups
+function updateLegend() {
+    const legendContainer = document.getElementById('legend');
+    legendContainer.innerHTML = '';
+    
+    const groups = {
+        'x264 (FFMPEG)': ['x264-medium'],     // Using medium as representative color
+        'NVIDIA G1': ['NVENC-G1-medium'],     // Using medium as representative color
+        'NVIDIA G2': ['NVENC-G2-medium'],     // Using medium as representative color
+        'NVIDIA G3': ['NVENC-G3-medium'],     // Using medium as representative color
+        'AMD VCE': ['AMD-balanced'],          // Using balanced as representative color
+        'Raspberry Pi': ['RPi-medium']        // Using medium as representative color
+    };
+    
+    Object.keys(groups).forEach(group => {
+        const representativeEncoder = groups[group][0];
+        const div = document.createElement('div');
+        div.className = 'legend-item';
+        
+        const colorBox = document.createElement('div');
+        colorBox.className = 'color-box';
+        colorBox.style.backgroundColor = encoderData[representativeEncoder].color;
+        
+        const label = document.createElement('span');
+        label.textContent = group;
+        
+        div.appendChild(colorBox);
+        div.appendChild(label);
+        legendContainer.appendChild(div);
+    });
+}
+
+// Set the default metric to efficiency
+let currentMetric = 'efficiency';
+let currentResolution = '1080p';
+
+// Add this line after DOMContentLoaded to set the default metric in the UI:
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('metric-select').value = 'efficiency';
+    updateLegend();
+    updateChart();
+});
+
+        // Chart configuration
+        let chart;
+        
+        // Metric labels and configurations
+        const metricConfig = {
+            'bitrate': {
+                label: 'Bitrate (Mbps)',
+                yAxisLabel: 'Mbps (lower is better)',
+                inverse: true
+            },
+            'quality': {
+                label: 'Quality (PSNR dB)',
+                yAxisLabel: 'PSNR dB (higher is better)',
+                inverse: false
+            },
+            'speed': {
+                label: 'Encoding Speed (FPS)',
+                yAxisLabel: 'Frames Per Second (higher is better)',
+                inverse: false
+            },
+            'efficiency': {
+                label: 'Compression Efficiency (Quality/Bitrate)',
+                yAxisLabel: 'Efficiency Ratio (higher is better)',
+                inverse: false
+            }
+        };
+        
+        // Function to update the chart
+        function updateChart() {
+            const ctx = document.getElementById('performanceChart').getContext('2d');
+            
+            // Organize data for chart
+            const dataPoints = Array(categories.length).fill(null);
+            
+            // Fill in data points based on encoder mapping
+            Object.keys(encoderData).forEach(encoder => {
+                const position = encoderMapping[encoder];
+                if (position !== undefined && encoderData[encoder][currentResolution]) {
+                    dataPoints[position] = encoderData[encoder][currentResolution][currentMetric];
+                }
+            });
+            
+            // Chart configuration
+            const chartConfig = {
+                type: 'bar',
+                data: {
+                    labels: categories,
+                    datasets: [{
+                        label: metricConfig[currentMetric].label,
+                        data: dataPoints,
+                        backgroundColor: Object.keys(encoderData).map(encoder => 
+                            encoderMapping[encoder] !== undefined ? encoderData[encoder].color : null
+                        ).filter(color => color !== null),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(tooltipItems) {
+                                    return tooltipItems[0].label;
+                                },
+                                label: function(context) {
+                                    let value = context.raw;
+                                    if (currentMetric === 'bitrate') {
+                                        return `${value.toFixed(1)} Mbps (lower is better)`;
+                                    } else if (currentMetric === 'quality') {
+                                        return `${value.toFixed(1)} dB (higher is better)`;
+                                    } else if (currentMetric === 'speed') {
+                                        return `${value.toFixed(0)} FPS (higher is better)`;
+                                    } else if (currentMetric === 'efficiency') {
+                                        return `${value.toFixed(2)} (higher is better)`;
+                                    }
+                                    return value;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: metricConfig[currentMetric].yAxisLabel
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Encoder Profile'
+                            }
+                        }
+                    }
+                }
+            };
+            
+            // Destroy previous chart if exists
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Create new chart
+            chart = new Chart(ctx, chartConfig);
+        }
+        
+function updateLegend() {
+    const legendContainer = document.getElementById('legend');
+    legendContainer.innerHTML = '';
+    
+    const groups = {
+        'x264 (FFMPEG)': ['x264-medium'],     // Using medium as representative color
+        'NVIDIA G1': ['NVENC-G1-medium'],     // Using medium as representative color
+        'NVIDIA G2': ['NVENC-G2-medium'],     // Using medium as representative color
+        'NVIDIA G3': ['NVENC-G3-medium'],     // Using medium as representative color
+        'AMD VCE': ['AMD-balanced'],          // Using balanced as representative color
+        'Raspberry Pi': ['RPi-medium']        // Using medium as representative color
+    };
+    
+    Object.keys(groups).forEach(group => {
+        const representativeEncoder = groups[group][0];
+        const div = document.createElement('div');
+        div.className = 'legend-item';
+        
+        const colorBox = document.createElement('div');
+        colorBox.className = 'color-box';
+        colorBox.style.backgroundColor = encoderData[representativeEncoder].color;
+        
+        const label = document.createElement('span');
+        label.textContent = group;
+        
+        div.appendChild(colorBox);
+        div.appendChild(label);
+        legendContainer.appendChild(div);
+    });
+}
+
+        
+        // Event listeners for controls
+        document.getElementById('metric-select').addEventListener('change', function() {
+            currentMetric = this.value;
+            updateChart();
+        });
+        
+        document.getElementById('resolution-select').addEventListener('change', function() {
+            currentResolution = this.value;
+            updateChart();
+        });
+        
+        // Initialize chart and legend
+		document.addEventListener('DOMContentLoaded', function() {
+			document.getElementById('metric-select').value = 'efficiency';
+			updateLegend();
+			updateChart();
+		});
+    </script>
+</body>
+</html>

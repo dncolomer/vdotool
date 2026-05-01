@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Controller Visualizer</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #controls {
+            margin: 20px;
+            padding: 10px;
+            background: #333;
+            border-radius: 5px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        select, button {
+            padding: 5px;
+            background: #444;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 3px;
+        }
+        button {
+            padding: 5px 10px;
+            background: #4CAF50;
+            border: none;
+            cursor: pointer;
+        }
+		.tooltip {
+			position: relative;
+			display: inline-block;
+		}
+
+		.tooltip:hover::after {
+			content: attr(data-tooltip);
+			position: absolute;
+			bottom: 100%;
+			left: 50%;
+			transform: translateX(-50%);
+			padding: 5px 10px;
+			background: rgba(0, 0, 0, 0.8);
+			color: white;
+			border-radius: 4px;
+			font-size: 12px;
+			white-space: nowrap;
+			z-index: 1000;
+		}
+
+        button:hover { background: #45a049; }
+        #gamepad { width: 600px; height: 400px; }
+        .button { transition: fill 0.1s ease; }
+        .button.pressed { fill: #4CAF50; }
+        .stick { transition: transform 0.1s ease; }
+        #deviceLog {
+            width: 80%;
+            max-height: 200px;
+            overflow-y: auto;
+            background: #333;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .controller-xbox, .controller-ps { display: none; }
+        .controller-xbox.active, .controller-ps.active { display: block; }
+        #mappingSelect { margin-left: 10px; }
+        
+        .device-section {
+            background: #444;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        
+        .device-section h3 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #aaa;
+        }
+        
+        .device-section.empty {
+            color: #888;
+            font-style: italic;
+        }
+        
+        .device-option {
+            padding: 5px;
+            margin: 2px 0;
+            background: #555;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .device-option:hover {
+            background: #666;
+        }
+        
+        .device-option.active {
+            background: #4CAF50;
+        }
+		
+		.device-option {
+			position: relative;
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.status-indicator {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			margin-left: 8px;
+			background: #666;
+			transition: background-color 0.3s ease;
+		}
+
+		.status-indicator.connected {
+			background: #4CAF50;
+		}
+
+		.status-indicator.disconnected {
+			background: #f44336;
+		}
+
+		.device-info {
+			font-size: 12px;
+			color: #888;
+			margin-left: 8px;
+		}
+
+		.pulse {
+			animation: pulse 2s infinite;
+		}
+
+		@keyframes pulse {
+			0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+			70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+			100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+		}
+		.empty small {
+			display: block;
+			margin-top: 4px;
+			color: #666;
+		}
+		
+		.controller-xbox, .controller-playstation {
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.3s ease;
+			position: absolute;
+		}
+
+		.controller-xbox.active, .controller-playstation.active {
+			opacity: 1;
+			pointer-events: auto;
+		}
+    </style>
+</head>
+<body>
+	<div id="controls">
+		<div id="deviceList">
+			<div id="gamepadSection" class="device-section">
+				<h3>Game Controllers</h3>
+				<div id="gamepadDevices">
+					<div class="empty">
+						<div>No gamepads detected</div>
+						<small>Connect an Xbox, PlayStation, or other gamepad and press any button.</small>
+					</div>
+				</div>
+			</div>
+			<div id="hidSection" class="device-section">
+				<h3>Other USB Devices</h3>
+				<div id="hidDevices">
+					<div class="empty">
+						<div>No other devices connected</div>
+						<small>Click "Connect Device" to add USB game controllers.</small>
+					</div>
+				</div>
+			</div>
+		</div>
+		<select id="mappingSelect" style="display: none;">
+			<option value="">Select controller type</option>
+			<option value="Xbox">Xbox Controller</option>
+			<option value="PlayStation">PlayStation Controller</option>
+		</select>
+		<button id="connectHID" class="tooltip" data-tooltip="Connect a USB game controller">Connect Device</button>
+		<button id="disconnectDevice" class="tooltip" data-tooltip="Disconnect selected device" style="display: none;">Disconnect</button>
+	</div>
+    <div id="deviceLog"></div>
+	 <svg id="gamepad" viewBox="0 0 800 500">
+		<g class="controller-xbox active">
+			<path d="M150 100 Q 300 150, 400 100 T 650 100 C 730 100, 730 250, 730 300 C 730 400, 700 450, 650 450 C 600 450, 450 480, 400 480 C 350 480, 200 450, 150 450 C 100 450, 70 400, 70 300 C 70 250, 70 100, 150 100 Z" fill="#333" stroke="#444" stroke-width="2" class="draggable"/>
+			
+			<path d="M 150 100 C 70 100, 40 130, 40 200 C 40 300, 70 350, 150 400" fill="#333" stroke="#222" stroke-width="3" class="draggable"/>
+
+			<path d="M 650 100 C 730 100, 760 130, 760 200 C 760 300, 730 350, 650 400" fill="#333" stroke="#222" stroke-width="3" class="draggable"/>
+
+			<g id="xbox-dpad" transform="translate(250,330)">
+				<path id="dpad-disc" d="M -50 -50 L -50 50 L 50 50 L 50 -50 Z" fill="none" class="draggable"/> 
+				<path d="M -30 -10 L -10 -10 L -10 -30 L 10 -30 L 10 -10 L 30 -10 L 30 10 L 10 10 L 10 30 L -10 30 L -10 10 L -30 10 Z" fill="#222" stroke="#111" stroke-width="2" class="draggable"/>
+				<rect id="dpad-up" class="button draggable" x="-15" y="-45" width="30" height="20" rx="3" fill="none" stroke="none"/>
+				<rect id="dpad-down" class="button draggable" x="-15" y="25" width="30" height="20" rx="3" fill="none" stroke="none"/>
+				<rect id="dpad-left" class="button draggable" x="-45" y="-15" width="20" height="30" rx="3" fill="none" stroke="none"/>
+				<rect id="dpad-right" class="button draggable" x="25" y="-15" width="20" height="30" rx="3" fill="none" stroke="none"/>
+			</g>
+
+			<g id="xbox-face" transform="translate(550,240)">
+				<circle id="button-a" class="button draggable" cx="0" cy="60" r="25" fill="#0a0" stroke="#070" stroke-width="2"/>
+				<circle id="button-b" class="button draggable" cx="60" cy="0" r="25" fill="#a00" stroke="#700" stroke-width="2"/>
+				<circle id="button-x" class="button draggable" cx="-60" cy="0" r="25" fill="#00a" stroke="#007" stroke-width="2"/>
+				<circle id="button-y" class="button draggable" cx="0" cy="-60" r="25" fill="#aa0" stroke="#770" stroke-width="2"/>
+				<text x="0" y="67" fill="#fff" text-anchor="middle" font-size="22" font-weight="bold" font-family="Arial" class="draggable">A</text>
+				<text x="60" y="7" fill="#fff" text-anchor="middle" font-size="22" font-weight="bold" font-family="Arial" class="draggable">B</text>
+				<text x="-60" y="7" fill="#fff" text-anchor="middle" font-size="22" font-weight="bold" font-family="Arial" class="draggable">X</text>
+				<text x="0" y="-53" fill="#fff" text-anchor="middle" font-size="22" font-weight="bold" font-family="Arial" class="draggable">Y</text>
+			</g>
+
+			<circle cx="148.6431121826172" cy="231.15162658691406" r="40" fill="#222" stroke="#111" stroke-width="2" class="draggable"/>
+			<circle cx="441.5507507324219" cy="328.3466491699219" r="40" fill="#222" stroke="#111" stroke-width="2" class="draggable"/>
+
+			<g id="xbox-sticks">
+				<circle id="stick-left" class="stick draggable" cx="149.55532836914062" cy="232.06381225585938" r="30" fill="#666" stroke="#444" stroke-width="3"/>
+				<circle id="stick-right" class="stick draggable" cx="442.46295166015625" cy="329.25885009765625" r="30" fill="#666" stroke="#444" stroke-width="3"/>
+			</g>
+
+			<g id="xbox-shoulders">
+				<rect id="button-lb" class="button draggable" x="95.26795959472656" y="90.06841278076172" width="100" height="25" rx="5" ry="15" fill="#444" stroke="#222" stroke-width="2"/>
+				<rect id="button-rb" class="button draggable" x="571.892822265625" y="81.85861206054688" width="100" height="25" rx="5" ry="15" fill="#444" stroke="#222" stroke-width="2"/>
+			</g>
+			
+			<circle cx="349.8289794921875" cy="183.11287689208984" r="25" fill="#107c10" stroke="#fff" stroke-width="3" class="draggable"/>
+			<text x="348.00457763671875" y="193.84947967529297" fill="#fff" text-anchor="middle" font-size="32" font-weight="bold" font-family="Arial" class="draggable">X</text>
+		</g>
+		<g class="controller-playstation">
+			<!-- PS Base -->
+			<path d="M150 100 C150 50, 650 50, 650 100 L650 400 C650 450, 150 450, 150 400 Z" fill="#333" stroke="#444" stroke-width="2" class="draggable"/>
+			
+			<!-- D-pad -->
+			<g id="ps-dpad" transform="translate(230,220)">
+				<!-- Keep the existing paths but update positions to match Xbox layout -->
+				<path id="ps-dpad-up" class="button draggable" d="M-15 -45 L15 -45 L15 -25 L-15 -25 Z" fill="#666"/>
+				<path id="ps-dpad-right" class="button draggable" d="M25 -15 L45 -15 L45 15 L25 15 Z" fill="#666"/>
+				<path id="ps-dpad-down" class="button draggable" d="M-15 25 L15 25 L15 45 L-15 45 Z" fill="#666"/>
+				<path id="ps-dpad-left" class="button draggable" d="M-45 -15 L-25 -15 L-25 15 L-45 15 Z" fill="#666"/>
+			</g>
+
+			<!-- Face buttons -->
+			<g id="ps-face" transform="translate(540,230)">
+				<!-- Update circle positions to match Xbox spacing -->
+				<circle id="ps-cross" class="button draggable" cx="0" cy="60" r="25" fill="#666"/>
+				<circle id="ps-circle" class="button draggable" cx="60" cy="0" r="25" fill="#666"/>
+				<circle id="ps-square" class="button draggable" cx="-60" cy="0" r="25" fill="#666"/>
+				<circle id="ps-triangle" class="button draggable" cx="0" cy="-60" r="25" fill="#666"/>
+				<!-- Update symbol positions to match new circle positions -->
+				<path d="M-8 60 L8 60 M0 52 L0 68" stroke="#444" stroke-width="3" class="draggable"/>
+				<circle cx="60" cy="0" r="15" stroke="#444" stroke-width="3" fill="none" class="draggable"/>
+				<rect x="-70" y="-10" width="20" height="20" stroke="#444" stroke-width="3" fill="none" class="draggable"/>
+				<path d="M0 -68 L-8 -52 L8 -52 Z" fill="#444" class="draggable"/>
+			</g>
+
+			<!-- Sticks base rings -->
+			<circle cx="297.3318176269531" cy="348.8255157470703" r="40" fill="#444" stroke="#555" stroke-width="2" class="draggable"/>
+			<circle cx="462.5313720703125" cy="356.6248779296875" r="40" fill="#444" stroke="#555" stroke-width="2" class="draggable"/>
+			
+			<!-- Sticks -->
+			<g id="ps-sticks">
+				<circle id="ps-stick-left" class="stick draggable" cx="297.3318176269531" cy="348.82554626464844" r="30" fill="#888"/>
+				<circle id="ps-stick-right" class="stick draggable" cx="460.70697021484375" cy="357.53704833984375" r="30" fill="#888"/>
+			</g>
+
+			<!-- Shoulder buttons -->
+			<g id="ps-shoulders">
+				<rect id="ps-l1" class="button draggable" x="200" y="50" width="80" height="30" rx="15" fill="#666"/>
+				<rect id="ps-r1" class="button draggable" x="520" y="50" width="80" height="30" rx="15" fill="#666"/>
+			</g>
+		</g>
+	</svg>
+    <script>
+        const deviceSelect = document.getElementById('deviceSelect');
+        const connectButton = document.getElementById('connectHID');
+        const disconnectButton = document.getElementById('disconnectDevice');
+        const deviceLog = document.getElementById('deviceLog');
+        let animationFrame;
+        const devices = new Map();
+        let lastState = new Uint8Array();
+		let selectedDeviceId = null;
+		
+		const mappingSelect = document.getElementById('mappingSelect');
+        let currentMapping = null;
+
+
+        function logDevice(message) {
+            const line = document.createElement('div');
+            line.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            deviceLog.insertBefore(line, deviceLog.firstChild);
+            if (deviceLog.children.length > 50) deviceLog.lastChild.remove();
+        }
+		
+		function updateDeviceOption(deviceId, deviceInfo) {
+			const deviceEl = document.createElement('div');
+			deviceEl.className = 'device-option';
+			
+			const contentWrapper = document.createElement('div');
+			contentWrapper.style.flex = 1;
+			
+			const nameEl = document.createElement('div');
+			nameEl.textContent = deviceId;
+			contentWrapper.appendChild(nameEl);
+			
+			if (deviceInfo.detectedType) {
+				const typeEl = document.createElement('div');
+				typeEl.className = 'device-info';
+				typeEl.textContent = `Type: ${deviceInfo.detectedType}`;
+				contentWrapper.appendChild(typeEl);
+			}
+			
+			deviceEl.appendChild(contentWrapper);
+			
+			const indicator = document.createElement('div');
+			indicator.className = 'status-indicator';
+			if (deviceInfo.type === 'gamepad') {
+				const gamepad = navigator.getGamepads()[deviceInfo.device.index];
+				indicator.classList.toggle('connected', gamepad && gamepad.connected);
+			} else {
+				indicator.classList.toggle('connected', deviceInfo.device.opened);
+			}
+			deviceEl.appendChild(indicator);
+			
+			deviceEl.onclick = () => selectDevice(deviceId);
+			return deviceEl;
+		}
+
+        function handleHIDInput(e) {
+            const data = new Uint8Array(e.data.buffer);
+            if (lastState.length) {
+                for (let i = 0; i < data.length; i++) {
+                    if (data[i] !== lastState[i]) {
+                        logDevice(`Device ${e.device.productName} Button ${i + 1} ${data[i] ? "Pressed" : "Released"}`);
+                        
+                        const buttonMap = {
+                            0: 'button-x',
+                            1: 'button-y',
+                            2: 'button-b',
+                            3: 'button-a',
+                            4: 'dpad-up',
+                            5: 'dpad-right',
+                            6: 'dpad-down',
+                            7: 'dpad-left'
+                        };
+
+                        const elementId = buttonMap[i];
+                        if (elementId) {
+                            const element = document.getElementById(elementId);
+                            if (element) {
+                                element.classList.toggle('pressed', Boolean(data[i]));
+                            }
+                        }
+                    }
+                }
+            }
+            lastState = data;
+        }
+
+        async function setupHIDDevice(device) {
+            try {
+                if (!device.opened) {
+                    await device.open();
+                }
+                
+                addDevice(device.productName, device, 'hid');
+                device.addEventListener("inputreport", handleHIDInput);
+                
+                logDevice(`Connected to ${device.productName}`);
+                disconnectButton.style.display = 'inline-block';
+            } catch (error) {
+                logDevice(`Error setting up device: ${error.message}`);
+            }
+        }
+
+        connectButton.onclick = async () => {
+            try {
+                const devices = await navigator.hid.requestDevice({
+                    filters: [] // Let Chrome show all HID devices
+                });
+                
+                for (const device of devices) {
+                    await setupHIDDevice(device);
+                }
+            } catch (error) {
+                logDevice(`Error connecting device: ${error.message}`);
+            }
+        };
+
+        const controllerMappings = {
+            'Xbox': {
+                type: 'gamepad',
+                buttons: {
+                    0: 'button-a',
+                    1: 'button-b',
+                    2: 'button-x',
+                    3: 'button-y',
+                    4: 'button-lb',
+                    5: 'button-rb',
+                    12: 'dpad-up',
+                    13: 'dpad-down',
+                    14: 'dpad-left',
+                    15: 'dpad-right'
+                },
+                sticks: {
+                    leftX: 0,
+                    leftY: 1,
+                    rightX: 2,
+                    rightY: 3
+                },
+                detect: (id) => /xbox|xinput/i.test(id)
+            },
+            'PlayStation': {
+                type: 'gamepad',
+                buttons: {
+                    0: 'ps-cross',
+                    1: 'ps-circle',
+                    2: 'ps-square',
+                    3: 'ps-triangle',
+                    4: 'ps-l1',
+                    5: 'ps-r1',
+                    12: 'ps-dpad-up',
+                    13: 'ps-dpad-down',
+                    14: 'ps-dpad-left',
+                    15: 'ps-dpad-right'
+                },
+                sticks: {
+                    leftX: 0,
+                    leftY: 1,
+                    rightX: 2,
+                    rightY: 3
+                },
+                detect: (id) => /playstation|ps4|ps5|dualshock|dualsense/i.test(id)
+            }
+        };
+		
+		function setControllerType(type) {
+			const xboxController = document.querySelector('.controller-xbox');
+			const psController = document.querySelector('.controller-playstation');
+			
+			if (!xboxController || !psController) return;
+			
+			xboxController.classList.remove('active');
+			psController.classList.remove('active');
+			
+			if (type) {
+				if (type.toLowerCase() === 'xbox') {
+					xboxController.classList.add('active');
+				} else if (type.toLowerCase() === 'playstation') {
+					psController.classList.add('active');
+				}
+				currentMapping = controllerMappings[type];
+				mappingSelect.value = type;
+			}
+		}
+		
+        function detectControllerType(id) {
+            for (const [type, mapping] of Object.entries(controllerMappings)) {
+                if (mapping.detect(id)) return type;
+            }
+            return null;
+        }
+
+		function addDevice(id, device, type) {
+			const detectedType = detectControllerType(id);
+			devices.set(id, { device, type, detectedType });
+			
+			const gamepadDevices = document.getElementById('gamepadDevices');
+			const hidDevices = document.getElementById('hidDevices');
+			
+			gamepadDevices.innerHTML = '';
+			hidDevices.innerHTML = '';
+			
+			let hasGamepads = false;
+			let hasHID = false;
+			
+			// Sort and group devices
+			const deviceArray = Array.from(devices.entries()).sort((a, b) => {
+				if (a[1].type !== b[1].type) return a[1].type === 'gamepad' ? -1 : 1;
+				if (!!a[1].detectedType !== !!b[1].detectedType) return a[1].detectedType ? -1 : 1;
+				return a[0].localeCompare(b[0]);
+			});
+			
+			deviceArray.forEach(([deviceId, deviceInfo]) => {
+				const deviceEl = updateDeviceOption(deviceId, deviceInfo);
+				
+				if (deviceInfo.type === 'gamepad') {
+					hasGamepads = true;
+					gamepadDevices.appendChild(deviceEl);
+				} else {
+					hasHID = true;
+					hidDevices.appendChild(deviceEl);
+				}
+			});
+			
+			// Update empty states
+			if (!hasGamepads) {
+				gamepadDevices.innerHTML = `
+					<div class="empty">
+						No gamepads detected. Connect a controller and press any button.
+						<br><small>Supports Xbox, PlayStation, and other standard gamepads.</small>
+					</div>`;
+			}
+			if (!hasHID) {
+				hidDevices.innerHTML = `
+					<div class="empty">
+						No other devices connected. 
+						<br><small>Click "Connect Device" to add USB game controllers.</small>
+					</div>`;
+			}
+			
+			if (!selectedDeviceId && deviceArray.length > 0) {
+				const firstGamepad = deviceArray.find(([_, info]) => info.type === 'gamepad');
+				if (firstGamepad) selectDevice(firstGamepad[0]);
+			}
+			
+			updateConnectButton();
+		}
+		
+		function updateButtonVisuals(elementId, isPressed, value = 1) {
+			const element = document.getElementById(elementId);
+			if (!element) return;
+			
+			element.classList.toggle('pressed', isPressed);
+			if (isPressed) {
+				// Add visual pressure feedback
+				const intensity = Math.min(value * 255, 255);
+				element.style.fill = `rgb(${76 + intensity * 0.2}, ${175 + intensity * 0.1}, ${80 + intensity * 0.1})`;
+			} else {
+				element.style.fill = '#666';
+			}
+		}
+		
+		function updateConnectButton() {
+			const hasDevices = devices.size > 0;
+			const anyHIDDevices = Array.from(devices.values()).some(d => d.type === 'hid');
+			
+			connectButton.classList.toggle('pulse', !hasDevices);
+			connectButton.textContent = hasDevices ? 'Add Device' : 'Connect Device';
+			
+			if (anyHIDDevices) {
+				disconnectButton.style.display = 'inline-block';
+			} else {
+				disconnectButton.style.display = 'none';
+			}
+		}
+		
+		function selectDevice(deviceId) {
+			const deviceInfo = devices.get(deviceId);
+			if (!deviceInfo) return;
+
+			selectedDeviceId = deviceId;
+
+			// Update UI
+			document.querySelectorAll('.device-option').forEach(el => 
+				el.classList.toggle('active', el.textContent === deviceId)
+			);
+			
+			if (deviceInfo.detectedType) {
+				setControllerType(deviceInfo.detectedType);
+				mappingSelect.style.display = 'none';
+			} else {
+				mappingSelect.style.display = 'inline-block';
+			}
+			
+			startPolling();
+		}
+
+		function removeDevice(id) {
+			devices.delete(id);
+			
+			if (selectedDeviceId === id) {
+				selectedDeviceId = null;
+				stopPolling();
+			}
+		}
+
+        window.addEventListener('gamepadconnected', (e) => {
+            logDevice(`Gamepad connected: ${e.gamepad.id}`);
+            addDevice(e.gamepad.id, e.gamepad, 'gamepad');
+        });
+
+        window.addEventListener('gamepaddisconnected', (e) => {
+            logDevice(`Gamepad disconnected: ${e.gamepad.id}`);
+            removeDevice(e.gamepad.id);
+        });
+
+		disconnectButton.onclick = async () => {
+			const deviceInfo = devices.get(selectedDeviceId);
+			if (deviceInfo && deviceInfo.type === 'hid') {
+				await deviceInfo.device.close();
+				removeDevice(selectedDeviceId);
+				disconnectButton.style.display = 'none';
+				logDevice(`Disconnected ${selectedDeviceId}`);
+			}
+		};
+
+        function startPolling() {
+            if (!animationFrame) {
+                animationFrame = requestAnimationFrame(updateVisuals);
+            }
+        }
+
+        function stopPolling() {
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+            }
+            resetVisuals();
+        }
+
+		function updateVisuals() {
+			const deviceInfo = devices.get(selectedDeviceId);
+			
+			if (deviceInfo && deviceInfo.type === 'gamepad') {
+				updateGamepadVisuals(deviceInfo.device);
+			}
+			
+			animationFrame = requestAnimationFrame(updateVisuals);
+		}
+		
+		mappingSelect.addEventListener('change', () => {
+            if (mappingSelect.value) {
+                setControllerType(mappingSelect.value);
+            }
+        });
+		
+		function updateGamepadVisuals(gamepadId) {
+			const gamepad = navigator.getGamepads()[gamepadId.index];
+			if (!gamepad || !currentMapping) return;
+
+			gamepad.buttons.forEach((button, index) => {
+				const elementId = currentMapping.buttons[index];
+				if (elementId) {
+					updateButtonVisuals(elementId, button.pressed, button.value);
+				}
+			});
+
+            const stickIds = currentMapping === controllerMappings['PlayStation'] ? 
+                ['ps-stick-left', 'ps-stick-right'] : 
+                ['stick-left', 'stick-right'];
+
+            updateStick(stickIds[0], 
+                gamepad.axes[currentMapping.sticks.leftX], 
+                gamepad.axes[currentMapping.sticks.leftY]
+            );
+            updateStick(stickIds[1], 
+                gamepad.axes[currentMapping.sticks.rightX], 
+                gamepad.axes[currentMapping.sticks.rightY]
+            );
+        }
+
+        function updateStick(stickId, x, y) {
+            const stick = document.getElementById(stickId);
+            const maxOffset = 20;
+            const transformX = x * maxOffset;
+            const transformY = y * maxOffset;
+            stick.style.transform = `translate(${transformX}px, ${transformY}px)`;
+        }
+
+        function resetVisuals() {
+            document.querySelectorAll('.button').forEach(button => {
+                button.classList.remove('pressed');
+            });
+            document.querySelectorAll('.stick').forEach(stick => {
+                stick.style.transform = 'translate(0, 0)';
+            });
+        }
+
+        // Check for any already-connected HID devices
+        async function initializeHID() {
+            const devices = await navigator.hid.getDevices();
+            devices.forEach(device => {
+                logDevice(`Found HID: ${device.productName}`);
+                if (device.opened) {
+                    setupHIDDevice(device);
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeHID);
+    </script>
+</body>
+</html>

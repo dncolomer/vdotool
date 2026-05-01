@@ -1,0 +1,151 @@
+name: vdotool
+version: 0.3.0
+description: >-
+  Live two-way WebRTC session tool for Hermes. Pairs a forked VDO.Ninja
+  with a Hermes plugin so the agent can see, hear, and talk to a remote
+  device (typically the user's phone) over a bidirectional WebRTC room.
+  Generic: use it for anything where Hermes benefits from live human-
+  in-the-loop context — cooking, tutoring, workouts, assembly, DIY
+  help, remote expert walkthroughs, live transcription, etc. The
+  plugin auto-starts everything (HTTPS server, frame writer sidecar,
+  headless Chromium viewer, background frame-watcher thread) on first
+  use so ``hermes chat`` is all the operator needs to run.
+author: vdotool contributors
+homepage: https://github.com/dncolomer/vdotool
+provides_tools:
+  - vdotool_start
+  - vdotool_get_latest_frame
+  - vdotool_watch
+  - vdotool_end
+  - vdotool_status
+  - vdotool_spawn_viewer
+  - vdotool_start_watcher
+  - vdotool_say
+provides_hooks:
+  - pre_llm_call
+requires_env:
+  # ── Auto-filled by the stack when autostart is on ───────────────────
+  - name: VDOTOOL_FRAMES_DIR
+    description: >-
+      Directory root shared with the VDO.Ninja fork writer. Each active
+      vdocall gets a <session_id>/ subdirectory here with frames,
+      audio_out/, and audio_in/.
+    secret: false
+  - name: VDOTOOL_VDO_BASE_URL
+    description: >-
+      Public base URL of the forked VDO.Ninja instance. Used to build
+      the push/view links handed to the user.
+    secret: false
+
+  # ── Auto-started stack ─────────────────────────────────────────────
+  - name: VDOTOOL_AUTOSTART_STACK
+    description: >-
+      Optional. Default "1" = plugin auto-starts the LAN HTTPS server
+      and frame writer subprocess on first use. Set to "0" if you run
+      scripts/serve_lan_https.py yourself.
+    secret: false
+  - name: VDOTOOL_WRITER_HOST
+    description: Optional. Host the writer sidecar binds on. Default 127.0.0.1.
+    secret: false
+  - name: VDOTOOL_WRITER_PORT
+    description: Optional. Port the writer sidecar binds on. Default 8765.
+    secret: false
+
+  # ── Viewer (headless Chromium) ─────────────────────────────────────
+  - name: VDOTOOL_CHROME_BIN
+    description: >-
+      Optional. Path to a Chromium/Chrome executable. If unset, the
+      plugin searches PATH for google-chrome, chromium,
+      chromium-browser, chrome.
+    secret: false
+  - name: VDOTOOL_VIEWER_DATA_DIR
+    description: >-
+      Optional. Root directory for per-session Chromium user-data-dirs
+      and viewer logs. Defaults to $TMPDIR/vdotool-viewers.
+    secret: false
+  - name: VDOTOOL_AUTO_SPAWN_VIEWER
+    description: >-
+      Optional. Set to "0" to disable auto-spawning the headless
+      viewer on vdotool_start. Defaults to on.
+    secret: false
+
+  # ── Watcher tuning ─────────────────────────────────────────────────
+  - name: VDOTOOL_INJECT_INTERVAL_SECONDS
+    description: >-
+      Optional. Minimum seconds between consecutive watcher injections
+      for ok-quality frames. Lower = more responsive, more LLM spend.
+      Default 10.0, minimum 2.0. Scene-change events bypass the throttle.
+    secret: false
+  - name: VDOTOOL_POLL_INTERVAL_SECONDS
+    description: Optional. Watcher disk-poll rate. Default 1.0, minimum 0.25.
+    secret: false
+  - name: VDOTOOL_BLANK_REMINDER_SECONDS
+    description: >-
+      Optional. Minimum seconds between repeated 'camera feed is blank'
+      reminders. Default 45.0.
+    secret: false
+
+  # ── Frame-quality thresholds ───────────────────────────────────────
+  - name: VDOTOOL_BLANK_BYTES_THRESHOLD
+    description: >-
+      Optional. JPEG byte-size below which a frame is classified as
+      'blank'. Default 8000.
+    secret: false
+  - name: VDOTOOL_LOW_DETAIL_BYTES_THRESHOLD
+    description: >-
+      Optional. JPEG byte-size below which a frame is 'low_detail'.
+      Default 15000.
+    secret: false
+  - name: VDOTOOL_MAX_FRAME_BYTES
+    description: >-
+      Optional. Hard cap on a single inbound frame upload. Default 4 MB.
+    secret: false
+  - name: VDOTOOL_KEEP_FRAMES_MIN
+    description: >-
+      Optional. Writer prunes frames older than this many minutes on
+      each write. Default 10.
+    secret: false
+
+  # ── Vision analysis ────────────────────────────────────────────────
+  - name: VDOTOOL_VISION_ANALYZE
+    description: >-
+      Optional. Set to "0" to disable the auxiliary vision analysis
+      inside vdotool_get_latest_frame. Defaults to on.
+    secret: false
+  - name: VDOTOOL_VISION_TIMEOUT
+    description: >-
+      Optional. Auxiliary vision analyzer timeout (seconds). Default 60.
+    secret: false
+
+  # ── TTS (agent speaks to phone) ────────────────────────────────────
+  - name: VDOTOOL_TTS_ENABLED
+    description: Optional. Master switch for vdotool_say. Default "1".
+    secret: false
+  - name: VDOTOOL_TTS_MAX_CHARS
+    description: >-
+      Optional. Truncate each single vdotool_say call to at most this
+      many characters. Default 800.
+    secret: false
+  - name: VDOTOOL_TTS_MAX_CHARS_PER_MIN
+    description: >-
+      Optional. Rolling 60-second per-session cap on total characters
+      synthesized. Default 10000.
+    secret: false
+
+  # ── STT (phone mic -> transcript) ──────────────────────────────────
+  - name: VDOTOOL_STT_ENABLED
+    description: >-
+      Optional. Master switch for the STT pipeline. Default "1".
+    secret: false
+  - name: VDOTOOL_AUDIO_IN_MAX_BYTES
+    description: >-
+      Optional. Hard cap on a single inbound utterance POST. Default 8 MB.
+    secret: false
+
+  # ── Writer DoS hardening ───────────────────────────────────────────
+  - name: VDOTOOL_MAX_CONCURRENT_REQUESTS
+    description: Optional. Max concurrent HTTP requests served by the writer. Default 32.
+    secret: false
+  - name: VDOTOOL_MAX_IN_FLIGHT_BYTES
+    description: Optional. Global cap on in-flight upload bytes. Default 32 MB.
+    secret: false

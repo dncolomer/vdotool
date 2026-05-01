@@ -1,0 +1,435 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="./lineawesome/css/line-awesome.min.css" />
+		<link rel="stylesheet" href="./main.css?ver=11" />
+		<link rel="stylesheet" href="./supports.css?ver=4" />
+		<meta charset="utf8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<style>
+			/* Mobile-friendly controls specific to this page */
+			html, body { -webkit-text-size-adjust: 100%; }
+			/* Tweak headers for this page */
+			#supports .card h1 { font-size: 1.3em; }
+			#browserSupportedOptionsTitle { font-size: 1.15em !important; }
+			#cameraControls {
+				display: grid;
+				grid-template-columns: 1fr auto auto;
+				gap: 8px;
+				align-items: center;
+			}
+			#cameraSelector {
+				min-width: 220px;
+				width: 100%;
+				padding: 8px 10px !important;
+				font-size: 16px !important;
+				min-height: 44px !important;
+				height: 44px !important;
+				line-height: 1.2 !important;
+				border-radius: 6px;
+				-webkit-appearance: none;
+				appearance: none;
+				cursor: pointer;
+			}
+			#facingModeControls button,
+			#cameraControls button,
+			#ptzControls button {
+				padding: 8px 12px !important;
+				font-size: 16px !important;
+				min-height: 44px !important;
+				height: 44px !important;
+				border-radius: 6px;
+				cursor: pointer;
+			}
+			#facingModeControls {
+				display: none; /* shown on iOS or limited device lists */
+				margin-top: 8px;
+			}
+			#ptzControls { margin-top: 10px; }
+			#ptzStatus { font-weight: bold; }
+			@media (max-width: 768px) {
+				#cameraControls {
+					grid-template-columns: 1fr;
+				}
+				/* Ensure option grids flow to single column */
+				.prettyJson.two-col,
+				.prettyJson.three-col { grid-template-columns: 1fr; }
+				#cameraSelector {
+					font-size: 17px !important;
+					min-height: 46px !important;
+					height: 46px !important;
+				}
+				#facingModeControls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+				#facingModeControls button,
+				#cameraControls button,
+				#ptzControls button {
+					font-size: 17px !important;
+					min-height: 46px !important;
+					height: 46px !important;
+				}
+				/* Slightly smaller headers on mobile */
+				#supports .card h1 { font-size: 1.15em; }
+				#browserSupportedOptionsTitle { font-size: 1.05em !important; }
+			}
+
+			/* Keep Camera Supported Options compact and non-overflowing */
+			.supportedOption > span:nth-child(1) { font-size: 1.05em; }
+			.subproperty {
+				font-size: 14px; line-height: 1.3; flex-wrap: wrap;
+				word-break: break-word; overflow-wrap: anywhere; box-sizing: border-box;
+			}
+			.subproperty span:nth-child(1),
+			.subproperty span:nth-child(2) { min-width: 0; }
+			.subproperty span:nth-child(2) {
+				white-space: normal; word-break: break-word; overflow-wrap: anywhere;
+			}
+			.supportedOption { overflow: hidden; }
+			.supportedOption > span { word-break: break-word; overflow-wrap: anywhere; }
+			#longCameraSupportedStrings { word-break: break-all; overflow-wrap: anywhere; }
+		</style>
+	</head>
+	<body id="supports">
+		<div id="header">
+			<a
+				id="logoname"
+				href="./"
+				style="text-decoration: none; color: white; margin: 2px"
+			>
+				<span data-translate="logo-header"> <font id="qos">V</font>DO.Ninja </span>
+			</a>
+		</div>
+		<div class="card">
+			<h1 id="browserSupportedOptionsTitle">💻 Browser supported options</h1>
+			<p style="margin-bottom: 20px">
+				List of options your browser reports as supported. If an option lights up
+				green, your currently selected camera reports that it supports that option.
+			</p>
+			<div id="browserSupportedOptions"></div>
+		</div>
+		<div class="card">
+			<h1>Device to check</h1>
+			<div id="cameraControls">
+				<select id="cameraSelector" aria-label="Camera selector" onchange="changeCamera()"></select>
+				<button id="unlockBtn" onclick="unlockDevices()" title="Request camera access to list devices">Unlock</button>
+				<button id="refreshBtn" onclick="refreshDevices()" title="Re-enumerate connected cameras">Refresh</button>
+			</div>
+			<div id="facingModeControls">
+				<button onclick="useFacingMode('user')">Front (iOS)</button>
+				<button onclick="useFacingMode('environment')">Back (iOS)</button>
+			</div>
+			<p id="iosHint" style="display:none;margin-top:8px">
+				On iOS Safari, the device list may be limited or unlabeled. Use the Front/Back buttons above if the dropdown does not work.
+			</p>
+			<div id="ptzControls">
+				<span>PTZ permission: <span id="ptzStatus">checking…</span></span>
+				<button onclick="requestPTZ()" title="Request PTZ access on supported browsers">Request PTZ</button>
+			</div>
+		</div>
+		<div class="card">
+			<h1 id="cameraSupportedOptionsTitle">📹 Camera supported options</h1>
+			<div id="cameraSupportedOptions"></div>
+		</div>
+		<div class="card">
+			<h1>📹 Camera settings</h1>
+			<div id="cameraSettings"></div>
+		</div>
+
+		<script>
+		
+			function getChromiumVersion() {
+				var raw = navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./);
+				return raw ? parseInt(raw[2], 10) : false;
+			}
+			
+			function safariVersion() {
+				try {
+					var ver = navigator.appVersion.split("Version/");
+					if (ver.length > 1) {
+						ver = ver[1].split(" Safari");
+					}
+					if (ver.length > 1) {
+						ver = ver[0].split(".");
+					}
+					if (ver.length > 1) {
+						ver = parseInt(ver[0]);
+					} else {
+						ver = 0;
+					}
+				} catch (e) {
+					return 0;
+				}
+				return ver;
+			}
+
+			function isIOS(){
+				return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
+			}
+			// Soften browser check: allow Firefox, Safari, Chromium-based
+			(function(){
+				try{
+					var isChromiumOk = getChromiumVersion() && getChromiumVersion() >= 60;
+					var isSafariOk = safariVersion() && safariVersion() >= 15;
+					var isFirefox = navigator.userAgent.toLowerCase().includes("firefox");
+					if (!(isChromiumOk || isSafariOk || isFirefox)){
+						console.warn("Older browser detected; some features may be limited.");
+					}
+				} catch(e) {}
+			})();
+		
+			function prettyPrintJsonToId(json, element) {
+				var output = "<div class='prettyJson three-col'>";
+
+				Object.entries(json)
+					.sort()
+					.forEach(([key, value]) => {
+						if (value == true) {
+							value = "<i class='las la-check'></i>";
+						}
+						if (value == false) {
+							value = "<i class='las la-times'></i>";
+						}
+						output += "<div class='property' id=" + key + ">";
+						output += "<span>" + key + "</span><span>" + value + "</span>";
+						output += "</div>";
+					});
+				output += "</div>";
+				document.getElementById(element).innerHTML = output;
+			}
+
+			function prettyPrintSupportedOptions(json, element) {
+				long_ass_strings = [json.deviceId, json.groupId];
+				var output = "<div class='prettyJson two-col'>";
+
+				var nestedObjs;
+				delete json.deviceId;
+				delete json.groupId;
+
+				Object.entries(json)
+					.sort()
+					.forEach(([key, value]) => {
+						output += "<div class='supportedOption'>";
+						nestedObjs = "";
+						if (typeof value === "object" && value !== null) {
+							Object.entries(value)
+								.sort()
+								.forEach(([key, value]) => {
+									nestedObjs +=
+										"<div class='subproperty'><span>" +
+										key +
+										"</span><span>" +
+										value +
+										"</span></div>";
+								});
+							output += "<span>" + key + "</span><span>" + nestedObjs + "</span>";
+						} else {
+							output += "<span>" + key + "</span><span>" + value + "</span>";
+						}
+						output += "</div>";
+					});
+				output += "</div>";
+				output += "<div id='longCameraSupportedStrings'><span>IDs</span>";
+				output += "<span>deviceId: " + long_ass_strings[0] + "</span>";
+				output += "<span>groupId: " + long_ass_strings[1] + "</span></div>";
+				document.getElementById(element).innerHTML = output;
+			}
+
+			let currentStream = null;
+			function stopCurrent(){
+				try{ if (currentStream){ currentStream.getTracks().forEach(t=>t.stop()); } }catch(e){}
+				currentStream = null;
+			}
+			function changeCamera() {
+				var deviceId = document.getElementById("cameraSelector").value;
+				if (!deviceId){ return; }
+				getCameraDetails(deviceId);
+			}
+
+			function getCameraDetails(deviceId) {
+				console.log(deviceId);
+				navigator.mediaDevices
+					.getUserMedia({
+						video: {
+							deviceId: { exact: deviceId },
+							zoom: true,
+							pan: true,
+							tilt: true
+						},
+						audio: false,
+					})
+					.then(function (mediaStream) {
+						console.log("worked");
+						stopCurrent();
+						currentStream = mediaStream;
+						setTimeout(function () {
+							mediaStream.getVideoTracks().forEach((track) => {
+								try{
+									const capabilities = track.getCapabilities();
+									const settings = track.getSettings();
+									prettyPrintSupportedOptions(capabilities, "cameraSupportedOptions");
+									document
+										.querySelectorAll(".property")
+										.forEach((el) => el.classList.remove("ok"));
+
+									Object.entries(capabilities)
+										.sort()
+										.forEach(([key, value]) => {
+											document.getElementById(key).classList.add("ok");
+										});
+									prettyPrintJsonToId(settings, "cameraSettings");
+								} catch (e){
+									document
+									.querySelectorAll(".property")
+									.forEach((el) => el.classList.remove("ok"));
+								}
+							});
+						}, 1000);
+					}).catch(function(e){
+						console.warn("Exact deviceId getUserMedia failed; trying fallback:", e && e.name);
+						setTimeout(function(){getCameraDetailsFallback(deviceId)},0);
+					})
+			}
+			
+			function getCameraDetailsFallback(deviceId) {
+				console.log(deviceId);
+				navigator.mediaDevices
+					.getUserMedia({
+						video: { deviceId: deviceId },
+						audio: false,
+					})
+					.then(function (mediaStream) {
+						console.log("worked");
+						stopCurrent();
+						currentStream = mediaStream;
+						setTimeout(function () {
+							mediaStream.getVideoTracks().forEach((track) => {
+								try{
+									const capabilities = track.getCapabilities();
+									const settings = track.getSettings();
+									prettyPrintSupportedOptions(capabilities, "cameraSupportedOptions");
+									document
+										.querySelectorAll(".property")
+										.forEach((el) => el.classList.remove("ok"));
+
+									Object.entries(capabilities)
+										.sort()
+										.forEach(([key, value]) => {
+											document.getElementById(key).classList.add("ok");
+										});
+									prettyPrintJsonToId(settings, "cameraSettings");
+								} catch (e){
+									document
+									.querySelectorAll(".property")
+									.forEach((el) => el.classList.remove("ok"));
+								}
+							});
+						}, 1000);
+					});
+			}
+
+			async function useFacingMode(mode){
+				stopCurrent();
+				try{
+					const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: mode } }, audio: false });
+					currentStream = mediaStream;
+					setTimeout(function(){
+						mediaStream.getVideoTracks().forEach((track)=>{
+							try{
+								const capabilities = track.getCapabilities();
+								const settings = track.getSettings();
+								prettyPrintSupportedOptions(capabilities, "cameraSupportedOptions");
+								prettyPrintJsonToId(settings, "cameraSettings");
+								document.querySelectorAll(".property").forEach((el)=>el.classList.remove("ok"));
+								Object.keys(capabilities).sort().forEach((k)=>{ var el = document.getElementById(k); if (el) el.classList.add("ok"); });
+							} catch(e){
+								document.querySelectorAll(".property").forEach((el)=>el.classList.remove("ok"));
+							}
+						});
+					}, 500);
+				} catch(e){
+					console.warn("FacingMode fallback failed:", e && e.name);
+				}
+			}
+			
+			var supports = navigator.mediaDevices.getSupportedConstraints();
+			prettyPrintJsonToId(supports, "browserSupportedOptions");
+			document.getElementById("browserSupportedOptionsTitle").innerText += " (" + Object.keys(supports).length + ")";
+
+			async function unlockDevices(){
+				try{
+					// Minimal stream to unlock device labels on iOS and Firefox
+					const tmp = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+					// stop immediately; we only need permission
+					tmp.getTracks().forEach(t=>t.stop());
+					refreshDevices();
+				} catch(e){
+					console.warn("Camera permission denied:", e && e.name);
+					refreshDevices(); // still try to enumerate what we can
+				}
+			}
+
+			function refreshDevices(){
+				navigator.mediaDevices.enumerateDevices().then(function(devices){
+					var sel = document.getElementById("cameraSelector");
+					var prev = sel.value;
+					sel.innerHTML = "";
+					var countVideoInputs = 0;
+					devices.forEach(function(device){
+						if (device.kind === "videoinput"){
+							countVideoInputs++;
+							var element = document.createElement("option");
+							element.value = device.deviceId;
+							element.textContent = device.label || (countVideoInputs===1?"Default Camera":"Camera "+countVideoInputs);
+							sel.appendChild(element);
+						}
+					});
+					// Show iOS hint and facing controls if needed
+					document.getElementById("iosHint").style.display = (isIOS() || countVideoInputs <= 1) ? "block" : "none";
+					document.getElementById("facingModeControls").style.display = (isIOS() || countVideoInputs <= 1) ? "block" : "none";
+					// Restore selection if possible
+					if ([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+					// Auto trigger first option
+					if (sel.options.length){ changeCamera(); }
+				}).catch(function (err){
+					console.log(err && (err.name+": "+err.message));
+				});
+			}
+
+			function onDeviceChange(){ refreshDevices(); }
+			if (navigator.mediaDevices && "ondevicechange" in navigator.mediaDevices){
+				navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
+			}
+
+			async function updatePTZStatus(){
+				var el = document.getElementById("ptzStatus");
+				if (!(navigator.permissions && navigator.permissions.query)){
+					el.innerText = "unknown";
+					return;
+				}
+				try{
+					var status = await navigator.permissions.query({ name: "camera", panTiltZoom: true });
+					el.innerText = status.state || "unknown";
+					status.onchange = function(){ el.innerText = status.state || "unknown"; };
+				} catch(e){
+					el.innerText = "not supported";
+				}
+			}
+
+			async function requestPTZ(){
+				try{
+					const deviceId = document.getElementById("cameraSelector").value || undefined;
+					const constraints = { video: { pan: true, tilt: true, zoom: true } };
+					if (deviceId){ constraints.video.deviceId = { exact: deviceId }; }
+					const tmp = await navigator.mediaDevices.getUserMedia(constraints);
+					tmp.getTracks().forEach(t=>t.stop());
+				} catch(e){
+					console.warn("PTZ request failed:", e && e.name);
+				} finally {
+					updatePTZStatus();
+				}
+			}
+
+			// Initial population without permission; user can tap Unlock to improve labels
+			refreshDevices();
+			updatePTZStatus();
+		</script>
+	</body>
+</html>

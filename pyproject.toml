@@ -1,0 +1,50 @@
+[project]
+name = "hermes-plugin-vdotool"
+version = "0.3.0"
+description = "Live two-way WebRTC session plugin for the Hermes agent"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/dncolomer/vdotool"
+
+[project.entry-points."hermes_agent.plugins"]
+vdotool = "hermes_plugin_vdotool"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Map the flat layout at the repo root onto a real Python package
+# named ``hermes_plugin_vdotool`` so ``pip install git+https://...``
+# (and therefore ``hermes plugins install <owner>/vdotool``) produces a
+# working importable package. The existing flat symlink install
+# (``ln -sfn $(pwd) ~/.hermes/plugins/vdotool``) keeps working because
+# Hermes imports the directory by path, not by distribution name.
+[tool.setuptools]
+packages = ["hermes_plugin_vdotool"]
+package-dir = {"hermes_plugin_vdotool" = "."}
+
+# Ship non-Python assets alongside the package so a pip install is
+# self-contained (plugin manifest, agent skill doc, LAN launcher +
+# smoke-test scripts, forked VDO.Ninja static files).
+[tool.setuptools.package-data]
+hermes_plugin_vdotool = [
+    "plugin.yaml",
+    "LICENSE",
+    "README.md",
+    "DEMO_LAN.md",
+    "skills/**/*",
+    "scripts/**/*",
+    "vdo_ninja/**/*",
+]
+
+# Don't pull the repo-root test/build junk into the installed package.
+[tool.setuptools.exclude-package-data]
+hermes_plugin_vdotool = [
+    "__pycache__/*",
+    "*/__pycache__/*",
+    ".git/*",
+    ".github/*",
+    "*.egg-info/*",
+]

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Device Inspector</title>
+    <style>
+        body { 
+            font-family: system-ui; 
+            max-width: 800px; 
+            margin: 20px auto; 
+            padding: 0 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+        select { 
+            width: 100%; 
+            margin: 10px 0; 
+            padding: 8px;
+            background: #2d2d2d;
+            color: #e0e0e0;
+            border: 1px solid #404040;
+            border-radius: 4px;
+        }
+        button {
+            background: #2d2d2d;
+            color: #e0e0e0;
+            border: 1px solid #404040;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #404040;
+        }
+        .device-info { 
+            background: #2d2d2d; 
+            padding: 15px; 
+            border-radius: 5px; 
+            margin: 10px 0;
+            border: 1px solid #404040;
+        }
+        .meter-container { 
+            width: 100%; 
+            height: 30px; 
+            background: #2d2d2d; 
+            position: relative; 
+            border-radius: 3px;
+            border: 1px solid #404040;
+        }
+        .meter-fill { 
+            height: 100%; 
+            width: 0%; 
+            background: #4CAF50; 
+            transition: width 0.1s; 
+            border-radius: 3px;
+            background: linear-gradient(90deg, #2196F3, #4CAF50);
+        }
+        .error { 
+            color: #ff6b6b; 
+            padding: 10px; 
+            background: #2d2d2d; 
+            border-radius: 3px;
+            border: 1px solid #ff6b6b;
+        }
+        h1, h2 { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <h1>Audio Device Inspector</h1>
+    <div id="permissionRequest">
+        <button onclick="requestPermission()">Grant Microphone Access</button>
+    </div>
+    <div id="deviceSelector" style="display: none;">
+        <h2>Select Input Device</h2>
+        <select id="audioInputs"></select>
+        <div id="inputInfo" class="device-info"></div>
+        
+        <h2>Output Device Info</h2>
+        <div id="outputInfo" class="device-info"></div>
+        
+        <h2>Audio Meter</h2>
+        <div class="meter-container">
+            <div id="meter" class="meter-fill"></div>
+        </div>
+    </div>
+
+    <script>
+    let audioContext;
+    let analyzer;
+    let mediaStream;
+
+    async function requestPermission() {
+        try {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            document.getElementById('permissionRequest').style.display = 'none';
+            document.getElementById('deviceSelector').style.display = 'block';
+            initializeAudioInspector();
+        } catch (err) {
+            showError('Permission denied or audio system error: ' + err.message);
+        }
+    }
+
+    async function initializeAudioInspector() {
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInputs = devices.filter(device => device.kind === 'audioinput');
+            
+            const select = document.getElementById('audioInputs');
+            select.innerHTML = audioInputs.map(device => 
+                `<option value="${device.deviceId}">${device.label}</option>`
+            ).join('');
+            
+            select.onchange = connectToDevice;
+            
+            audioContext = new AudioContext();
+            await connectToDevice();
+        } catch (err) {
+            showError('Failed to initialize audio system: ' + err.message);
+        }
+    }
+
+    async function connectToDevice() {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+        }
+
+        const deviceId = document.getElementById('audioInputs').value;
+        try {
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    deviceId: deviceId ? { exact: deviceId } : undefined,
+                    echoCancellation: false,
+                    noiseSuppression: false,
+                    autoGainControl: false
+                }
+            });
+
+            const track = mediaStream.getAudioTracks()[0];
+            const capabilities = track.getCapabilities();
+            const settings = track.getSettings();
+
+            displayDeviceInfo('inputInfo', settings, capabilities);
+            displayOutputInfo();
+            setupAudioMeter();
+        } catch (err) {
+            showError('Failed to connect to device: ' + err.message);
+        }
+    }
+
+    function displayDeviceInfo(elementId, settings, capabilities) {
+        const info = document.getElementById(elementId);
+        info.innerHTML = `
+            <div>Sample Rate: ${settings.sampleRate || 'Unknown'} Hz</div>
+            <div>Channels: ${settings.channelCount || 'Unknown'}</div>
+            <div>Latency: ${(settings.latency || 0).toFixed(2)} seconds</div>
+            <div>Auto Gain: ${settings.autoGainControl ? 'Yes' : 'No'}</div>
+            <div>Echo Cancellation: ${settings.echoCancellation ? 'Yes' : 'No'}</div>
+            <div>Noise Suppression: ${settings.noiseSuppression ? 'Yes' : 'No'}</div>
+        `;
+    }
+
+    function displayOutputInfo() {
+        const info = document.getElementById('outputInfo');
+        info.innerHTML = `
+            <div>Sample Rate: ${audioContext.sampleRate} Hz</div>
+            <div>Base Latency: ${(audioContext.baseLatency || 0).toFixed(4)} seconds</div>
+            <div>Output Latency: ${(audioContext.outputLatency || 0).toFixed(4)} seconds</div>
+        `;
+    }
+
+    function setupAudioMeter() {
+        if (analyzer) {
+            analyzer.disconnect();
+        }
+
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        analyzer = audioContext.createAnalyser();
+        analyzer.fftSize = 2048;
+        source.connect(analyzer);
+
+        const dataArray = new Uint8Array(analyzer.frequencyBinCount);
+        const meter = document.getElementById('meter');
+
+        function updateMeter() {
+            analyzer.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            const level = Math.min(100, average * 1.5);
+            meter.style.width = level + '%';
+            requestAnimationFrame(updateMeter);
+        }
+
+        updateMeter();
+    }
+
+    function showError(message) {
+        const error = document.createElement('div');
+        error.className = 'error';
+        error.textContent = message;
+        document.body.insertBefore(error, document.body.firstChild);
+        setTimeout(() => error.remove(), 5000);
+    }
+    </script>
+</body>
+</html>

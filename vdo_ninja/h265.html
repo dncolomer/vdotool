@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Codec Support Checker - H.265/HEVC Browser Compatibility Tool</title>
+    
+    <!-- Primary meta tags -->
+    <meta name="description" content="Check your browser's WebRTC codec support, focusing on H.265/HEVC compatibility. Learn how to enable H.265 in Chrome and other browsers for better video compression.">
+    <meta name="keywords" content="H.265, HEVC, H265, WebRTC, OBS, WHIP, codec support, video compression, Chrome H.265, browser compatibility, video codec, codec checker, WebRTC codec">
+    <meta name="author" content="VDO.Ninja">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://vdo.ninja/codec-checker">
+    <meta property="og:title" content="WebRTC Codec Support Checker - H.265/HEVC Compatibility">
+    <meta property="og:description" content="Check your browser's support for H.265/HEVC and other WebRTC video codecs. Includes instructions for enabling H.265 support in Chrome and browser compatibility information.">
+    <meta property="og:image" content="https://vdo.ninja/media/favicon-32x32.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:url" content="https://vdo.ninja/codec-checker">
+    <meta property="twitter:title" content="WebRTC Codec Support Checker - H.265/HEVC Compatibility">
+    <meta property="twitter:description" content="Check your browser's support for H.265/HEVC and other WebRTC video codecs. Includes instructions for enabling H.265 support in Chrome and browser compatibility information.">
+    <meta property="twitter:image" content="https://vdo.ninja/media/favicon-32x32.png">
+
+    <!-- Additional meta information -->
+    <meta name="application-name" content="WebRTC Codec Checker">
+    <meta name="theme-color" content="#1a202e">
+    
+    <!-- Accessibility -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Codec Checker">
+    
+    <!-- IE compatibility -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="./media/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./media/favicon-16x16.png">
+    <link rel="shortcut icon" href="./media/favicon.ico">
+    <style>
+        html {
+            border: 0;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        body {
+            padding: 0;
+            min-height: 100vh;
+            width: 100%;
+            background: linear-gradient(to top, #2a2a38, 50%, #1a202e) fixed;
+            font-size: 1.2em;
+            font-family: Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-flow: column;
+            margin: 0;
+            color: #e1e1e1;
+            overflow-x: hidden;
+        }
+
+        #header {
+            width: 100%;
+            background-color: #101520;
+            color: #6f6f6f;
+            font-size: 20px;
+            line-height: 20px;
+            padding: 5px 10px;
+            letter-spacing: 3px;
+            font-weight: bold;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 2em auto;
+            padding: 0 20px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .codec-status {
+            background: rgba(26, 28, 43, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .supported {
+            background: #6aab23;
+            box-shadow: 0 0 10px rgba(106, 171, 35, 0.4);
+        }
+
+        .unsupported {
+            background: #ab2323;
+            box-shadow: 0 0 10px rgba(171, 35, 35, 0.4);
+        }
+
+        .codec-list {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+
+        .help-info {
+            background: rgba(67, 56, 202, 0.15);
+            border: 1px solid rgba(67, 56, 202, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #90caf9;
+            margin-bottom: 20px;
+        }
+
+        h3 {
+            color: #90caf9;
+            margin: 15px 0;
+        }
+
+        a {
+            color: #64b5f6;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        code {
+            display: block;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #b4ecb4;
+            overflow-x: auto;
+        }
+
+        .description {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.6;
+            padding-right: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 15px;
+        }
+
+        .note {
+            background: rgba(106, 171, 35, 0.1);
+            border-left: 4px solid #6aab23;
+            padding: 10px 15px;
+            margin: 10px 0;
+            border-radius: 0 5px 5px 0;
+        }
+
+        .update-notice {
+            background: rgba(106, 171, 35, 0.2);
+            border: 1px solid rgba(106, 171, 35, 0.4);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .browser-version {
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin: 0 3px;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                font-size: 1em;
+            }
+            
+            .container {
+                padding: 0 15px;
+            }
+            
+            code {
+                font-size: 0.8em;
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="header">WebRTC Codec Support Checker</div>
+    <div class="container">
+        <div class="description">
+            <p>H.265 (also known as HEVC or H265) is a modern and efficient video codec capable of high-efficiency video compression. Due to licensing requirements, its availability in browsers is limited, but support is improving.</p>
+        </div>
+
+        <div class="update-notice">
+            <h2>🎉 Chrome Now Supports H.265 Natively!</h2>
+            <p><strong>Great news!</strong> Starting from Chrome version <span class="browser-version">136</span> and above, H.265/HEVC is now supported natively for WebRTC without requiring any flags or special configuration.</p>
+            <p><strong>Platform requirements:</strong></p>
+            <ul>
+                <li>✅ Windows, macOS: Works out of the box</li>
+                <li>⚠️ Linux: Requires VAAPI support</li>
+            </ul>
+        </div>
+
+        <div class="codec-status" id="mainStatus">
+            <h2>Checking codec support...</h2>
+        </div>
+        
+        <div class="codec-list" id="codecList">
+            <h2>Supported Codecs</h2>
+            <div id="codecListContent"></div>
+        </div>
+
+        <div class="help-info" id="helpInfo" style="display: none">
+            <h2>H.265/HEVC Browser Support</h2>
+            <p>H.265/HEVC support varies by browser:</p>
+            <ul>
+                <li><strong>Chrome/Chromium v136+:</strong> Supported natively (no flags needed!)</li>
+                <li><strong>Chrome/Chromium v135 and below:</strong> Can be enabled manually with flags</li>
+                <li><strong>Safari-based browsers:</strong> Supported natively</li>
+                <li><strong>Thorium browser:</strong> Supported natively</li>
+                <li><strong>Firefox:</strong> Generally not supported</li>
+                <li><strong>Other browsers:</strong> Check individual browser documentation</li>
+            </ul>
+
+            <div id="legacyInstructions" style="display: none">
+                <h2>Enabling H.265 in Older Chrome Versions (v135 and below)</h2>
+                
+                <div class="instructions">
+                    <h3>Method 1: Using a Desktop Shortcut</h3>
+                    <ol>
+                        <li>Right-click on your Chrome desktop shortcut (create one if you don't have it)</li>
+                        <li>Select "Properties"</li>
+                        <li>In the "Target" field, after the quotes containing the Chrome executable path, add a space and then paste:
+                            <code>--enable-features=PlatformHEVCEncoderSupport,WebRtcAllowH265Receive,WebRtcAllowH265Send --force-fieldtrials=WebRTC-Video-H26xPacketBuffer/Enabled</code>
+                        </li>
+                        <li>The complete target should look similar to:
+                            <code>"C:\Program Files\Google\Chrome\Application\chrome.exe" --enable-features=PlatformHEVCEncoderSupport,WebRtcAllowH265Receive,WebRtcAllowH265Send --force-fieldtrials=WebRTC-Video-H26xPacketBuffer/Enabled</code>
+                        </li>
+                        <li>Click "Apply" and "OK"</li>
+                    </ol>
+
+                    <div class="note">
+                        Note: You must launch Chrome using this modified shortcut to enable H.265 support.
+                    </div>
+
+                    <h3>Method 2: Using Command Prompt</h3>
+                    <ol>
+                        <li>Close all running Chrome instances</li>
+                        <li>Press Win + R to open the Run dialog</li>
+                        <li>Type "cmd" and press Enter to open Command Prompt</li>
+                        <li>Navigate to Chrome's installation directory (typically):
+                            <code>cd "C:\Program Files\Google\Chrome\Application"</code>
+                        </li>
+                        <li>Run Chrome with the parameters:
+                            <code>chrome.exe --enable-features=PlatformHEVCEncoderSupport,WebRtcAllowH265Receive,WebRtcAllowH265Send --force-fieldtrials=WebRTC-Video-H26xPacketBuffer/Enabled</code>
+                        </li>
+                    </ol>
+
+                    <div class="note">
+                        Important: These settings need to be applied each time you launch Chrome. Using a modified shortcut (Method 1) is more convenient for regular use.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="compatibility-notice" style="
+            background: rgba(255, 165, 0, 0.1);
+            border-left: 4px solid #ffa500;
+            padding: 20px;
+            margin: 30px 0;
+            border-radius: 0 5px 5px 0;
+            line-height: 1.6;
+        ">
+            <h2 style="color: #ffd700;">Important Compatibility Notice</h2>
+            
+            <p>While H.265/HEVC offers excellent compression efficiency, there are some important considerations:</p>
+            
+            <ul style="margin: 15px 0; padding-left: 20px;">
+                <li>Not all WebRTC viewers support H.265, even if their browser technically can decode it</li>
+                <li>Different H.265 implementations may not be compatible with each other</li>
+                <li>Using H.265 in SFU (Selective Forwarding Unit) broadcasting applications is not recommended due to these compatibility issues</li>
+            </ul>
+
+            <p>VDO.Ninja handles this gracefully by automatically falling back to other codecs if H.265 negotiation fails. You can specify a codec preference order using the codec parameter in your viewer link:</p>
+            
+            <code style="margin: 15px 0;">Example: &codec=h265,av1,h264,vp8</code>
+            
+            <p>This tells VDO.Ninja to try codecs in order: first H.265, then AV1, then H.264, and finally VP8, ensuring the best available codec is used for each connection.</p>
+        </div>
+    </div>
+
+    <script>
+        async function checkCodecSupport() {
+            const mainStatus = document.getElementById('mainStatus');
+            const codecListContent = document.getElementById('codecListContent');
+            const helpInfo = document.getElementById('helpInfo');
+            const legacyInstructions = document.getElementById('legacyInstructions');
+
+            try {
+                const codecs = RTCRtpSender.getCapabilities('video').codecs;
+                let codecsFound = new Set();
+                let h265Supported = false;
+
+                codecs.forEach(codec => {
+                    if (!['video/red', 'video/ulpfec', 'video/rtx'].includes(codec.mimeType)) {
+                        codecsFound.add(codec.mimeType.replace('video/', '').toUpperCase());
+                        if (codec.mimeType.toLowerCase().includes('h265')) {
+                            h265Supported = true;
+                        }
+                    }
+                });
+
+                // Check Chrome version
+                let chromeVersion = null;
+                let isChrome = false;
+                const userAgent = navigator.userAgent;
+                
+                if (userAgent.includes('Chrome/') && !userAgent.includes('Edg/')) {
+                    isChrome = true;
+                    const match = userAgent.match(/Chrome\/(\d+)/);
+                    if (match) {
+                        chromeVersion = parseInt(match[1]);
+                    }
+                }
+
+                let statusMessage = `
+                    <h2>H.265/HEVC Status</h2>
+                    <p><span class="status-icon ${h265Supported ? 'supported' : 'unsupported'}"></span>
+                    H.265/HEVC is currently ${h265Supported ? 'supported' : 'not supported'} in your browser</p>
+                `;
+
+                // Add browser version info if Chrome
+                if (isChrome && chromeVersion) {
+                    statusMessage += `<p style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">Chrome version detected: ${chromeVersion}</p>`;
+                    
+                    // Show legacy instructions only for older Chrome versions
+                    if (chromeVersion < 136 && !h265Supported) {
+                        legacyInstructions.style.display = 'block';
+                    }
+                }
+
+                mainStatus.innerHTML = statusMessage;
+
+                codecListContent.innerHTML = Array.from(codecsFound)
+                    .map(codec => `<p><span class="status-icon supported"></span>${codec}</p>`)
+                    .join('');
+
+                helpInfo.style.display = 'block';
+
+            } catch (error) {
+                mainStatus.innerHTML = `
+                    <h2>Error Checking Codec Support</h2>
+                    <p>Unable to check codec support: ${error.message}</p>
+                `;
+            }
+        }
+
+        window.addEventListener('load', checkCodecSupport);
+    </script>
+</body>
+</html>

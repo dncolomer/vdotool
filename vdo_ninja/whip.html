@@ -1,0 +1,1502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>WHIP/WHEP Client - WebRTC Streaming Tool</title>
+    <meta name="description" content="A powerful WHIP/WHEP client for WebRTC streaming, leveraging VDO.Ninja for seamless audio and video transmission.">
+    <meta name="keywords" content="WHIP, WHEP, WebRTC, streaming, VDO.Ninja, MediaMTX">
+    <meta name="author" content="Your Name or Company">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://vdo.ninja/">
+    <meta property="og:title" content="WHIP/WHEP Client - WebRTC Streaming Tool">
+    <meta property="og:description" content="A powerful WHIP/WHEP client for WebRTC streaming, leveraging VDO.Ninja for seamless audio and video transmission.">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://vdo.ninja/">
+    <meta property="twitter:title" content="WHIP/WHEP Client - WebRTC Streaming Tool">
+    <meta property="twitter:description" content="A powerful WHIP/WHEP client for WebRTC streaming, leveraging VDO.Ninja for seamless audio and video transmission.">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon" />
+    <link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="./media/favicon-32x32.png" />
+    <link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="./media/favicon-16x16.png" />
+    <link id="favicon3" rel="icon" href="./media/favicon.ico" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="./lineawesome/css/line-awesome.min.css" />
+	<style>
+	html {
+		border: 0;
+		margin: 0;
+		padding: 0;
+		height: 100%;
+		width: 100%;
+	}
+
+	body {
+		padding: 0;
+		min-height: 100vh;
+		width: 100%;
+		background: linear-gradient(to top, #363644, 50%, #151b29) fixed;
+		font-size: 2em;
+		font-family: Helvetica, Arial, sans-serif;
+		display: flex;
+		flex-flow: column;
+		margin: 0;
+		overflow-y: auto;
+		overflow-x: hidden;
+	}
+
+	video {
+
+		margin: 0;
+		padding: 0;
+		overflow: hidden;
+		cursor: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=), none;
+		user-select: none;
+		
+	}
+
+	#moreinfo {
+		flex-direction: row;
+		flex-wrap: nowrap;
+		justify-content: center;
+		margin: 2em;
+		color:white;
+	}
+	a {
+		color:white;
+	}
+	button.glyphicon-button:focus,
+	button.glyphicon-button:active:focus,
+	button.glyphicon-button.active:focus,
+	button.glyphicon-button.focus,
+	button.glyphicon-button:active.focus,
+	button.glyphicon-button.active.focus {
+	  outline: none !important;
+	}
+
+	.gobutton {
+		font-size:14px;
+		font-weight: bold;
+		border: none;
+		background: #6aab23;
+		display: flex;
+		border-radius: 0px;
+		border-top-right-radius: 10px;
+		border-bottom-right-radius: 10px;
+		box-shadow: 0 12px 15px -10px #5ca70b, 0 2px 0px #6aab23;
+		color: white;
+		cursor: pointer;
+		box-sizing: border-box;
+		align-items: center;
+		padding: 0 1em;
+		min-width: 50px;
+	}
+	.details{
+		font-size: 14px;
+		font-weight: bold;
+		border: none;
+		background: #555;
+		display: flex;
+		border-radius: 0px;
+		border-top-right-radius: 10px;
+		border-bottom-right-radius: 10px;
+		box-shadow: 0 12px 15px -10px #444, 0 2px 0px #555;
+		color: white;
+		box-sizing: border-box;
+		align-items: center;
+		padding: 0 1em;
+		min-width: 50px;
+	}
+	#header{
+		width:100%;
+		background-color: #101520;
+	}
+	.changeText {
+		font-size: 1em;
+		align-self: center;
+		width: 100%;
+		padding: 1em;
+		font-weight: bold;
+		background: white;
+		border: 4px solid white;
+		box-shadow: 0px 30px 40px -32px #6aab23, 0 2px 0px #6aab23;
+		border-top-left-radius: 10px;
+		border-bottom-left-radius: 10px;
+		transition: all 0.2s linear;
+		box-sizing: border-box;
+		border-bottom-right-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.changeText:focus {
+		outline: none;
+	}
+	select.changetext{
+		padding: .1em;
+	}
+
+	.container{
+		font-size: 16px;
+		align-self:center;
+		max-width: 100%;
+		width: 1280px;
+		margin: auto auto;
+		padding: 20px 0;
+	}
+	label {
+		font: white;
+		font-size: 1em;
+		color: white;
+	}
+	input[type='checkbox'] {
+		-webkit-appearance:none;
+		width:30px;
+		height:30px;
+		background:white;
+		border-radius:5px;
+		border:2px solid #555;
+		cursor: pointer;
+	}
+	input[type='checkbox']:checked {
+		background: #1A1;
+	}
+	#audioOutput, #lastUrls {
+		font-size: calc(16px + 0.3vw);
+		width: 730px;
+		height: 100%;
+		flex: 20;
+		border-radius: 10px;
+		padding: 1em;
+		background: #eaeaea;
+		cursor:pointer;
+	}
+	label[for="audioOutput"] {
+		font-size: 3em;
+		color: #FE53BB;
+		text-shadow: 0px 0px 30px #fe53bb;
+		padding-right: 10px;
+	}
+	label[for="changeText"] {
+		font-size: 3em;
+		color: #00F6FF;
+		text-shadow: 0px 0px 30px #00f6ff;
+		padding-top: 5px;
+		padding-right: 10px;
+	}
+
+	label[for="lastUrls"] {
+	font-size: 3em;
+		color: #1a1;
+		text-shadow: 0px 0px 30px #1a1;
+		padding-right: 10px;
+		cursor: pointer;
+	}
+
+	div#audioOutputContainer, #history {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		margin: 2em;
+	}
+		
+	@media only screen and (max-width: 1030px) {
+		body{
+			zoom: 0.9; 
+			-moz-transform: scale(0.9); 
+			-moz-transform-origin: 0 0;
+		}
+	}
+
+	#messageDiv {
+		font-size: .7em;
+		color: #DDD;
+		transition: all 0.5s linear;
+		font-style: italic;
+		opacity: 0;
+		text-align: center;
+		margin: 10px 0;
+	}
+
+	div.urlInput {
+		padding: 0 0 1vh 0;
+	}
+	
+	@media only screen and (max-height: 639px) {
+		div.urlInput {
+		}
+		div#audioOutputContainer, #history {
+			margin: 1em;
+		}
+	}
+	
+	@media only screen and (max-width: 767px) {
+		
+		div.urlInput {
+		}
+		div#audioOutputContainer, #history {
+			margin:  2em 1em;
+		}
+	}
+	
+	
+	@media only screen and (max-height: 380px) {
+		div.urlInput {
+		}
+		div#audioOutputContainer, #history {
+			margin: 1em;
+		}
+	}
+	
+	
+
+	label[for="audioOutput"], label[for="lastUrls"] {
+		font-size: 3em;
+	}
+
+	#warning4mac, #electronVersion {
+		background: #8500f7;
+		box-shadow: 0px 0px 50px 10px #8500f7ab, inset 0px 0px 10px 2px #8d08ffba;
+		border: 2px solid #8500f7;
+		border-radius: 10px;
+		width: 90%;
+		padding:1em;
+		margin:0 auto;
+		color:white;
+		font-size:1.3em;
+		margin-bottom: 20px;
+	}
+
+	#warning4mac a, #electronVersion a {
+		color:white;
+	 }
+
+	 ul#lastUrls {
+		list-style: none;
+		background: #101520;
+		color: white;
+		padding: 1em;
+	}
+
+	ul#lastUrls li {
+		padding: 5px 0px;
+	}
+	ul#lastUrls li:nth-child(even) {
+		background-color: #182031;
+	}
+
+	.inputComboGrid,.inputCombo {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		flex-grow: 1;
+	}
+	@media only screen and (max-width: 799px) {
+		.inputComboGrid {
+			display: grid;
+			padding: 0px 5px;
+		}
+		.inputComboGrid > * {
+			margin: 2px 0;
+		}
+	}
+	#version{
+		margin: 0 auto;
+		font-size: 30%;
+		display: inline-block;
+		color: #000A;
+	}
+	h3 {
+		color: #b0e3ff;
+	}
+	.hidden{
+		display:none;
+		opacity:0;
+		visibility:none;
+		width:0;
+		height:0
+	}
+	
+	.tabs-container {
+	  position: sticky;
+	  top: 0;
+	  z-index: 100;
+	  background: rgba(16, 21, 32, 0.95);
+	  backdrop-filter: blur(10px);
+	  padding: 15px 0;
+	  margin: 20px 0 50px 0;
+	  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	  border-radius: 25px;
+	}
+
+	.section-tabs {
+	  display: flex;
+	  gap: 15px;
+	  max-width: 1200px;
+	  margin: 0 auto;
+	  padding: 20px;
+	  justify-content: space-between;
+	  font-size: 120%;
+	}
+	
+	@media only screen and (max-width: 1100px) {
+		.section-tabs {
+			padding: 10px !important;
+			font-size: 100%!important;
+		}
+	}
+	
+	@media only screen and (max-width: 900px) {
+		.section-tabs {
+			gap:3px!important;
+		}
+		
+		.section-tab {
+			padding:5px!important;
+		}
+	}
+	
+
+	.section-tab {
+	  padding: 24px;
+	  background: rgba(255, 255, 255, 0.05);
+	  border: 1px solid rgba(255, 255, 255, 0.1);
+	  border-radius: 8px;
+	  color: white;
+	  cursor: pointer;
+	  transition: all 0.2s ease;
+	  font-size: 1em;
+	  display: flex;
+	  align-items: center;
+	  gap: 8px;
+	}
+
+	.section-tab:hover {
+	  background: rgba(106, 171, 35, 0.2);
+	}
+
+	.section-tab.active {
+	  background: #6aab23;
+	  border-color: #6aab23;
+	}
+	
+	.section-card {
+		width:1000px;
+		max-width:100%;
+	}
+	.advanced {
+		margin-top:40px;
+	}
+	.usage-tip {
+	  background: rgba(106, 171, 35, 0.1);
+	  border-left: 4px solid #6aab23;
+	  padding: 15px;
+	  margin: 15px 0;
+	  border-radius: 0 8px 8px 0;
+	  font-size: 0.9em;
+	  color: #DDD;
+	}
+
+	.footer-content {
+	  margin-top: 40px;
+	  padding-top: 40px;
+	  border-top: 1px solid rgba(255, 255, 255, 0.1);
+	}
+	
+	.input-section {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+
+	.info-box {
+		background: rgba(0, 0, 0, 0.2);
+		border-radius: 10px;
+		padding: 20px;
+	}
+
+	.endpoint-info {
+		font-size: 1.1em;
+		color: #ccc;
+		margin-bottom: 15px;
+		padding-bottom: 15px;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	}
+
+	.endpoint-info code {
+		background: rgba(0, 0, 0, 0.3);
+		padding: 4px 8px;
+		border-radius: 4px;
+		color: #00F6FF;
+	}
+
+	.usage-notes {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.note {
+		display: flex;
+		align-items: start;
+		gap: 10px;
+		color: #fff;
+		font-size: 0.9em;
+	}
+
+	.note i {
+		color: #00F6FF;
+		font-size: 1.2em;
+		margin-top: 2px;
+	}
+
+	.troubleshooting {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		font-size: 0.9em;
+		color: #ccc;
+		padding: 10px;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 6px;
+	}
+
+	.troubleshooting a {
+		color: #00F6FF;
+		text-decoration: none;
+	}
+
+	.troubleshooting a:hover {
+		text-decoration: underline;
+	}
+
+	.genbutton {
+		font-size: 14px;
+		font-weight: bold;
+		border: none;
+		background: #555;
+		display: flex;
+		border-radius: 10px;
+		box-shadow: 0 12px 15px -10px #444, 0 2px 0px #555;
+		color: white;
+		cursor: pointer;
+		box-sizing: border-box;
+		align-items: center;
+		padding: 0 1em;
+		min-width: 40px;
+		height: 40px;
+		justify-content: center;
+		transition: background 0.2s ease;
+	}
+
+	.genbutton:hover {
+		background: #666;
+	}
+	
+
+	.feature-note {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		color: #fff;
+		font-size: 0.9em;
+		padding: 10px;
+		background: rgba(145, 70, 255, 0.15);
+		border-radius: 6px;
+		margin-bottom: 20px;
+	}
+
+	.feature-note i {
+		color: #9146FF;
+		font-size: 1.2em;
+	}
+
+	.publishing-options h4 {
+		color: #00F6FF;
+		margin-bottom: 15px;
+		font-size: 1.1em;
+	}
+
+	.tool-card {
+		display: flex;
+		gap: 15px;
+		padding: 15px;
+		background: rgba(255, 255, 255, 0.05);
+		border-radius: 8px;
+		margin-bottom: 10px;
+		transition: transform 0.2s ease;
+	}
+
+	.tool-card:hover {
+		transform: translateX(5px);
+	}
+
+	.tool-card i {
+		font-size: 2em;
+		color: #00F6FF;
+		align-self: center;
+	}
+
+	.tool-info h5 {
+		color: #fff;
+		margin: 0 0 5px 0;
+		font-size: 1em;
+	}
+
+	.tool-info p {
+		color: #ccc;
+		font-size: 0.9em;
+		margin: 0 0 8px 0;
+	}
+
+	.tool-info a {
+		color: #00F6FF;
+		text-decoration: none;
+		font-size: 0.9em;
+		display: inline-block;
+	}
+
+	.tool-info a:hover {
+		text-decoration: underline;
+	}
+
+	@media (max-width: 768px) {
+		.tool-card {
+			flex-direction: column;
+			text-align: center;
+		}
+		
+		.tool-card i {
+			margin-bottom: 10px;
+		}
+	}
+	</style>
+</head>
+<body>
+	<div id="header" style="-webkit-app-region: drag; color:#6f6f6f;font-size:20px; line-height: 20px; padding: 5px 10px; letter-spacing: 3; font-weight: bold;">WHIP / WHEP simple sample setup</div>
+	
+		<div class="container">
+				<div id="urlInput1" class="urlInput" title="Put the link you want to load here">
+					
+					<h3>Publish a video from VDO.Ninja to a WHIP ingestion end-point</h3>
+					
+					<div  class="inputCombo" id="inputCombo1">
+						<label for="changeText">
+							<i class="las la-upload"></i>
+						</label>
+						<input type="text" id="changeText1" class="inputfield changeText" placeholder="WHIP Publishing URL" />
+						<button  onclick="gohere1();" class="gobutton" id="gobutton1">GO</button>
+					</div>
+					<div >
+						<div class="inputCombo" style="margin: 10px 0px 10px 10px;">
+							<input type="password" id="changeText1a" class="inputfield changeText" placeholder="🗝️ Authentication Bearer Token (optional)" />
+							<div class="details">⚙️</div>
+						</div>
+						<h3 class="advanced">Advanced options</h3>
+						<div class="inputComboGrid" id="advanced" style="margin: 10px 0px 10px 10px;">
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="whipoutaudiobitrate"  title="Which audio bitrate target would you prefer? 128-kbps is fine for music." >
+								<option value="0" selected>🎙️Default Audio Bitrate</option>
+								<option value="32">🎙️32-kbps</option>
+								<option value="64">🎙️64-kbps</option>
+								<option value="128">🎙️128-kbps</option>
+								<option value="256">🎙️256-kbps</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="vbrcbr"  title="Whether the audio bitrate with be constant or variable" >
+								<option value="cbr" selected>🎙️CBR</option>
+								<option value="vbr">🎙️VBR</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="denoise" onchange="checkStereo()" title="Turn off to improve clarity, but you'll hear any background noise" >
+								<option value="0" selected>🎙️Denoise Off</option>
+								<option value="1">🎙️Denoise On</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="autogain" onchange="checkStereo()" title="Auto-controls the input volume; turn off to manage that yourself." >
+								<option value="0" selected>🎙️Auto Gain Off</option>
+								<option value="1">🎙️Auto Gain On</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="stereo"  title="Stereo is available only if auto-gain and noise-reduction is off." >
+								<option value="1" selected>🎙️Stereo</option>
+								<option value="0">🎙️Mono</option>
+							</select >
+						</div>
+						<div class="inputComboGrid" id="advanced2" style="margin: 10px 0px 10px 10px;">
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="bitrateGroupFlag" title="Which video bitrate target would you prefer?" >
+								<option value="0" selected>🎦Default Video Bitrate</option>
+								<option value="500">🎦500-kbps</option>
+								<option value="2500">🎦2500-kbps</option>
+								<option value="6000">🎦6000-kbps</option>
+								<option value="20000">🎦20000-kbps</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText"  id="codecGroupFlag" onchange="updateSVC();" title="Which video codec would you prefer to be used if available?" >
+								<option value="default" selected>🎦OpenH264</option>
+								<option id="av1codec" value="av1">🎦AV1</option>
+								<option value="vp9">🎦VP9</option>
+								<option value="vp8">🎦VP8</option>
+								<option value="h264">🎦H264</option>
+								<option id="h265codec" value="h265">🎦H265</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="svcGroupFlag" title="Which scalable video coding do you want to use?" >
+								<option value="0" selected>🎦 SVC Off</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="e2eeGroupFlag1" title="E2EE uses insertable streams; not everthing supports this" >
+								<option value="0" selected>🔑 E2EE Off</option>
+								<option value="1">🔑 E2EE On</option>
+							</select >
+						</div>
+						<div class="inputComboGrid" id="advanced2a" style="margin: 10px 0px 10px 10px;">
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="keyFrameRateFlag" title="Tries to force a minimum keyframe rate internal. This may hurt quality as the method of triggering a keyframe from the browser may cause a flicker or a few blurry frames. Without it though, viewers may not be able to load the video promptly." >
+								<option value="0" selected>🎦 Force Keyframes Interval: Off</option>
+								<option value="2000">🎦 Force Keyframes Interval: 2s</option>
+								<option value="6000">🎦 Force Keyframes Interval: 6s</option>
+							</select >
+							<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="whipwaitFlag" title="Time to wait for ICE candidates before sending the offer. Needed if you whip server is behind a firewall.">
+								<option value="0">⌛Do not wait for ICE candidates</option>
+								<option selected value="200">⌛Wait 200-ms for ICE candidates</option>
+								<option value="500">⌛Wait 500-ms for ICE candidates</option>
+								<option value="1000">⌛Wait 1000-ms for ICE candidates</option>
+								<option value="5000">⌛Wait 5000-ms for ICE candidates</option>
+							</select>
+						</div>
+					</div>	
+				</div>
+				<div id="urlInput2" class="urlInput">
+					<h3>Setup VDO.Ninja to be a WHIP-ingestion end-point (OBS → VDO)</h3>
+					
+					<div class="input-section">
+						<div class="inputCombo" id="inputCombo2">
+							<label for="changeText">
+								<i class="las la-play"></i>
+							</label>
+							<input type="text" id="changeText2" class="inputfield changeText" 
+								placeholder="Create a unique stream token (alphanumeric, case-sensitive, max 50 chars)" />
+							<button onclick="gohere2();" class="gobutton" id="gobutton2">GO</button>
+							<button onclick="generateNewToken();" class="genbutton" title="Generate random token"><i class="las la-random"></i></button>
+						</div>
+						
+						<div class="info-box">
+							<div class="endpoint-info">
+								<i class="las la-link"></i> WHIP endpoint URL: <code>https://whip.vdo.ninja</code>
+							</div>
+							
+							<div class="usage-notes">
+								<div class="note">
+									<i class="las la-info-circle"></i>
+									<span>Your stream token must be unique. Only one person can publish to a token at a time.</span>
+								</div>
+								<div class="note">
+									<i class="las la-laptop-code"></i>
+									<span>For our recommend OBS WHIP encoding settings, for smooth playback, <a href='https://docs.vdo.ninja/guides/recommended-obs-whip-settings' target='_blank'>see this guide</a>.</span>
+								</div>
+								<div class="note">
+									<i class="las la-play-circle"></i>
+									<span>You have to first start VDO.Ninja (GO button) before starting your OBS stream.</span>
+								</div>
+								<div class="note">
+									<i class="las la-users"></i>
+									<span>Important: Only ONE viewer can connect directly to an OBS WHIP stream.</span>
+								</div>
+								<div class="note">
+									<i class="las la-broadcast-tower"></i>
+									<span>Need multiple viewers? Use <a href="https://meshcast.io" target="_blank">meshcast.io</a> or <a href='https://docs.vdo.ninja/guides/deploy-your-own-meshcast-like-service' target='_blank'>deploy your own MediaMTX server</a>.</span>
+								</div>
+							</div>
+						</div>
+						
+						<div class="troubleshooting" style="background: rgba(255, 193, 7, 0.2); border-left: 4px solid #ffc107;">
+							<i class="las la-exclamation-triangle" style="color: #ffc107; font-size: 1.3em;"></i>
+							<span><strong>Can't publish WHIP via OBS outside your LAN?</strong></span>
+							Download our patched OBS version from our:<a href="https://github.com/steveseguin/obs-studio/releases/" target="_blank">Github Release section</a>
+						</div>
+
+						<!-- NEW SETTINGS BOX -->
+						<div class="info-box" style="background: rgba(106, 171, 35, 0.15); border-radius: 10px; padding: 20px; margin: 20px 0; border-left: 4px solid #6aab23;">
+							<h4 style="color: #6aab23; margin-top: 0; font-size: 1.1em;">📋 Recommended OBS WHIP Settings</h4>
+							<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+								<div>
+									<ul style="margin: 0; padding-left: 20px; color: white;">
+										<li>Rate Control: <strong>CBR</strong></li>
+										<li>Bitrate: <strong>2500</strong> to <strong>8000</strong></li>
+										<li>Keyframe Interval: <strong>1s</strong></li>
+										<li>Preset: <strong>Veryfast</strong> or <strong>Ultrafast</strong></li>
+									</ul>
+								</div>
+								<div>
+									<ul style="margin: 0; padding-left: 20px; color: white;">
+										<li>Encoder: <strong>x264</strong></li>
+										<li>Profile: <strong>High</strong> or <strong>Baseline</strong></li>
+										<li>Tune: <strong>Fastdecode</strong> or <strong>Zerolatency</strong></li>
+										<li>x264 Options: <strong>bframes=0</strong> (required!)</li>
+									</ul>
+								</div>
+							</div>
+							<p style="margin-top: 15px; color: #ddd; font-size: 0.9em;">
+								⚠️ <strong>Important:</strong> Using <code>&buffer=2500</code> in your view link can help reduce skipped frames at the cost of increased latency.
+							</p>
+							<p style="margin-top: 15px; color: #ddd; font-size: 0.9em;">
+								ℹ️ <strong>Tinker:</strong> The best settings are not set in stone; experiment with different values and encoders to find what works best for you.
+							</p>
+						</div>
+					</div>
+				</div>
+				<div id="urlInput1a" class="urlInput">
+					<h3>Publish your camera or screen directly to Twitch channel using VDO.Ninja</h3>
+					
+					<div class="input-section">
+						<div class="inputCombo" id="inputCombo1t">
+							<label for="changeText">
+								<i class="las la-upload"></i>
+							</label>
+							<input type="password" id="changeText1t" autocomplete="changeText1twitcha" class="inputfield changeText" 
+								placeholder="Enter your Twitch stream token here" />
+							<button onclick="gohere1t();" class="gobutton" id="gobutton1t">GO</button>
+						</div>
+
+						<div class="info-box">
+							<div class="feature-note">
+								<i class="las la-bolt"></i>
+								<span>WHIP publishing to Twitch offers low-latency streaming with dynamic bitrate adaptation</span>
+							</div>
+
+							<div class="publishing-options">
+								<h4>Special Publishing Tools with Twitch support:</h4>
+								<div class="tool-card">
+									<i class="las la-chalkboard"></i>
+									<div class="tool-info">
+										<h5>Interactive Whiteboard</h5>
+										<p>Draw and annotate live on screen, perfect for tutorials or explanations</p>
+										<a href="https://vdo.ninja/alpha/whiteboard" target="_blank">Try Whiteboard →</a>
+									</div>
+								</div>
+
+								<div class="tool-card">
+									<i class="las la-video"></i>
+									<div class="tool-info">
+										<h5>IP Camera Publisher</h5>
+										<p>Stream MJPEG IP camera feeds with VDO.Ninja to Twitch or other platforms</p>
+										<a href="https://vdo.ninja/alpha/ipcam" target="_blank">Try IP Camera →</a>
+									</div>
+								</div>
+
+								<div class="tool-card">
+									<i class="las la-th-large"></i>
+									<div class="tool-info">
+										<h5>Multi-Guest Mixer</h5>
+										<p>Mix multiple VDO.Ninja guests into a single stream, all in your browser</p>
+										<a href="https://vdo.ninja/mixer" target="_blank">Try Mixer →</a>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div id="urlInput3"  class="urlInput"title="Put the link you want to play here">
+					
+					<h3>Play a remote video stream available via WHEP</h3>
+					
+					<div  class="inputCombo" id="inputCombo3">
+						<label for="changeText">
+						<i class="las la-play"></i>
+						</label>
+						<input type="text" id="changeText3" class="inputfield changeText"  placeholder="WHEP Play URL" />
+						<button  onclick="gohere3();"  class="gobutton" id="gobutton3">GO</button>
+					</div>
+					<div class="inputCombo" style="margin: 10px 0px 10px 10px;">
+						<input type="password" id="changeText3a" class="inputfield changeText" placeholder="🗝️ Authentication Bearer Token (optional)" />
+						<div class="details">⚙️</div>
+					</div>
+					<h3 class="advanced">Advanced options</h3>
+					<div class="inputComboGrid" id="advancedwhep" style="margin: 10px 0px 10px 10px;">
+						<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="whepbuffer"  title="Adding a playback buffer can help reduce frame loss or jitter" >
+							<option value="0" selected>⌛No added playback buffer</option>
+							<option value="500">⌛500-ms added</option>
+							<option value="1000">⌛1000-ms added</option>
+							<option value="2000">⌛2000-ms added</option>
+							<option value="3000">⌛3000-ms added</option>
+						</select >
+						<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="whepicewait"  title="Adding a playback buffer can help reduce frame loss or jitter" >
+							<option value="0">⌛Do not wait for ICE candidates</option>
+							<option value="500">⌛Wait 500-ms for ICE candidates</option>
+							<option value="1000">⌛Wait 1000-ms for ICE candidates</option>
+							<option value="2000" selected>⌛Wait 2000-ms for ICE candidates</option>
+							<option value="5000">⌛Wait 5000-ms for ICE candidates</option>
+						</select >
+						<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="e2eeGroupFlag2" title="E2EE uses insertable streams; not everthing supports this" >
+							<option value="0" selected>🔑 E2EE Off</option>
+							<option value="1">🔑 E2EE On</option>
+						</select >
+						<select style="border-radius:10px;margin-right:5px;width:unset!important;" class="changeText" id="stereowhep"  title="Stereo is available only if auto-gain and noise-reduction is off." >
+							<option value="1" selected>🎙️Stereo</option>
+							<option value="0">🎙️Mono</option>
+						</select>
+					</div>
+				</div>
+				<div id="urlInput4" class="urlInput" title="Start a VDO.Ninja stream, and then after, access it remotely via WHEP">
+					
+					<h3>Host a VDO.Ninja stream as a WHEP source</h3>
+					
+					<div  class="inputCombo" id="inputCombo4">
+						<label for="changeText">
+							<i class="las la-broadcast-tower"></i>
+						</label>
+						<input type="text" id="changeText4" class="inputfield changeText"  oninput="change4()" onchange="change4()" placeholder="The WHEP Token you wish to use goes here" />
+						<button  onclick="gohere4();"  class="gobutton" id="gobutton4"  onclick="gohere4();" >GO</button>
+						
+					</div>
+					<h3 style="text-align: center;color:#ccc;"><i>The WHEP endpoint for this is <a href='' id="whepoutsrc" target="_blank">https://whep.vdo.ninja/<span id='whepoutid'>WHEP_TOKEN_HERE</span></a></i></h3>
+				</div>
+				
+				<div id="history" title="History of past links used. You can clear this history using the button to the left">
+					
+					<label for="lastUrls" onclick="resetHistory()">
+						<i class="las la-history"></i>
+					</label>
+					<h3 style='cursor:pointer;' onclick="resetHistory()">Clear History</h3>
+				</div>
+				<br />
+				<!-- Main content container -->
+				<div id="moreinfo">
+					<h1>More information and options</h1>
+					
+					<p>
+						For more WHIP/WHEP options, tools, services, and documentation, please see:
+						<a href="https://docs.vdo.ninja/steves-helper-apps/whip-and-whep-tooling" target="_blank">
+							https://docs.vdo.ninja/steves-helper-apps/whip-and-whep-tooling
+						</a>
+					</p>
+
+					<h3>For community support</h3>
+					<p>For support, join our <a href="https://discord.vdo.ninja" target="_blank">Discord server here</a>.</p>
+
+					<div id="additional-info">
+						<h2>About WHIP/WHEP Integration Options</h2>
+						<p>There are three main ways to publish using WHIP from VDO.Ninja:</p>
+						<ul>
+							<li><strong>MediaMTX self-hosted server:</strong> Add <code>&mediamtx=yourserver.com</code> to any VDO.Ninja URL</li>
+							<li><strong>Meshcast managed service:</strong> Add <code>&meshcast</code> to any VDO.Ninja URL</li>
+							<li><strong>Other WHIP/WHEP services:</strong> Using <code>&whipout</code>, which is what this page tends to use</li>
+						</ul>
+						<p>You can of course also playback videos into VDO.Ninja from WHIP/WHEP clients and servers.</p>
+
+						<h3>Using MediaMTX</h3>
+						<p>MediaMTX is a self-hosted SFU that supports WHIP/WHEP:</p>
+						<ul>
+							<li>Works with VDO.Ninja group rooms and other features, just like Meshcast</li>
+							<li>Custom port can be set, making port forwarding on a router easy</li>
+							<li>Ultilizing it with VDO.Ninja is as easy as using Meshcast: <code>&mediamtx=yourserver.com:port</code></li>
+							<li>Find setup instructions in our <a href="https://docs.vdo.ninja/guides/deploy-your-own-meshcast-like-service" target="_blank">MediaMTX guide</a></li>
+						</ul>
+
+						<h3>Using Meshcast.io</h3>
+						<p>Meshcast.io offers a managed WHIP/WHEP service:</p>
+						<ul>
+							<li>Free service with servers in US, Canada, and Europe</li>
+							<li>Just add <code>&meshcast</code> to any VDO.Ninja URL</li>
+							<li>No setup required - auto-connects to nearest server</li>
+							<li>Supports up to 100 viewers</li>
+							<li>Perfect for quick setups and small broadcasts</li>
+						</ul>
+						<p><small>Note: Meshcast.io service is provided on a best-effort basis.</small></p>
+
+						<h3>Direct WHIP/WHEP Publishing</h3>
+						<p>This page provides a simple client for direct WHIP/WHEP streaming:</p>
+						<ul>
+							<li>Easily tweak and change advanced WebRTC streaming settings</li>
+							<li>Publish from the VDO.Ninja mixer or whiteboard directly to Twitch or WHIP service</li>
+							<li>Peer-to-Peer WHIP playback allows for server-free OBS to OBS streaming</li>
+							<li>Host VDO.Ninja streams as WHEP sources or view WHEP sources</li>
+						</ul>
+
+						<h3>Troubleshooting</h3>
+						<p>Common solutions for connection issues:</p>
+						<ul>
+							<li>Verify network and firewall settings</li>
+							<li>If publishing with OBS to VDO.Ninja, ensure a compatible OBS version is used.</li>
+							<li>Check MediaMTX server accessibility and SSL requirements</li>
+							<li>For H265 support, check <a href="https://vdo.ninja/h265" target="_blank">browser compatibility</a></li>
+							<li>WHIP is one to one, so publishing from OBS to VDO.Ninja directly, without an SFU, will only allow one viewer at a time</li>
+						</ul>
+					</div>
+
+					<div id="about-vdo-ninja">
+						<h2>About VDO.Ninja</h2>
+						<p>VDO.Ninja is a free, open-source platform for live video production that supports multiple ways to integrate WHIP/WHEP streaming:</p>
+						<ul>
+							<li>It's easy to switch from peer to peer to server-based broadcasting with MediaMTX and Meshcast</li>
+							<li>Direct WHIP/WHEP publishing capabilities lowers latency and costs</li>
+							<li>Group room functionality for multi-user broadcasts and stream management</li>
+							<li>Mobile device support, with browser-based and native app options</li>
+						</ul>
+						
+						<h3>Open Source</h3>
+						<p>Both VDO.Ninja and this WHIP/WHEP client are open-source:</p>
+						<ul>
+							<li>VDO.Ninja: <a href="https://github.com/steveseguin/vdoninja" target="_blank">https://github.com/steveseguin/vdoninja</a></li>
+							<li>WHIP/WHEP Client: <a href="https://github.com/steveseguin/vdo.ninja/blob/develop/whip.html" target="_blank">https://github.com/steveseguin/vdo.ninja/blob/develop/whip.html</a></li>
+						</ul>
+					</div>
+				</div>
+					<br /><br /><br /><br />
+				</div>
+				<br /><br /><br /><br />
+
+		</div>
+<script>
+
+var domain = "./";
+
+document.querySelector("#changeText1").value = localStorage.getItem('changeText1') || "";
+document.querySelector("#changeText1t").value = localStorage.getItem('changeText1t') || "";
+document.querySelector("#changeText1a").value = localStorage.getItem('changeText1a') || "";
+document.querySelector("#changeText2").value = localStorage.getItem('changeText2') || "";
+
+
+const tabHashMap = {
+  'urlInput1': 'publish',
+  'urlInput2': 'obs',
+  'urlInput1a': 'twitch',
+  'urlInput3': 'play',
+  'urlInput4': 'host'
+};
+
+const hashTabMap = {
+  'publish': 'urlInput1',
+  'obs': 'urlInput2',
+  'twitch': 'urlInput1a',
+  'play': 'urlInput3',
+  'host': 'urlInput4'
+};
+
+if (localStorage.getItem('changeText3')!==null){
+	document.getElementById('changeText3').value = localStorage.getItem('changeText3');
+}
+if (localStorage.getItem('changeText3a')!==null){
+	document.getElementById('changeText3a').value = localStorage.getItem('changeText3a');
+}
+
+if (localStorage.getItem('whepbuffer')!==null){
+	document.getElementById('whepbuffer').value = localStorage.getItem('whepbuffer');
+}
+if (localStorage.getItem('whepicewait')!==null){
+	document.getElementById('whepicewait').value = localStorage.getItem('whepicewait');
+}
+if (localStorage.getItem('bitrateGroupFlag')!==null){
+	document.getElementById('bitrateGroupFlag').value = localStorage.getItem('bitrateGroupFlag');
+}
+if (localStorage.getItem('codecGroupFlag')!==null){
+	document.getElementById('codecGroupFlag').value = localStorage.getItem('codecGroupFlag');
+}
+if (localStorage.getItem('keyFrameRateFlag')!==null){
+	document.getElementById('keyFrameRateFlag').value = localStorage.getItem('keyFrameRateFlag');
+}
+if (localStorage.getItem('svcGroupFlag')!==null){
+	document.getElementById('svcGroupFlag').value = localStorage.getItem('svcGroupFlag');
+}
+if (localStorage.getItem('whipoutaudiobitrate')!==null){
+	document.getElementById('whipoutaudiobitrate').value = localStorage.getItem('whipoutaudiobitrate');
+}
+if (localStorage.getItem('vbrcbr')!==null){
+	document.getElementById('vbrcbr').value = localStorage.getItem('vbrcbr');
+}
+if (localStorage.getItem('autogain')!==null){
+	document.getElementById('autogain').value = localStorage.getItem('autogain');
+}
+if (localStorage.getItem('stereo')!==null){
+	document.getElementById('stereo').value = localStorage.getItem('stereo');
+}
+if (localStorage.getItem('denoise')!==null){
+	document.getElementById('denoise').value = localStorage.getItem('denoise');
+}
+
+if (localStorage.getItem('e2eeGroupFlag1')!==null){
+	document.getElementById('e2eeGroupFlag1').value = localStorage.getItem('e2eeGroupFlag1');
+}
+if (localStorage.getItem('e2eeGroupFlag2')!==null){
+	document.getElementById('e2eeGroupFlag2').value = localStorage.getItem('e2eeGroupFlag2');
+}
+
+if (localStorage.getItem('stereowhep')!==null){
+	document.getElementById('stereowhep').value = localStorage.getItem('stereowhep');
+}
+
+if (localStorage.getItem('whipwaitFlag')!==null){
+    document.getElementById('whipwaitFlag').value = localStorage.getItem('whipwaitFlag');
+}
+
+const scalabilityModes = [
+	'L1T1',
+	'L1T2',
+	'L1T3',
+	'L2T1',
+	'L2T2',
+	'L2T3',
+	'L3T1',
+	'L3T2',
+	'L3T3',
+	'L2T1h',
+	'L2T2h',
+	'L2T3h',
+	'S2T1',
+	'S2T2',
+	'S2T3',
+	'S2T1h',
+	'S2T2h',
+	'S2T3h',
+	'S3T1',
+	'S3T2',
+	'S3T3',
+	'S3T1h',
+	'S3T2h',
+	'S3T3h',
+	'L2T2_KEY',
+	'L2T3_KEY',
+	'L3T2_KEY',
+	'L3T3_KEY'
+];
+
+
+function gohere1(){
+	if (document.getElementById('changeText1').value){
+		
+		localStorage.setItem('changeText1', document.getElementById('changeText1').value);
+		localStorage.setItem('changeText1a', document.getElementById('changeText1a').value || "");
+		
+		localStorage.setItem('bitrateGroupFlag', document.getElementById('bitrateGroupFlag').value);
+		localStorage.setItem('codecGroupFlag', document.getElementById('codecGroupFlag').value);
+		localStorage.setItem('keyFrameRateFlag', document.getElementById('keyFrameRateFlag').value);
+		
+		localStorage.setItem('svcGroupFlag', document.getElementById('svcGroupFlag').value);
+		localStorage.setItem('whipwaitFlag', document.getElementById('whipwaitFlag').value);
+
+		
+		localStorage.setItem('whipoutaudiobitrate', document.getElementById('whipoutaudiobitrate').value);
+		localStorage.setItem('vbrcbr', document.getElementById('vbrcbr').value);
+		localStorage.setItem('autogain', document.getElementById('autogain').value);
+		localStorage.setItem('stereo', document.getElementById('stereo').value);
+		localStorage.setItem('denoise', document.getElementById('denoise').value);
+		
+		localStorage.setItem('e2eeGroupFlag1', document.getElementById('e2eeGroupFlag1').value);
+		
+		var whipoutaudiobitrate = "";
+		if (parseInt(document.getElementById('whipoutaudiobitrate').value)){
+			whipoutaudiobitrate = "&whipoutaudiobitrate="+document.getElementById('whipoutaudiobitrate').value;
+		}
+		
+		var vbrcbr = "&"+document.getElementById('vbrcbr').value;
+		var autogain = "&autogain="+document.getElementById('autogain').value;
+		
+		var stereo = "&stereo="+document.getElementById('stereo').value;
+		
+		var denoise = "&denoise="+document.getElementById('denoise').value;
+		
+		
+		var bitrate = "";
+		if (parseInt(document.getElementById('bitrateGroupFlag').value)){
+			bitrate = "&whipoutvideobitrate="+document.getElementById('bitrateGroupFlag').value;
+		}
+		var codec = "";
+		if (document.getElementById('codecGroupFlag').value!=="default"){
+			codec = "&whipoutcodec="+document.getElementById('codecGroupFlag').value;
+		}
+		var keyFrameRateFlag = "";
+		if (document.getElementById('keyFrameRateFlag').value!=="0"){
+			keyFrameRateFlag = "&whipoutkeyframe="+document.getElementById('keyFrameRateFlag').value;
+		}
+		var svc = "";
+		if (document.getElementById('svcGroupFlag').value!=="0"){
+			svc = "&svc="+document.getElementById('svcGroupFlag').value;
+		}
+		
+		var e2ee = "";
+		if (document.getElementById('e2eeGroupFlag1').value!=="0"){
+			e2ee = "&e2ee&password";
+		}
+		
+		var whipwait = "&whipwait=" + document.getElementById('whipwaitFlag').value;
+		
+		if (document.getElementById('changeText1a').value){
+			window.location = domain + "?push&whippush=" + encodeURIComponent(document.getElementById('changeText1').value) + "&whippushtoken=" + document.getElementById('changeText1a').value + codec + bitrate+whipoutaudiobitrate+vbrcbr+autogain+stereo+denoise+svc+e2ee+keyFrameRateFlag + whipwait;
+		} else {
+			window.location = domain + "?push&whippush=" + encodeURIComponent(document.getElementById('changeText1').value) + codec + bitrate+whipoutaudiobitrate+vbrcbr+autogain+stereo+denoise+svc+e2ee+keyFrameRateFlag + whipwait;
+		}
+	}
+}
+
+function checkStereo(){
+	if (parseInt(document.getElementById('autogain').value) || parseInt(document.getElementById('denoise').value)){
+		document.getElementById('stereo').disabled = true;
+		document.getElementById('stereo').title = "Noise reduction and auto-gain will prevent stereo audio from working";
+	} else {
+		document.getElementById('stereo').disabled = false;
+		delete document.getElementById('stereo').disabled;
+		document.getElementById('stereo').title = "Enable stereo 2.0 audio if available. Must be enabled on the viewer's end as well.";
+	}
+}
+
+function updateSVC(){
+	
+	var codecName = document.getElementById('codecGroupFlag').value;
+	var select = document.getElementById("svcGroupFlag");
+	var selectedValue = "0";
+	if (select.options && select.selectedIndex && select.options[select.selectedIndex]){
+		selectedValue = select.options[select.selectedIndex].value;
+	}
+	select.innerHTML = "";
+	
+	var option = document.createElement("option");
+	option.text = "🎦 SVC Off";
+	option.value = "0";
+	select.add(option);
+	select.selectedIndex = 0;
+	
+	if (svcLUT[codecName]){
+		svcLUT[codecName].forEach(opt=>{
+			option = document.createElement("option");
+			option.text = "🎦 "+opt;
+			option.value = opt;
+			select.add(option);
+			if (opt == selectedValue){
+				select.value = opt;
+			}
+		});
+	}
+}
+
+function gohere1t(){
+	if (document.getElementById('changeText1t').value){
+		localStorage.setItem('changeText1t', document.getElementById('changeText1t').value);
+		window.location = domain + "?whipoutvideobitrate=5800&stereo&push&whippush=https%3A%2F%2Fg.webrtc.live-video.net%3A4443%2Fv2%2Foffer&whippushtoken="+ document.getElementById('changeText1t').value;
+	}
+}
+
+function gohere2(){
+	if (document.getElementById('changeText2').value){
+		localStorage.setItem('changeText2', document.getElementById('changeText2').value);
+		window.location = domain + "?whip=" + document.getElementById('changeText2').value;
+	}
+}
+
+function gohere3(){
+	if (document.getElementById('changeText3').value){
+	
+		if (document.getElementById('changeText3').value.startsWith("http://vdo.ninja/")){
+			document.getElementById('changeText3').value = document.getElementById('changeText3').value.replace("http://vdo.ninja/","http://insecure.vdo.ninja/"); // a special exception for WHEP developers
+		} else if (document.getElementById('changeText3').value.startsWith("http://")){
+			if (window.location.protocol+window.location.hostname == "https:vdo.ninja"){
+				var tmp = window.location.pathname.split("/");
+				tmp.pop();
+				domain = "http://insecure.vdo.ninja"+tmp.join("/")+"/";
+			}
+		}
+	
+		localStorage.setItem('changeText3', document.getElementById('changeText3').value);
+		localStorage.setItem('changeText3a', document.getElementById('changeText3a').value);
+		localStorage.setItem('whepbuffer', document.getElementById('whepbuffer').value);
+		localStorage.setItem('whepicewait', document.getElementById('whepicewait').value);
+		localStorage.setItem('e2eeGroupFlag2', document.getElementById('e2eeGroupFlag2').value);
+		localStorage.setItem('stereowhep', document.getElementById('stereowhep').value);
+		
+		
+		var addedon = "";
+		if (parseInt(document.getElementById('whepbuffer').value)){
+			addedon += "&buffer="+document.getElementById('whepbuffer').value;
+		}
+		
+		if (parseInt(document.getElementById('e2eeGroupFlag2').value)){
+			addedon += "&e2ee&password";
+		}
+		if (parseInt(document.getElementById('stereowhep').value)){
+			addedon += "&stereo=2";  // viewer side only; stereo=1 will do both ways
+		} else {
+			addedon += "&mono";
+		}
+		
+		if (document.getElementById('changeText3a').value){
+			addedon += "&whepplaytoken="+document.getElementById('changeText3a').value;
+		}
+		
+		addedon += "&whepwait="+document.getElementById('whepicewait').value;
+		
+		window.location = domain + "?&whepplay=" + encodeURIComponent(document.getElementById('changeText3').value)+addedon;
+	}
+}
+
+function change4(){
+	document.getElementById('whepoutid').innerText = document.getElementById('changeText4').value;
+	document.getElementById('whepoutsrc').href = "https://whep.vdo.ninja/"+document.getElementById('changeText4').value;
+	
+	
+}
+
+function gohere4(){
+	if (document.getElementById('changeText4').value){  // document.getElementById('changeText4').value
+		localStorage.setItem('changeText4', document.getElementById('changeText4').value);
+		document.getElementById('whepoutid').innerText = document.getElementById('changeText4').value;
+		document.getElementById('whepoutsrc').href = "https://whep.vdo.ninja/"+document.getElementById('changeText4').value;
+		var addedon = "";
+		window.location = domain + "?push=" + encodeURIComponent(document.getElementById('changeText4').value)+"&whepout=" + encodeURIComponent(document.getElementById('changeText4').value)+addedon;
+	}
+}
+
+function resetHistory(){
+	localStorage.clear();
+	document.querySelector("#changeText1").value = "";
+	document.querySelector("#changeText1a").value = "";
+	document.querySelector("#changeText2").value = "";
+	document.querySelector("#changeText3").value = "";
+	document.querySelector("#changeText1t").value = "";
+	checkStereo();
+}
+
+(function (w) {
+    w.URLSearchParams = w.URLSearchParams || function (searchString) {
+        var self = this;
+        self.searchString = searchString;
+        self.get = function (name) {
+            var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(self.searchString);
+            if (results == null) {
+                return null;
+            }
+            else {
+                return decodeURI(results[1]) || 0;
+            }
+        };
+    }
+
+})(window)
+
+var urlParams = new URLSearchParams(window.location.search);
+
+function enterPressed(event, callback){
+  if (event.keyCode === 13){ // Number 13 is the "Enter" key on the keyboard
+    event.preventDefault(); // Cancel the default action, if needed
+    callback();
+  }
+}
+
+checkStereo();
+
+var isMobile = false;
+if( /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)){ // does not detect iPad Pros.
+	isMobile=true; // if iOS, default to H264?  meh.  let's not.
+}
+var Firefox = navigator.userAgent.indexOf("Firefox")>=0;
+if (Firefox){
+	Firefox = parseInt(navigator.userAgent.split("irefox/").pop()) || true;
+} 
+
+var capabilityType = Firefox ? "transmission" : "webrtc";
+var codecs = RTCRtpSender.getCapabilities('video').codecs;
+var svcLUT = {};
+var svcDefault = {};
+
+function getCommonValues(obj) {
+	if (obj.default){
+		delete obj.default;
+	}
+	let commonValues = [];
+	let firstKey = Object.keys(obj)[0];
+	let firstArray = obj[firstKey];
+	for (let i = 0; i < firstArray.length; i++) {
+		let currentValue = firstArray[i];
+		let isCommonValue = true;
+		for (let key in obj) {
+			if (!obj[key].includes(currentValue)) {
+			isCommonValue = false;
+			break;
+			}
+		}
+		if (isCommonValue) {
+			commonValues.push(currentValue);
+		}
+	}
+	return commonValues
+}
+
+async function processCodecs(){
+	await codecs.forEach(async codec => {
+		try {
+			var codecName = codec.mimeType.replace("video/","").toLowerCase();
+			if (['video/red', 'video/ulpfec', 'video/rtx'].includes(codec.mimeType)) {
+				return;
+			} else if (svcLUT[codecName]){ // already done
+				return;
+			}
+			
+			svcLUT[codecName] = [];
+			var capabilityPromises = [];
+			for (const mode of scalabilityModes) {
+				capabilityPromises.push(navigator.mediaCapabilities.encodingInfo({
+					type: capabilityType,
+					video: {
+						contentType: codec.mimeType,
+						width: 1920,
+						height: 1080,
+						bitrate: 10000,
+						framerate: 29.97,
+						scalabilityMode: mode
+					}
+				}));
+			}
+			var capabilityResults = await Promise.all(capabilityPromises);
+			for (var i = 0;i<capabilityResults.length;i++){
+				if (capabilityResults[i].supported){
+					svcLUT[codecName].push(scalabilityModes[i]);
+				}
+			}
+			
+			svcLUT['default'] = getCommonValues(svcLUT);
+			updateSVC();
+		} catch(e){
+			console.error(e);
+		}
+	});
+	console.log("available codecs");
+	console.log(svcLUT);
+
+	
+}
+if (codecs){
+
+	var h265found = false;
+	codecs.forEach(c =>{
+		if (c.mimeType.toLowerCase().includes("h265")){
+			h265found = true;
+		}
+	})
+	if (!h265found){
+		document.getElementById("h265codec").disabled = true;
+		document.getElementById("h265codec").title = "Not found on your system. See https://vdo.ninja/h265 for help on enabling.";
+	}
+	
+	var av1found = false;
+	codecs.forEach(c =>{
+		if (c.mimeType.toLowerCase().includes("av1")){
+			av1found = true;
+		}
+	})
+	if (!av1found){
+		document.getElementById("av1codec").disabled = true;
+		document.getElementById("av1codec").title = "Not found on your system";
+	} else if (localStorage.getItem('codecGroupFlag')===null){
+		document.getElementById('codecGroupFlag').value = "av1";
+	}
+	
+	
+	
+	processCodecs();
+	
+}
+// Updated UI interactions
+function initializeUI() {
+  // Create tabs container
+  const tabsContainer = document.createElement('div');
+  tabsContainer.className = 'tabs-container';
+  
+  const tabsInner = document.createElement('div');
+  tabsInner.className = 'section-tabs';
+  
+  const tabs = [
+    { id: 'publish-tab', text: 'Publish Stream', icon: '🎥', target: 'urlInput1' },
+	{ id: 'obs-tab', text: ' OBS ➡️ VDO', icon: '', target: 'urlInput2' },
+	{ id: 'twitch-tab', text: 'VDO ➡️ Twitch ', icon: '', target: 'urlInput1a' },
+    { id: 'play-tab', text: 'Play Stream', icon: '📺', target: 'urlInput3' },
+    { id: 'host-tab', text: 'Host Stream', icon: '🌐', target: 'urlInput4' }
+  ];
+
+  tabs.forEach(tab => {
+    const tabElement = document.createElement('div');
+    tabElement.className = 'section-tab';
+    tabElement.innerHTML = `${tab.icon} ${tab.text}`;
+    tabElement.onclick = () => switchTab(tab.target);
+    tabsInner.appendChild(tabElement);
+  });
+
+  tabsContainer.appendChild(tabsInner);
+  document.querySelector('.container').insertBefore(tabsContainer, document.querySelector('.urlInput'));
+
+  // Setup sections
+  const sections = document.querySelectorAll('.urlInput');
+  sections.forEach(section => {
+    section.classList.add('section-card');
+   
+  });
+
+  // Initially show first section and hide others
+  sections.forEach((section, index) => {
+    section.style.display = index === 0 ? 'block' : 'none';
+  });
+  document.querySelector('.section-tab').classList.add('active');
+
+  // Add tips where needed
+  const obsSection = document.getElementById('urlInput2');
+  if (obsSection) {
+    const tip = document.createElement('div');
+    tip.className = 'usage-tip';
+    tip.innerHTML = '💡 Copy this endpoint URL into OBS: <strong>https://whip.vdo.ninja</strong>   ..and don\'t forget to also copy over your stream token.';
+    obsSection.querySelector('.inputCombo').after(tip);
+  }
+}
+
+function switchTab(targetId) {
+  document.querySelectorAll('.urlInput').forEach(section => {
+    section.style.display = section.id === targetId ? 'block' : 'none';
+  });
+  
+  document.querySelectorAll('.section-tab').forEach((tab, index) => {
+    tab.classList.toggle('active', index === Array.from(document.querySelectorAll('.urlInput'))
+      .findIndex(section => section.id === targetId));
+  });
+  
+  window.location.hash = tabHashMap[targetId];
+}
+
+function checkHashAndSelectTab() {
+  const hash = window.location.hash.substring(1);
+  if (hash && hashTabMap[hash]) {
+    switchTab(hashTabMap[hash]);
+  }
+}
+
+
+function toggleAdvanced(section, toggle) {
+  const isHidden = !section.classList.contains('visible');
+  section.classList.toggle('visible');
+  toggle.innerHTML = isHidden ? '⚙️ Hide Advanced Options' : '⚙️ Advanced Options';
+}
+
+function generateStreamID(length = 7) {
+    var text = "";
+    var possible = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    for (var i = 0; i < length; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    try {
+        text = text.replaceAll("AD", "vDAv");
+        text = text.replaceAll("Ad", "vdAv");
+        text = text.replaceAll("ad", "vdav");
+        text = text.replaceAll("aD", "vDav");
+    } catch (e) {
+        console.error(e);
+    }
+    return text;
+}
+
+function generateNewToken() {
+    document.getElementById('changeText2').value = generateStreamID();
+}
+
+// Initialize UI when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  initializeUI();
+  checkHashAndSelectTab();
+});
+
+window.addEventListener('hashchange', checkHashAndSelectTab);
+</script>
+</body>
+</html>

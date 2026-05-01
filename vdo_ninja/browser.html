@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Information Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .info-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+            padding-bottom: 25px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-section:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: #333;
+            text-align: right;
+            max-width: 60%;
+            word-break: break-word;
+        }
+
+        .info-value.true {
+            color: #4caf50;
+        }
+
+        .info-value.false {
+            color: #f44336;
+        }
+
+        .info-value.number {
+            color: #2196f3;
+        }
+
+        .performance-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .performance-0 {
+            background: #4caf50;
+            color: white;
+        }
+
+        .performance-1 {
+            background: #ff9800;
+            color: white;
+        }
+
+        .performance-2 {
+            background: #f44336;
+            color: white;
+        }
+
+        .safari-highlight {
+            background: #fffacd;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ffd700;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .info-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .info-value {
+                max-width: 100%;
+                text-align: left;
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Device Information Detector</h1>
+            <p>Comprehensive browser and device capability detection</p>
+        </div>
+
+        <div class="info-card">
+            <div class="info-section safari-highlight">
+                <h2 class="section-title">🦁 Safari/WebKit Version</h2>
+                <div class="info-item">
+                    <span class="info-label">Safari Version</span>
+                    <span class="info-value number" id="safari-version">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">iOS Version</span>
+                    <span class="info-value number" id="ios-version">Detecting...</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="section-title">🌐 Browser Detection</h2>
+                <div class="info-item">
+                    <span class="info-label">Firefox</span>
+                    <span class="info-value" id="firefox">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Chromium Version</span>
+                    <span class="info-value" id="chromium">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Opera GX</span>
+                    <span class="info-value" id="opera-gx">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Vingester</span>
+                    <span class="info-value" id="vingester">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">MELD</span>
+                    <span class="info-value" id="meld">Detecting...</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="section-title">📱 Device Detection</h2>
+                <div class="info-item">
+                    <span class="info-label">iOS</span>
+                    <span class="info-value" id="ios">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">iPad</span>
+                    <span class="info-value" id="ipad">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">macOS</span>
+                    <span class="info-value" id="macos">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Intel Mac</span>
+                    <span class="info-value" id="intel-mac">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Android</span>
+                    <span class="info-value" id="android">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Samsung A Series</span>
+                    <span class="info-value" id="samsung-a">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">iPhone 12+</span>
+                    <span class="info-value" id="iphone12">Detecting...</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="section-title">⚡ Hardware Capabilities</h2>
+                <div class="info-item">
+                    <span class="info-label">CPU Threads</span>
+                    <span class="info-value" id="cpu">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">GPU</span>
+                    <span class="info-value" id="gpu">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Wake Lock Support</span>
+                    <span class="info-value" id="wake-lock">Detecting...</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Performance Score</span>
+                    <span class="info-value" id="performance">Detecting...</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <h2 class="section-title">📊 Raw Data</h2>
+                <div class="info-item">
+                    <span class="info-label">User Agent</span>
+                    <span class="info-value" id="user-agent" style="font-size: 0.8rem;">Detecting...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Stub for missing functions/objects
+        function log(msg) { console.log(msg); }
+        function errorlog(e) { console.error(e); }
+        var session = { 
+            quality_wb: 0, 
+            quality_room: 0,
+            mobile: false,
+            audioCtx: null 
+        };
+
+        // Your original functions (preserved exactly)
+        function detectCPUSupport() {
+            let cpuThreads = navigator.hardwareConcurrency;
+            if (cpuThreads) {
+                return cpuThreads + " threads";
+            }
+            return false;
+        }
+
+        function detectGPUSupport() {
+            try {
+                const gl = document.createElement("canvas").getContext("webgl");
+
+                if (!gl) {
+                    return false;
+                }
+
+                if (!Firefox) {
+                    try {
+                        const debugInfo = gl.getExtension("WEBGL_debug_renderer_info"); // chrome
+                        if (debugInfo) {
+                            return gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+                        }
+                    } catch (e) {}
+                }
+
+                try {
+                    return gl.getParameter(gl.RENDERER) || false; // firefox
+                } catch (e) {}
+            } catch (e) {}
+            return false;
+        }
+
+        function isOperaGX() {
+            return (!!window.opr && !!opr.addons) || !!window.opera || navigator.userAgent.indexOf(" OPR/75") >= 0;
+        }
+
+        function isSamsungASeries() {
+            return navigator.userAgent.includes("; SM-A") || false;
+        }
+
+        function getChromiumVersion() {
+            var raw = navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./);
+            return raw ? parseInt(raw[2], 10) : false;
+        }
+
+        function getiOSVersion() {
+            try {
+                var agent = navigator.userAgent;
+                var start = agent.indexOf("OS ");
+                if ((agent.indexOf("iPhone") > -1 || agent.indexOf("iPad") > -1) && start > -1) {
+                    return window.Number(agent.substr(start + 3, 3).replace("_", "."));
+                }
+                return 0;
+            } catch (e) {
+                return 0;
+            }
+            return 0;
+        }
+
+        function safariVersion() {
+            var ver = 0;
+            try {
+                ver = navigator.appVersion.split("Version/");
+                if (ver.length > 1) {
+                    ver = ver[1].split(" Safari");
+                }
+                if (ver.length > 1) {
+                    ver = ver[0].split(".");
+                }
+                if (ver.length > 1) {
+                    ver = parseInt(ver[0]);
+                } else {
+                    ver = 0;
+                }
+            } catch (e) {
+                return 0;
+            }
+            return ver;
+        }
+
+        function isIntelMac() {
+            // Check if it's a Mac but not Apple Silicon
+            if (macOS && navigator.userAgent.indexOf("Intel") >= 0) {
+                return true;
+            }
+            return false;
+        }
+
+        function judgePerformance(){
+            try {
+                if (SafariVersion && SafariVersion >= 17 && (iOS || iPad)) { // iphone xr or newer
+                    return 0;
+                }
+                
+                const cores = typeof navigator.hardwareConcurrency === 'number' ? navigator.hardwareConcurrency : 0;
+                
+                if (isIntelMac()) {
+                    if (cores < 6) { // yes. they are that bad.
+                        return 2;
+                    } else {
+                        return 1;
+                    }
+                }
+                
+                if (session.mobile && (cores>=4)){ // assume hardware encoded acceleration
+                    return 0;
+                }
+                
+                if (!cores){
+                    return 1;
+                } else if (cores < 4 ){
+                    return 2;
+                } else if (cores>8){
+                    return 0;
+                }
+                return 1
+            } catch (e) {
+                return 1; // 99% safe default
+            }
+        }
+
+        const needsLegacyWakeLock = () => {
+            try {
+                if ('wakeLock' in navigator) {
+                    if (Firefox) { // using your existing Firefox detection
+                        return true;
+                    }
+                    if ((iOS || iPad) && SafariVersion < 16.4) { // using your existing iOS/iPad/SafariVersion detection
+                        return true;
+                    }
+                    return false;
+                }
+            } catch(e){}
+            
+            return true; // No Wake Lock API, need legacy keep alive for mobile
+        };
+
+        // Your original detection code
+        try {
+            var iOS = !!navigator.platform && /iPad|iPhone|iPod/.test(navigator.platform); // used by main.js also
+            var iPad = navigator.maxTouchPoints && navigator.maxTouchPoints > 2 && /MacIntel/.test(navigator.platform);
+
+            var macOS = navigator.userAgent.indexOf("Mac OS X") != -1;
+            macOS = macOS && !(iOS || iPad);
+            var Firefox = navigator.userAgent.indexOf("Firefox") >= 0;
+            if (Firefox) {
+                Firefox = parseInt(navigator.userAgent.split("irefox/").pop()) || true;
+            }
+            var Android = navigator.userAgent.toLowerCase().indexOf("android") > -1; //&& ua.indexOf("mobile");
+            var ChromiumVersion = getChromiumVersion();
+            var OperaGx = isOperaGX();
+            var SafariVersion = safariVersion() || getiOSVersion(); // I should rename this to webkit
+
+            if (iOS || iPad) {
+                // iOS doesn't yet allow actual browsers, cause it's abusing its duopoly.
+                if (SafariVersion) {
+                    if (Firefox) {
+                        Firefox = false; //  I should rename this to gecko
+                    }
+                    if (ChromiumVersion) {
+                        ChromiumVersion = false; // I should rename this to chromium
+                    }
+                }
+            }
+            var SamsungASeries = isSamsungASeries();
+            var isVingester = navigator.userAgent.indexOf("Vingester") >= 0;
+
+            var gpgpuSupport = detectGPUSupport(); // graphics ; not supported on ios
+            log(gpgpuSupport);
+
+            var cpuSupport = detectCPUSupport(); // thread count ; supported on ios
+            log(cpuSupport);
+
+            var iPhone12Up = false;
+            
+            var isMELD = false;
+            if (typeof navigator!== 'undefined' && navigator.userAgent && navigator.userAgent.includes("Meld/")) {
+                isMELD = true;
+            }
+
+            if (iOS && !iPad) {
+                if (window.devicePixelRatio.toFixed(2) >= 3 && window.screen.height > 800 && window.screen.width != 414) {
+                    // for reference, https://www.ios-resolution.com/
+                    iPhone12Up = true; // iPhone SE is left out.
+                }
+            }
+            
+            // Detect mobile
+            session.mobile = iOS || iPad || Android;
+            
+            session.quality_wb = judgePerformance(); // try to estimate what resolution to use for encoding when not in a room.
+            
+            if (session.quality_room < session.quality_wb){
+                session.quality_room = session.quality_wb;
+            }
+            
+        } catch (e) {
+            errorlog(e);
+        }
+
+        // Display results
+        function updateDisplay() {
+            // Safari/iOS versions
+            document.getElementById('safari-version').textContent = safariVersion() || 'Not Safari';
+            document.getElementById('safari-version').className = 'info-value ' + (safariVersion() ? 'number' : 'false');
+            
+            document.getElementById('ios-version').textContent = getiOSVersion() || 'Not iOS';
+            document.getElementById('ios-version').className = 'info-value ' + (getiOSVersion() ? 'number' : 'false');
+
+            // Browser detection
+            document.getElementById('firefox').textContent = Firefox || 'No';
+            document.getElementById('firefox').className = 'info-value ' + (Firefox ? 'true' : 'false');
+            
+            document.getElementById('chromium').textContent = ChromiumVersion || 'No';
+            document.getElementById('chromium').className = 'info-value ' + (ChromiumVersion ? 'number' : 'false');
+            
+            document.getElementById('opera-gx').textContent = OperaGx ? 'Yes' : 'No';
+            document.getElementById('opera-gx').className = 'info-value ' + (OperaGx ? 'true' : 'false');
+            
+            document.getElementById('vingester').textContent = isVingester ? 'Yes' : 'No';
+            document.getElementById('vingester').className = 'info-value ' + (isVingester ? 'true' : 'false');
+            
+            document.getElementById('meld').textContent = isMELD ? 'Yes' : 'No';
+            document.getElementById('meld').className = 'info-value ' + (isMELD ? 'true' : 'false');
+
+            // Device detection
+            document.getElementById('ios').textContent = iOS ? 'Yes' : 'No';
+            document.getElementById('ios').className = 'info-value ' + (iOS ? 'true' : 'false');
+            
+            document.getElementById('ipad').textContent = iPad ? 'Yes' : 'No';
+            document.getElementById('ipad').className = 'info-value ' + (iPad ? 'true' : 'false');
+            
+            document.getElementById('macos').textContent = macOS ? 'Yes' : 'No';
+            document.getElementById('macos').className = 'info-value ' + (macOS ? 'true' : 'false');
+            
+            document.getElementById('intel-mac').textContent = isIntelMac() ? 'Yes' : 'No';
+            document.getElementById('intel-mac').className = 'info-value ' + (isIntelMac() ? 'true' : 'false');
+            
+            document.getElementById('android').textContent = Android ? 'Yes' : 'No';
+            document.getElementById('android').className = 'info-value ' + (Android ? 'true' : 'false');
+            
+            document.getElementById('samsung-a').textContent = SamsungASeries ? 'Yes' : 'No';
+            document.getElementById('samsung-a').className = 'info-value ' + (SamsungASeries ? 'true' : 'false');
+            
+            document.getElementById('iphone12').textContent = iPhone12Up ? 'Yes' : 'No';
+            document.getElementById('iphone12').className = 'info-value ' + (iPhone12Up ? 'true' : 'false');
+
+            // Hardware
+            document.getElementById('cpu').textContent = cpuSupport || 'Not detected';
+            document.getElementById('cpu').className = 'info-value ' + (cpuSupport ? 'number' : 'false');
+            
+            document.getElementById('gpu').textContent = gpgpuSupport || 'Not detected';
+            document.getElementById('gpu').className = 'info-value ' + (gpgpuSupport ? 'true' : 'false');
+            
+            document.getElementById('wake-lock').textContent = needsLegacyWakeLock() ? 'Legacy needed' : 'Modern API';
+            document.getElementById('wake-lock').className = 'info-value ' + (needsLegacyWakeLock() ? 'false' : 'true');
+            
+            // Performance
+            const perfScore = session.quality_wb;
+            const perfText = perfScore === 0 ? 'High' : perfScore === 1 ? 'Medium' : 'Low';
+            document.getElementById('performance').innerHTML = `<span class="performance-indicator performance-${perfScore}">${perfText} (${perfScore})</span>`;
+            
+            // User agent
+            document.getElementById('user-agent').textContent = navigator.userAgent;
+        }
+
+        // Run detection when page loads
+        updateDisplay();
+    </script>
+</body>
+</html>

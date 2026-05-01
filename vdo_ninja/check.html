@@ -1,0 +1,1494 @@
+<html>
+	<head>
+		<link rel="stylesheet" href="./lineawesome/css/line-awesome.min.css" />
+		<link rel="stylesheet" href="./check.css?ver=1" />
+		<meta charset="utf8" />
+		<link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon" />
+		<link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="./media/favicon-32x32.png" />
+		<link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="./media/favicon-16x16.png" />
+		<link id="favicon3" rel="icon" href="./media/favicon.ico" />
+		<link id="thumbnailUrl" itemprop="thumbnailUrl" href="./media/vdoNinja_logo_full.png" />
+		<link rel="alternate" type="text/markdown" href="/rawdoc.md" title="Developer and User Documentation">
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="index, follow" />
+		<meta name="author" content="Steve Seguin" />
+		<meta name="copyright" content="&copy; 2024 Steve Seguin" />
+		<meta name="license" content="https://github.com/steveseguin/vdo.ninja/LICENSE.md" />
+		<meta name="sourcecode" content="https://github.com/steveseguin/vdo.ninja" />
+		<meta name="theme-color" content="#0f131d" />
+		<link rel="canonical" href="https://vdo.ninja/check.html" />
+		<title>VDON Stream Test</title>
+		<meta id="metaTitle" name="title" content="VDON Stream Test" />
+		<meta name="description" content="Run a VDO.Ninja preflight test for camera, microphone, bandwidth, and WebRTC connection quality before joining a live room." />
+
+		<meta name="twitter:card" content="summary_large_image">
+		<meta name="twitter:creator" content="@SteveSeguin">
+		<meta name="twitter:title" content="VDON Stream Test">
+		<meta name="twitter:description" content="Check your camera, microphone, and WebRTC network performance before you go live on VDO.Ninja.">
+		<meta name="twitter:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
+
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="https://vdo.ninja/check.html">
+		<meta property="og:title" content="VDON Stream Test">
+		<meta property="og:description" content="Run a VDO.Ninja preflight test for camera, microphone, bandwidth, and WebRTC connection quality before joining a live room.">
+		<meta property="og:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
+		<meta property="og:image:width" content="1200">
+		<meta property="og:image:height" content="630">
+		<meta property="og:site_name" content="VDO.Ninja">
+
+	</head>
+	<body>
+		<div class="fullscreen" id="page1">
+			<h1>Welcome</h1>
+			<h2>
+				<p>This application will access your camera and complete a video test stream.</p>
+				<p>The full test will take a few minutes to complete.</p>
+				<button onclick="next1();">Continue</button>
+			</h2>
+		</div>
+		<div class="fullscreen hidden" id="page2">
+			<h1>Please note, for best results:</h1>
+			<h2>
+				<ul>
+					<li>Connect your computer to a wired connection, instead of Wi-Fi</li>
+					<li>Have no other applications open while running this test</li>
+					<li>If using a laptop, connect your laptop to a power outlet</li>
+				</ul>
+				<button onclick="next2();">Continue</button>
+			</h2>
+		</div>
+		
+		<div class="fullscreen hidden" id="page2a">
+			<h1>This first step will measure your network bandwidth</h1>
+			<h2>
+				<p>We will test against Cloudflare's speed test servers.</p>
+				<p>It will take a minute to complete once started.</p>
+				<div id="cloudflareresults">
+					<button id="cloudflare" disabled>Loading Files</button>
+				</div>
+			</h2>
+		</div>
+		
+		<div class="fullscreen hidden" id="page3">
+			<h2>
+				<p>The next step will access your camera and microphone.</p>
+				<p>Accept the camera and microphone permissions if prompted.</p>
+				<small><i>No one will be able to see your video or audio, other than you.</i></small>
+				<p><img src='./media/accept.png'/></p>
+				<button onclick="next3();">Continue</button>
+			</h2>
+		</div>
+		<div id="mainapp" class="hidden">
+			<h1>
+				Video and stream quality check
+			</h1>
+			<div id="container">
+			</div>
+			<div class="hidden" id="graphs">
+				<div class="graph">
+					<h3>Bitrate (kbps)</h3>
+					<span>0</span>
+					<canvas id="bitrate-graph"></canvas>
+				</div>
+
+				<div class="graph">
+					<h3>Buffer delay (ms)</h3>
+					<span>0</span>
+					<canvas id="buffer-graph"></canvas>
+				</div>
+
+				<div class="graph">
+					<h3>Packet Loss (%)</h3>
+					<span>0</span>
+					<canvas id="packetloss-graph"></canvas>
+				</div>
+			</div>
+			
+			<div style="display:none;" id="explanation">
+				<div id="remote"></div>
+				<br />
+				Testing location: <select name="turnlist" id="turnlist" onchange="reloadTurn();" title="Select an exact location to test against">
+				  <option selected value="">Automatic</option>
+				  <option value="de1">Saarbruecken, Germany</option>
+				  <option value="de2">Frankfurt, Germany</option>
+				  <option value="fr1">Strasbourg, France</option>
+				  <option value="bra1">São Paulo, Brazil</option>
+				  <option value="pol1">Warsaw, Poland</option>
+				  <option value="cae1">Montreal, Canada</option>
+				  <option value="use1">Virgina, USA</option>
+				  <option disabled value="usc1">Chicago, USA</option>
+				  <option disabled value="usw1">Los Angeles, USA</option>
+				  <option value="usw2">Oregon, USA</option>
+				  <option value="aus1">Sydney, Australia</option>
+				  <option value="jap1">Tokyo, Japan</option>
+				  <option value="sing1">Singapore</option>
+				  <option value="ind1">Mumbai, India</option>
+				  <option value="pol1">Warsaw, Poland</option>
+				</select>
+				<br /><br /><br />
+			</div>
+		</div>
+
+		<script>
+		
+			function getChromiumVersion() {
+				var raw = navigator.userAgent.match(/Chrom(e|ium)\/([0-9]+)\./);
+				return raw ? parseInt(raw[2], 10) : false;
+			}
+			
+			function next1(){
+				document.getElementById("page1").classList.add("hidden");
+				document.getElementById("page2").classList.remove("hidden");
+			}
+			
+			async function runCodecDetection() {
+			  try {
+				console.log("Starting advanced codec detection...");
+				const detectedCodecs = await detectCodecs();
+				logged.push({detectedCodecs});
+				console.log("Codec detection complete", detectedCodecs);
+				return detectedCodecs;
+			  } catch (error) {
+				console.error("Error in codec detection:", error);
+				logged.push({codecDetectionError: error.message});
+				return null;
+			  }
+			}
+
+			// Call codec detection at appropriate time
+			function next2() {
+			  document.getElementById("page2").classList.add("hidden");
+			  document.getElementById("page2a").classList.remove("hidden");
+			  
+			  // Run codec detection in parallel with speed test loading
+			  runCodecDetection();
+			  
+			  setTimeout(function() {
+				if (document.getElementById("playButton") && !document.getElementById("playButton").skip) {
+				  next2a();
+				}
+			  }, 10000);
+			}
+			
+			function next2a(){
+				document.getElementById("page2a").classList.add("hidden");
+				document.getElementById("page3").classList.remove("hidden");
+			}
+			
+			function next3(){
+				document.getElementById("page3").classList.add("hidden");
+				document.getElementById("mainapp").classList.remove("hidden");
+				loadIframe(region);
+			}
+		
+			(function (w) {
+				w.URLSearchParams =
+					w.URLSearchParams ||
+					function (searchString) {
+						var self = this;
+						self.searchString = searchString;
+						self.get = function (name) {
+							var results = new RegExp("[\?&]" + name + "=([^&#]*)").exec(
+								self.searchString
+							);
+							if (results == null) {
+								return null;
+							} else {
+								return decodeURI(results[1]) || 0;
+							}
+						};
+					};
+			})(window);
+			var urlParams = new URLSearchParams(window.location.search);
+			
+			var quality_reason = "";
+			var encoder = "";
+			var Round_Trip_Time_ms = "";
+			var recordResults = false;
+			
+			var iframe1 = document.createElement("iframe");
+			
+			function copyFunction(copyText) {
+				alert("Log copied to the clipboard.");
+				try {
+					copyText.select();
+					copyText.setSelectionRange(0, 99999);
+					document.execCommand("copy");
+				} catch (e) {
+					var dummy = document.createElement("input");
+					document.body.appendChild(dummy);
+					dummy.value = copyText;
+					dummy.select();
+					document.execCommand("copy");
+					document.body.removeChild(dummy);
+					return false;
+				}
+				
+			}
+			
+			function printValues(obj) {
+				var out = "";
+				for (var key in obj) {
+					if (typeof obj[key] === "object") {
+						out += "<br />";
+						out += printValues(obj[key]);
+					} else {
+						if (key.startsWith("_")) {
+						} else {
+							out += "<b>" + key + "</b>: " + obj[key] + "<br />";
+						}
+					}
+				}
+				return out;
+			}
+
+			var logged = [];
+			function logData(data) {
+				logged.push(data);
+			}
+			
+			const stunServers = [
+			  'stun:stun.l.google.com:19302',
+			  'stun:stun1.l.google.com:19302',
+			  'stun:stun.cloudflare.com:3478',
+			];
+
+			async function checkConnectionModes() {
+			  let hostMode = false;
+			  let srflxMode = false;
+
+			  const iceConfig = { iceServers: [{ urls: stunServers }] };
+			  const rtcPeerConnection = new RTCPeerConnection(iceConfig);
+
+			  rtcPeerConnection.createDataChannel(''); // Create a dummy data channel
+			  const offer = await rtcPeerConnection.createOffer();
+
+			  rtcPeerConnection.onicecandidate = (event) => {
+				if (event.candidate) {
+				  if (event.candidate.candidate.includes('srflx')) {
+					if (!srflxMode){
+						srflxMode= true;
+						if (hostMode){
+							logged.push({hostMode,srflxMode});
+						}
+					}
+				  } else if (event.candidate.candidate.includes('host')) {
+					if (!hostMode){
+						hostMode = true;
+						if (srflxMode){
+							logged.push({hostMode,srflxMode});
+						}
+					}
+				  }
+				} else {
+				  rtcPeerConnection.onicecandidate = null;
+				  if (!hostMode || !hostMode){
+					logged.push({hostMode,srflxMode});
+				  }
+				}
+			  };
+			  rtcPeerConnection.setLocalDescription(offer);
+			}
+			try {
+				checkConnectionModes();
+			} catch(e){}
+		
+			function reloadTurn(){
+				console.log("Reloading to change TURN servers");
+				loadIframe(document.getElementById("turnlist").value);
+			}
+			
+			function updateTurnlist(value){
+				var select = document.getElementById("turnlist");
+				var selected = select.value;
+				
+				select.innerHTML = "";
+				
+				var opt = document.createElement("option");
+				opt.value = ""
+				opt.title = "Choose the closest location automatically";
+				opt.innerHTML = "Automatic";
+				select.appendChild(opt);
+				if (selected == ""){
+					opt.selected = true;
+				}
+				
+				for (var i =0;i<value.length;i++){
+					var opt = document.createElement("option");
+					opt.value = value[i].locale;
+					opt.title = value[i].name;
+					opt.innerHTML = value[i].name;
+					select.appendChild(opt);
+					if (selected == opt.value){
+						opt.selected = true;
+					}
+				}
+			}
+			
+			var eventMethod = window.addEventListener
+				? "addEventListener"
+				: "attachEvent";
+			var eventer = window[eventMethod];
+			var messageEvent = eventMethod === "attachEvent" ? "onmessage" : "message";
+			var previousResolution;
+			var timer= null;
+			
+			var statsSent = false;
+
+			eventer(messageEvent, function (e) {
+				if ("action" in e.data) {
+				
+					if (e.data.action == "available-speedtest-servers"){
+						console.warn("Speedtest server list loaded");
+						updateTurnlist(e.data.value);
+					}
+					
+					if (e.data.action == "started-camera"){
+						loadIframe2();
+						document.getElementById("localVideoText").innerText =  "Local video before transmission";
+					} else if (e.data.action == "screen-share-state" && e.data.value){
+						loadIframe2();
+						document.getElementById("localVideoText").innerText =  "Local video before transmission";
+					} 
+					
+					if (e.data.action == "new-view-connection") {
+						if (timer===null){
+							timer = 0;
+						} else {
+							return;
+						}
+						buttonContainer.querySelectorAll(
+							"#controls button:last-child"
+						)[0].style.display = "inline";
+						
+						
+						logData({"timestart": Date.now()});
+						
+						try {
+							logData({"peakhour": new Date(Date.now()).getHours()>7 && new Date(Date.now()).getHours()<11});
+						} catch(e){}
+						
+						var showdetails = document.createElement("button");
+						showdetails.onclick = function(){
+							document.getElementById("graphs").classList.toggle('hidden');
+						}
+						showdetails.innerText = "Show testing details";
+						buttonContainer.appendChild(showdetails);
+						
+						setTimeout(function(button){
+							button.click();
+						}, 90000,button);
+					}
+
+					if (e.data.action == "setVideoBitrate") {
+						buttonContainer.querySelectorAll("button").forEach((button) => {
+							button.classList.remove("active");
+						});
+						if (e.data.value == 30) {
+							document
+								.querySelectorAll("#controls button")[0]
+								.classList.add("active");
+						}
+						if (e.data.value == 6000) {
+							document
+								.querySelectorAll("#controls button")[1]
+								.classList.add("active");
+						}
+						if (e.data.value == -1) {
+							document
+								.querySelectorAll("#controls button")[2]
+								.classList.add("active");
+						}
+					}
+				}
+				if ("stats" in e.data) {
+					var out = "";
+					
+					
+					for (var someValue in e.data.stats.inbound) {
+						out += printValues(e.data.stats.inbound[someValue]);
+						if (e.data.stats.inbound[someValue] && e.data.stats.inbound[someValue].info){
+							if (!statsSent){
+								statsSent = e.data.stats.inbound[someValue];
+							}
+						}
+					}
+					
+					for (var someValue in e.data.stats.outbound) {
+						if (e.data.stats.outbound[someValue].quality_limitation_reason){
+							if (quality_reason != e.data.stats.outbound[someValue].quality_limitation_reason) {
+								quality_reason = e.data.stats.outbound[someValue].quality_limitation_reason;
+								logData({"QLR": quality_reason});
+							}
+						}
+						
+						if (e.data.stats.outbound[someValue].encoder){
+							if (encoder != e.data.stats.outbound[someValue].encoder) {
+								encoder = e.data.stats.outbound[someValue].encoder;
+								logData({"encoder":encoder});
+							}
+						} else if (e.data.stats.outbound[someValue].video_codec){
+							if (encoder != e.data.stats.outbound[someValue].video_codec) {
+								encoder = e.data.stats.outbound[someValue].video_codec;
+								logData({"encoder":encoder});
+							}
+						}
+					}
+
+					for (var key in e.data.stats.inbound[streamID]){
+						if (typeof e.data.stats.inbound[streamID][key] == "object"){
+							if ("Bitrate_in_kbps" in e.data.stats.inbound[streamID][key]){
+								var bitrate = e.data.stats.inbound[streamID][key]["Bitrate_in_kbps"];
+								updateData("bitrate", bitrate);
+							}
+							
+							if ("Jitter_Buffer_ms" in e.data.stats.inbound[streamID][key]){
+								var buffer = e.data.stats.inbound[streamID][key]["Jitter_Buffer_ms"];
+								updateData("buffer", buffer);
+							} else if ("Buffer_Delay_in_ms" in e.data.stats.inbound[streamID][key]){
+								var buffer = e.data.stats.inbound[streamID][key]["Buffer_Delay_in_ms"];
+								updateData("buffer", buffer);
+							} else if ("Added_Buffer_Delay_ms" in e.data.stats.inbound[streamID][key]){
+								console.log("Added_Buffer_Delay_ms");
+								var buffer = e.data.stats.inbound[streamID][key]["Added_Buffer_Delay_ms"];
+								updateData("buffer", buffer);
+							}
+							
+							if ("packetLoss_in_percentage" in e.data.stats.inbound[streamID][key]){
+								var packetloss = e.data.stats.inbound[streamID][key]["packetLoss_in_percentage"];
+								if (packetloss != undefined) {
+									packetloss = packetloss.toFixed(2);
+									updateData("packetloss", packetloss);
+								}
+							}
+
+							if ("Resolution" in e.data.stats.inbound[streamID][key]){
+								var resolution = e.data.stats.inbound[streamID][key]["Resolution"];
+
+								if (previousResolution != resolution) {
+									previousResolution = resolution;
+									logData({"resolution": resolution});
+								}
+							}
+							
+						}
+					}
+				}
+			});
+
+			var streamID = "";
+			var possible = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+			for (var i = 0; i < 7; i++) {
+				streamID += possible.charAt(
+					Math.floor(Math.random() * possible.length)
+				);
+			}
+			
+			if (urlParams.has("sid")) {
+				streamID = urlParams.get("sid");
+			} else if (urlParams.has("push")) {
+				streamID = urlParams.get("push");
+			}
+			
+			var region = "";
+			if (urlParams.has("location")) {
+				region = urlParams.get("location");
+			} else if (urlParams.has("region")) {
+				region = urlParams.get("region");
+			}
+			
+			var testType= "webcam&quality=0&css=check.css";
+			if (urlParams.has("screen") || urlParams.has("ss") || urlParams.has("screenshare") || urlParams.has("screentest")) {
+				testType = "quality=0&screenshare&css=check.css"
+			}
+			
+			<!-- <option selected value="">Automatic</option> -->
+			<!-- <option value="de1">Saarbruecken, Germany</option> -->
+			<!-- <option value="de2">Frankfurt, Germany</option> -->
+			<!-- <option value="fr1">Strasbourg, France</option> -->
+			<!-- <option value="bra1">São Paulo, Brazil</option> -->
+			<!-- <option value="pol1">Warsaw, Poland</option> -->
+			<!-- <option value="cae1">Montreal, Canada</option> -->
+			<!-- <option value="use1">Virgina, USA</option> -->
+			<!-- <option disabled value="usc1">Chicago, USA</option> -->
+			<!-- <option disabled value="usw1">Los Angeles, USA</option> -->
+			<!-- <option value="usw2">Oregon, USA</option> -->
+			<!-- <option value="aus1">Sydney, Australia</option> -->
+			<!-- <option value="jap1">Tokyo, Japan</option> -->
+			<!-- <option value="sing1">Singapore</option> -->
+			<!-- <option value="ind1">Mumbai, India</option> -->
+			<!-- <option value="pol1">Warsaw, Poland</option> -->
+			
+			function detectCodecs() {
+			  const codecData = {
+				video: {},
+				audio: {},
+				webrtc: {},
+				webcodec: {},
+				mediaCapabilities: {}
+			  };
+
+			  // Basic mimeType detection function - returns all supported mime types
+			  function getSupportedMimeTypes(media, types, codecs) {
+				const supported = [];
+				
+				// First check simple types
+				types.forEach(type => {
+				  const mimeType = `${media}/${type}`;
+				  if (MediaRecorder.isTypeSupported(mimeType)) {
+					supported.push(mimeType);
+				  }
+				});
+				
+				// Then check with codecs
+				types.forEach(type => {
+				  const mimeType = `${media}/${type}`;
+				  
+				  codecs.forEach(codec => {
+					if (!codec) return;
+					
+					const variation = `${mimeType};codecs=${codec.toLowerCase()}`;
+					if (MediaRecorder.isTypeSupported(variation)) {
+					  supported.push(variation);
+					  
+					  const codecKey = codec.toLowerCase();
+					  if (media === 'video') {
+						codecData.video[codecKey] = codecData.video[codecKey] || {};
+						codecData.video[codecKey].mediaRecorder = true;
+						codecData.video[codecKey].canEncode = true;
+					  } else {
+						codecData.audio[codecKey] = codecData.audio[codecKey] || {};
+						codecData.audio[codecKey].mediaRecorder = true;
+						codecData.audio[codecKey].canEncode = true;
+					  }
+					}
+				  });
+				  
+				  // Check codec combinations for video/webm
+				  if (media === 'video' && type === 'webm') {
+					codecs.forEach(videoCodec => {
+					  if (!videoCodec) return;
+					  
+					  const audioCodecs = ['opus', 'vorbis'];
+					  audioCodecs.forEach(audioCodec => {
+						const variation = `${mimeType};codecs=${videoCodec.toLowerCase()},${audioCodec}`;
+						if (MediaRecorder.isTypeSupported(variation)) {
+						  supported.push(variation);
+						}
+					  });
+					});
+				  }
+				});
+				
+				return supported;
+			  }
+
+			  // WebRTC hardware acceleration checker
+			  async function checkWebRTCHardwareAcceleration(codec) {
+				return new Promise(async (resolve) => {
+				  try {
+					const config = {
+					  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+					  iceCandidatePoolSize: 0
+					};
+					
+					const pc1 = new RTCPeerConnection(config);
+					const pc2 = new RTCPeerConnection(config);
+					
+					pc1.createDataChannel('test', {ordered: true});
+					
+					pc1.onicecandidate = e => e.candidate && pc2.addIceCandidate(e.candidate);
+					pc2.onicecandidate = e => e.candidate && pc1.addIceCandidate(e.candidate);
+					
+					const canvas = document.createElement('canvas');
+					canvas.width = 1280;
+					canvas.height = 720;
+					
+					const ctx = canvas.getContext('2d');
+					ctx.fillStyle = '#3498db';
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+					
+					const startTime = Date.now();
+					function animateCanvas() {
+					  const elapsed = Date.now() - startTime;
+					  ctx.fillStyle = '#3498db';
+					  ctx.fillRect(0, 0, canvas.width, canvas.height);
+					  
+					  ctx.fillStyle = '#e74c3c';
+					  const x = 100 + Math.sin(elapsed / 500) * 100;
+					  const y = canvas.height / 2 + Math.cos(elapsed / 500) * 100;
+					  ctx.beginPath();
+					  ctx.arc(x, y, 50, 0, Math.PI * 2);
+					  ctx.fill();
+					  
+					  if (Date.now() - startTime < 3000) {
+						requestAnimationFrame(animateCanvas);
+					  }
+					}
+					
+					animateCanvas();
+					const stream = canvas.captureStream(30);
+					
+					stream.getVideoTracks().forEach(track => {
+					  pc1.addTrack(track, stream);
+					});
+					
+					const transceiver = pc1.getTransceivers()[0];
+					const codecs = RTCRtpSender.getCapabilities('video').codecs;
+					
+					const targetCodec = codecs.find(c => {
+					  return c.mimeType.toLowerCase().includes(codec.toLowerCase());
+					});
+					
+					if (targetCodec) {
+					  transceiver.setCodecPreferences([targetCodec]);
+					}
+					
+					const offer = await pc1.createOffer();
+					await pc1.setLocalDescription(offer);
+					await pc2.setRemoteDescription(offer);
+					const answer = await pc2.createAnswer();
+					await pc2.setLocalDescription(answer);
+					await pc1.setRemoteDescription(answer);
+					
+					setTimeout(async () => {
+					  let hardwareAccelerated = false;
+					  let profile = null;
+					  
+					  try {
+						const stats = await pc1.getStats();
+						stats.forEach(stat => {
+						  if (stat.type === 'outbound-rtp' && stat.kind === 'video') {
+							if (stat.encoderImplementation) {
+							  const implementation = stat.encoderImplementation.toLowerCase();
+							  hardwareAccelerated = implementation.includes('hardware') || 
+													implementation === 'externalencoder' || 
+													implementation === 'mediafoundationvideoacceleration' ||
+													implementation.includes('accelerator');
+							}
+							
+							if (stat.codecId) {
+							  stats.forEach(s => {
+								if (s.id === stat.codecId && s.sdpFmtpLine) {
+								  const match = s.sdpFmtpLine.match(/profile-level-id=([0-9a-f]+)/i);
+								  if (match) {
+									profile = match[1];
+								  }
+								}
+							  });
+							}
+						  }
+						});
+					  } catch (e) {
+						console.error(`Error getting WebRTC stats: ${e.message}`);
+					  }
+					  
+					  pc1.close();
+					  pc2.close();
+					  stream.getTracks().forEach(track => track.stop());
+					  
+					  resolve({ 
+						hardwareAccelerated, 
+						profile,
+						webrtc: true,
+						canEncode: true,
+						canDecode: true,
+						webrtcHwEncoding: hardwareAccelerated
+					  });
+					}, 2000);
+				  } catch (error) {
+					console.error(`WebRTC check failed for ${codec}: ${error.message}`);
+					resolve({ webrtc: false });
+				  }
+				});
+			  }
+
+			  // WebCodec encoder detection
+			  async function checkWebCodecEncoder(codec, width = 1280, height = 720, framerate = 30) {
+				if (!('VideoEncoder' in window)) {
+				  return { webcodec: false };
+				}
+				
+				let result = { webcodec: false };
+				
+				try {
+				  const codecMapping = {
+					'vp8': 'vp8',
+					'vp9': 'vp09.00.10.08',
+					'av1': 'av01.0.04M.08',
+					'h264': 'avc1.42001E',
+					'h265': 'hev1.1.6.L93.B0'
+				  };
+				  
+				  const webcodecFormat = codecMapping[codec.toLowerCase()] || codec;
+				  
+				  // Check hardware acceleration with prefer-hardware
+				  const hwConfig = {
+					codec: webcodecFormat,
+					hardwareAcceleration: 'prefer-hardware',
+					width,
+					height,
+					bitrate: 2000000,
+					framerate
+				  };
+				  
+				  const hwSupport = await VideoEncoder.isConfigSupported(hwConfig);
+				  
+				  if (hwSupport && hwSupport.supported) {
+					result = { 
+					  webcodec: true,
+					  hardwareAccelerated: true,
+					  config: hwSupport.config,
+					  canEncode: true
+					};
+				  } else {
+					// Check with prefer-software
+					const swConfig = {
+					  codec: webcodecFormat,
+					  hardwareAcceleration: 'prefer-software',
+					  width,
+					  height,
+					  bitrate: 2000000,
+					  framerate
+					};
+					
+					const swSupport = await VideoEncoder.isConfigSupported(swConfig);
+					
+					if (swSupport && swSupport.supported) {
+					  result = { 
+						webcodec: true,
+						hardwareAccelerated: false,
+						config: swSupport.config,
+						canEncode: true
+					  };
+					}
+				  }
+				} catch (error) {
+				  console.error(`WebCodec encoder check failed for ${codec}: ${error.message}`);
+				}
+				
+				return result;
+			  }
+
+			  // WebCodec decoder detection
+			  async function checkWebCodecDecoder(codec, width = 1280, height = 720, framerate = 30) {
+				if (!('VideoDecoder' in window)) {
+				  return { webcodec: false };
+				}
+				
+				let result = { webcodec: false };
+				
+				try {
+				  const codecMapping = {
+					'vp8': 'vp8',
+					'vp9': 'vp09.00.10.08',
+					'av1': 'av01.0.04M.08',
+					'h264': 'avc1.42001E',
+					'h265': 'hev1.1.6.L93.B0'
+				  };
+				  
+				  const webcodecFormat = codecMapping[codec.toLowerCase()] || codec;
+				  
+				  // Check hardware acceleration with prefer-hardware
+				  const hwConfig = {
+					codec: webcodecFormat,
+					hardwareAcceleration: 'prefer-hardware',
+					codedWidth: width,
+					codedHeight: height,
+					description: new Uint8Array(0)
+				  };
+				  
+				  const hwSupport = await VideoDecoder.isConfigSupported(hwConfig);
+				  
+				  if (hwSupport && hwSupport.supported) {
+					result = { 
+					  webcodec: true,
+					  hardwareAccelerated: true,
+					  config: hwSupport.config,
+					  canDecode: true
+					};
+				  } else {
+					// Check with prefer-software
+					const swConfig = {
+					  codec: webcodecFormat,
+					  hardwareAcceleration: 'prefer-software',
+					  codedWidth: width,
+					  codedHeight: height,
+					  description: new Uint8Array(0)
+					};
+					
+					const swSupport = await VideoDecoder.isConfigSupported(swConfig);
+					
+					if (swSupport && swSupport.supported) {
+					  result = { 
+						webcodec: true,
+						hardwareAccelerated: false,
+						config: swSupport.config,
+						canDecode: true
+					  };
+					}
+				  }
+				} catch (error) {
+				  console.error(`WebCodec decoder check failed for ${codec}: ${error.message}`);
+				}
+				
+				return result;
+			  }
+
+			  // Main detection function
+			  async function runDetection() {
+				// Define codec lists
+				const videoTypes = ["webm", "mp4", "x-matroska", "ogg"];
+				const audioTypes = ["webm", "mp4", "ogg", "x-matroska", "wav"];
+				
+				const videoCodecs = [
+				  "vp8", "vp9", "av1", "h264", "h265", 
+				  "vp9.0", "vp8.0", "avc1", "av1x", "h.264", "h.265", 
+				  "av01.0.04M.08", "vp09.00.10.08", "avc1.42001E"
+				];
+				
+				const audioCodecs = [
+				  "opus", "vorbis", "mp3", "aac", "pcm", 
+				  "mp4a.40.2", "mp4a", "L16", "wav", "flac"
+				];
+				
+				// 1. Detect MediaRecorder support
+				const supportedVideoTypes = getSupportedMimeTypes("video", videoTypes, videoCodecs);
+				const supportedAudioTypes = getSupportedMimeTypes("audio", audioTypes, audioCodecs);
+				console.log(`Found ${supportedVideoTypes.length} supported video MediaRecorder formats`);
+				console.log(`Found ${supportedAudioTypes.length} supported audio MediaRecorder formats`);
+				
+				// 2. Detect WebCodec support
+				if ('VideoEncoder' in window || 'VideoDecoder' in window) {
+				  console.log('Checking WebCodec support...');
+				  
+				  const resolutions = [
+					{ width: 640, height: 360 },
+					{ width: 1280, height: 720 },
+					{ width: 1920, height: 1080 }
+				  ];
+				  
+				  const webcodecCodecs = ['vp8', 'vp9', 'h264', 'av1', 'h265'];
+				  
+				  for (const codec of webcodecCodecs) {
+					for (const res of resolutions) {
+					  // Check encoder
+					  const encoderResult = await checkWebCodecEncoder(codec, res.width, res.height, 30);
+					  
+					  if (encoderResult.webcodec) {
+						codecData.video[codec] = codecData.video[codec] || {};
+						codecData.video[codec].webcodec = true;
+						codecData.video[codec].canEncode = true;
+						
+						// Store specific hardware acceleration for WebCodec encoder
+						codecData.video[codec].webcodecHwEncoding = encoderResult.hardwareAccelerated;
+						
+						// If any resolution has hardware acceleration, we'll mark it as supported
+						if (encoderResult.hardwareAccelerated) {
+						  codecData.video[codec].hardwareAccelerated = true;
+						  
+						  // Store the min resolution that allows hardware acceleration
+						  if (!codecData.video[codec].minHwResolution || 
+							res.width * res.height < 
+							codecData.video[codec].minHwResolution.width * codecData.video[codec].minHwResolution.height) {
+							codecData.video[codec].minHwResolution = res;
+							codecData.video[codec].resolutionLimit = `${res.width}x${res.height}+`;
+						  }
+						} 
+						// Only set hardware as false if it hasn't been set to true already
+						else if (codecData.video[codec].hardwareAccelerated !== true) {
+						  codecData.video[codec].hardwareAccelerated = false;
+						}
+						
+						if (encoderResult.config) {
+						  codecData.video[codec].webcodecConfig = codecData.video[codec].webcodecConfig || {};
+						  codecData.video[codec].webcodecConfig.encoder = encoderResult.config;
+						}
+					  }
+					  
+					  // Check decoder
+					  const decoderResult = await checkWebCodecDecoder(codec, res.width, res.height, 30);
+					  
+					  if (decoderResult.webcodec) {
+						codecData.video[codec] = codecData.video[codec] || {};
+						codecData.video[codec].webcodec = true;
+						codecData.video[codec].canDecode = true;
+						
+						// Store specific hardware acceleration for WebCodec decoder
+						codecData.video[codec].webcodecHwDecoding = decoderResult.hardwareAccelerated;
+						
+						// If any resolution has hardware acceleration, we'll mark it as supported
+						if (decoderResult.hardwareAccelerated) {
+						  codecData.video[codec].hardwareAccelerated = true;
+						  
+						  // Store the min resolution that allows hardware acceleration
+						  if (!codecData.video[codec].minHwResolution || 
+							res.width * res.height < 
+							codecData.video[codec].minHwResolution.width * codecData.video[codec].minHwResolution.height) {
+							codecData.video[codec].minHwResolution = res;
+							codecData.video[codec].resolutionLimit = `${res.width}x${res.height}+`;
+						  }
+						} 
+						// Only set hardware as false if it hasn't been set to true already
+						else if (codecData.video[codec].hardwareAccelerated !== true) {
+						  codecData.video[codec].hardwareAccelerated = false;
+						}
+						
+						if (decoderResult.config) {
+						  codecData.video[codec].webcodecConfig = codecData.video[codec].webcodecConfig || {};
+						  codecData.video[codec].webcodecConfig.decoder = decoderResult.config;
+						}
+					  }
+					}
+				  }
+				} else {
+				  console.log('WebCodec API not supported by this browser');
+				}
+				
+				// 3. Detect WebRTC support and hardware acceleration
+				if ('RTCPeerConnection' in window) {
+				  console.log('Checking WebRTC support and hardware acceleration...');
+				  
+				  const webrtcCodecs = ['VP8', 'VP9', 'AV1', 'H264'];
+				  
+				  for (const codec of webrtcCodecs) {
+					const result = await checkWebRTCHardwareAcceleration(codec);
+					
+					if (result.webrtc) {
+					  const normalizedCodec = codec.toLowerCase();
+					  codecData.video[normalizedCodec] = codecData.video[normalizedCodec] || {};
+					  codecData.video[normalizedCodec].webrtc = true;
+					  codecData.video[normalizedCodec].canEncode = true;
+					  codecData.video[normalizedCodec].canDecode = true;
+					  
+					  // Only update hardware acceleration if not already set
+					  if (result.hardwareAccelerated) {
+						codecData.video[normalizedCodec].hardwareAccelerated = true;
+					  } else if (codecData.video[normalizedCodec].hardwareAccelerated !== true) {
+						codecData.video[normalizedCodec].hardwareAccelerated = false;
+					  }
+					  
+					  if (result.profile) {
+						codecData.video[normalizedCodec].profile = result.profile;
+					  }
+					  
+					  if (result.webrtcHwEncoding) {
+						codecData.video[normalizedCodec].webrtcHwEncoding = true;
+					  }
+					}
+				  }
+				} else {
+				  console.log('WebRTC not supported by this browser');
+				}
+				
+				// 4. Check scalability modes and MediaCapabilities
+				if ('mediaCapabilities' in navigator) {
+				  console.log('Checking MediaCapabilities API support...');
+				  
+				  const videoTypes = ['vp8', 'vp9', 'av1', 'h264', 'h265', 'avc1'];
+				  const resolutions = [
+					{ width: 640, height: 360 },
+					{ width: 1280, height: 720 },
+					{ width: 1920, height: 1080 }
+				  ];
+				  
+				  // Define scalability modes to test
+				  const scalabilityModes = [
+					"L1T1", "L1T2", "L1T3",
+					"L2T1", "L2T2", "L2T3",
+					"L3T1", "L3T2", "L3T3",
+					"S2T1", "S2T2", "S2T3",
+					"S3T1", "S3T2", "S3T3"
+				  ];
+				  
+				  // Check browser-specific capability type
+				  const isFirefox = navigator.userAgent.indexOf("Firefox") >= 0;
+				  const capabilityType = isFirefox ? "transmission" : "webrtc";
+				  
+				  // Check WebRTC codec capabilities
+				  const webrtcCodecs = [];
+				  if ('RTCRtpSender' in window && RTCRtpSender.getCapabilities) {
+					try {
+					  const rtcCodecs = RTCRtpSender.getCapabilities('video').codecs;
+					  rtcCodecs.forEach(codec => {
+						if (!['video/red', 'video/ulpfec', 'video/rtx'].includes(codec.mimeType)) {
+						  const codecName = codec.mimeType.replace("video/", "").toLowerCase();
+						  webrtcCodecs.push({
+							name: codecName,
+							mimeType: codec.mimeType,
+							sdpFmtpLine: codec.sdpFmtpLine,
+							clockRate: codec.clockRate
+						  });
+						}
+					  });
+					  
+					  console.log(`Found ${webrtcCodecs.length} supported WebRTC codecs`);
+					} catch (e) {
+					  console.error(`Error getting RTCRtpSender.getCapabilities: ${e.message}`);
+					}
+				  }
+				  
+				  // Process each codec with MediaCapabilities
+				  for (const codec of webrtcCodecs) {
+					try {
+					  const capabilityPromises = [];
+					  const codecScalabilityModes = [];
+					  
+					  // Test different scalability modes
+					  for (const mode of scalabilityModes) {
+						for (const res of resolutions) {
+						  capabilityPromises.push(
+							navigator.mediaCapabilities.encodingInfo({
+							  type: capabilityType,
+							  video: {
+								contentType: codec.mimeType,
+								width: res.width,
+								height: res.height,
+								bitrate: 2000000,
+								framerate: 30,
+								scalabilityMode: mode
+							  }
+							}).then(result => {
+							  return { mode, res, result };
+							}).catch(e => {
+							  return { mode, res, error: e };
+							})
+						  );
+						}
+					  }
+					  
+					  const results = await Promise.all(capabilityPromises);
+					  
+					  // Process results
+					  let isSupported = false;
+					  let isSmooth = false;
+					  let isPowerEfficient = false;
+					  let supportedModes = [];
+					  
+					  results.forEach(({ mode, res, result, error }) => {
+						if (result && !error) {
+						  if (result.supported) {
+							isSupported = true;
+							
+							if (result.smooth) {
+							  isSmooth = true;
+							}
+							
+							if (result.powerEfficient) {
+							  isPowerEfficient = true;
+							}
+							
+							if (!supportedModes.includes(mode)) {
+							  supportedModes.push(mode);
+							}
+						  }
+						}
+					  });
+					  
+					  if (isSupported) {
+						const codecName = codec.name;
+						codecData.video[codecName] = codecData.video[codecName] || {};
+						codecData.video[codecName].mediaCapabilities = true;
+						codecData.video[codecName].scalabilityModes = supportedModes;
+						
+						// Assume MediaCapabilities is testing decoding
+						codecData.video[codecName].canDecode = true;
+						
+						// If powerEfficient is true, this is a good indicator of hardware acceleration
+						if (isPowerEfficient && codecData.video[codecName].hardwareAccelerated !== true) {
+						  codecData.video[codecName].hardwareAccelerated = true;
+						  codecData.video[codecName].details = (codecData.video[codecName].details || '') + 
+							'MediaCapabilities reports this codec as power efficient. ';
+						}
+						
+						// Store SDP format parameters if available
+						if (codec.sdpFmtpLine && !codecData.video[codecName].profile) {
+						  const profileMatch = codec.sdpFmtpLine.match(/profile-level-id=([0-9a-f]+)/i);
+						  if (profileMatch) {
+							codecData.video[codecName].profile = profileMatch[1];
+						  }
+						}
+					  }
+					} catch (error) {
+					  console.error(`MediaCapabilities check failed for ${codec.name}: ${error.message}`);
+					}
+				  }
+				} else {
+				  console.log('MediaCapabilities API not supported by this browser');
+				}
+				
+				// Get browser info
+				const browserInfo = {
+				  userAgent: navigator.userAgent,
+				  platform: navigator.platform,
+				  vendor: navigator.vendor
+				};
+				
+				// Return complete codec data
+				return {
+				  video: codecData.video,
+				  audio: codecData.audio,
+				  browserInfo
+				};
+			  }
+
+			  // Run detection and return results
+			  return runDetection();
+			}
+			
+			
+			function loadIframe(zone="") {
+				// this is pretty important if you want to avoid camera permission popup problems. YOu need to load the iFRAME after  you load the parent body. A quick solution is like: <body onload=>loadIframe();"> !!!
+
+				document.getElementById("container").innerHTML = "";
+
+				
+				var iframeContainer = document.createElement("span");
+
+				iframe1.allow="autoplay;camera;microphone;display-capture;";
+				iframe1.allowtransparency="true";
+				iframe1.allowfullscreen ="true";
+
+				//iframe.allow = "autoplay";
+				var srcString =	"./index.html?push=" + streamID + "&cleanoutput&privacy&"+testType+"&audiodevice=1&fullscreen&transparent&remote&maxbandwidth&speedtest="+zone;
+				
+				if (urlParams.has("turn")) {
+					srcString = srcString + "&turn=" + urlParams.get("turn");
+				}
+
+				// we are changing some text on page load, just to demonstrate what's possible.
+				iframe1.onload = function (e) {
+					e.target.contentWindow.postMessage(
+						{
+							function: "changeHTML",
+							target: "add_camera",
+							value: "Select your Camera",
+						},
+						"*"
+					);
+				};
+				iframe1.src = srcString;
+
+				iframeContainer.appendChild(iframe1);
+
+				var title = document.createElement("h3");
+				if (urlParams.has("screen") || urlParams.has("ss") || urlParams.has("screenshare") || urlParams.has("screentest")) {
+					title.innerHTML = "Select the screen, tab, or window you intend to share.<br><br><small>For best results, the content being shared should contain motion.  A blank static page likely will not be sufficient.</small>";
+				} else {
+					title.innerHTML = "Select the camera you intend to use.<br><br><small>For best results, the content being captured should contain motion. A blank static page will not be sufficient.</small>";
+				}
+				title.id = "localVideoText";
+				iframeContainer.appendChild(title);
+
+				var feeds = document.createElement("div");
+				feeds.id = "feeds";
+
+				document.getElementById("container").appendChild(feeds);
+				document.getElementById("feeds").appendChild(iframeContainer);
+				
+				setInterval(function (iframe1) {
+					try {
+						iframe1.contentWindow.postMessage({ getStats: true }, "*");
+					} catch(e){
+						clearInterval(this);
+					}
+				}, 1000, iframe1);
+				
+			}
+			
+			var buttonContainer = document.createElement("div");
+			buttonContainer.id = "controls";
+			var button = document.createElement("button");
+
+			function loadIframe2(zone="") {
+				
+				if (document.getElementById("testframe")){
+					return;
+				}
+				//document.getElementById("graphs").classList.remove('hidden');
+				var iframe = document.createElement("iframe");
+				var iframeContainer = document.createElement("span");
+				iframe.id = "testframe";
+
+				iframe.allow = "autoplay";
+				var srcString = "./index.html?view=" + streamID + "&cleanoutput&privacy&noaudio&transparent&bitrate=6000&scale=100&speedtest="+zone; // No TURN servers set on the reciever. Don't want to query for TURN servers needlessly.
+
+				if (urlParams.has("turn")) {
+					srcString = srcString + "&turn=" + urlParams.get("turn");
+				}
+
+				if (urlParams.has("buffer")) {
+					srcString = srcString + "&buffer=" + urlParams.get("buffer");
+				}
+				
+				if (urlParams.has("id")) {
+					recordResults = urlParams.get("id") || false;
+				} else if (urlParams.has("session")) {
+					recordResults = urlParams.get("session") || false;
+				}
+
+				iframe.src = srcString;
+
+				iframeContainer.appendChild(iframe);
+
+				var title = document.createElement("h3");
+				title.innerText = "Video after traversing the Internet";
+				iframeContainer.appendChild(title);
+
+				document.getElementById("feeds").appendChild(iframeContainer);
+
+				var br = document.createElement("br");
+				document.getElementById("container").appendChild(br);
+
+
+				
+				var div = document.createElement("h1");
+				buttonContainer.appendChild(div);
+				
+				
+				button.className = "red";
+				//button.disabled = true;
+				button.innerHTML = "Abort the test";
+				
+				button.style.display = "none";
+				button.onclick = function (){
+				
+					logData(statsSent);
+					
+					if (!recordResults){
+						recordResults = "results_"+streamID;
+						document.getElementById("container").innerHTML = "<br />Link to results: <a target='_blank' href='https://vdo.ninja/results?id="+recordResults+"'>https://vdo.ninja/results?id="+recordResults+"</a><br /><br /><small><i>Results are anonymous and deleted after 7-days</i></small><br /><br /><br />Final Test Results:<br />";
+						document.getElementById("graphs").classList.remove('hidden');
+					} 
+					var request = new XMLHttpRequest();
+					request.open('POST', "https://record.vdo.workers.dev/?name="+recordResults);
+					try {
+						request.send(JSON.stringify(logged));
+					} catch(e){
+						console.error(e);
+					}
+					
+					timer = 91;
+					div.innerHTML = "Test ended";
+					clearInterval(interval);
+					
+					try{
+						if (iframe){
+								iframe.contentWindow.postMessage({ close: true }, "*");
+						}
+						button.remove();
+						iframe1.remove();
+						iframe.remove();
+						feeds.style.display = "none";
+					} catch(e){};
+				};
+				buttonContainer.appendChild(button);
+				document.getElementById("container").appendChild(buttonContainer);
+
+				var interval = setInterval(function (iframe1) {
+					if (timer==90){
+						document.body.innerHTML = "<h1>Test complete. Thank you</h1>";
+						return;
+					}
+					if (timer>90){
+						clearInterval(interval);
+						return;
+					}
+					
+					if (timer == 0){
+						iframe.contentWindow.postMessage({ bitrate: 2500 }, "*");
+						bitrate.target = 2500;
+						updateData("target", bitrate.target);
+					}
+					if (timer == 30){
+						iframe.contentWindow.postMessage({ bitrate: 4000 }, "*");
+						bitrate.target = 4000;
+						updateData("target", bitrate.target);
+					}
+					if (timer == 60){
+						iframe.contentWindow.postMessage({ bitrate: 6000 }, "*");
+						bitrate.target = 6000;
+						updateData("target", bitrate.target);
+					}
+					
+					if (timer!==null){
+						timer+=1
+						div.innerHTML = "Test completes in "+(90-timer)+" seconds";
+					} 
+					try {
+						if (iframe1){
+							iframe1.contentWindow.postMessage({ getStats: true }, "*");
+						}
+					} catch(e){
+						clearInterval(interval);
+					}
+				}, 1000, iframe);
+			}
+
+			
+			var bitrate = {
+				element: "bitrate-graph",
+				data: 0,
+				max: 6500,
+				target: 2500,
+			};
+			var frames;
+			var buffer = {
+				element: "buffer-graph",
+				data: 0,
+				max: 200,
+				target: 100,
+			};
+			var packetloss = {
+				element: "packetloss-graph",
+				data: 0,
+				max: 3,
+				target: 2,
+			};
+
+			function updateData(type, data) {
+				if (type == "bitrate") {
+					bitrate.data = data;
+					plotData("bitrate", bitrate);
+					plotData("bitrate", bitrate);
+					plotData("bitrate", bitrate);
+				}
+
+				if (type == "buffer") {
+					buffer.data = data;
+					plotData("buffer", buffer);
+					plotData("buffer", buffer);
+					plotData("buffer", buffer);
+				}
+
+				if (type == "packetloss") {
+					packetloss.data = data;
+					plotData("packetloss", packetloss);
+					plotData("packetloss", packetloss);
+					plotData("packetloss", packetloss);
+				}
+				
+				logData({[type]: data});
+			}
+
+			function plotData(type, stat) {
+				var canvas;
+				var context;
+				var yScale;
+
+				canvas = document.getElementById(stat.element);
+				context = canvas.getContext("2d");
+
+				if (isNaN(stat.data)) {
+					stat.data = 0;
+				}
+
+				var text = (canvas.previousElementSibling.innerHTML = stat.data);
+
+				var height = context.canvas.height;
+				var width = context.canvas.width;
+
+				var borderWidth = 5;
+				var offset = borderWidth * 2;
+
+				// Create gradient
+				
+				var grd = context.createLinearGradient(0, 0, 0, height);
+				
+				if (type == "bitrate") {
+					
+					if (stat.target == 2500){
+						grd.addColorStop(0, "#33C433");
+						grd.addColorStop(0.7, "#33C433");
+						grd.addColorStop(0.8, "#F3F304");
+						grd.addColorStop(0.92, "#F30404");
+					} else if (stat.target == 4000){
+						grd.addColorStop(0, "#33C433");
+						grd.addColorStop(0.5, "#33C433");
+						grd.addColorStop(0.8, "#F3F304");
+						grd.addColorStop(0.92, "#F30404");
+					} else if (stat.target == 6000){
+						grd.addColorStop(0, "#33C433");
+						grd.addColorStop(0.3, "#33C433");
+						grd.addColorStop(0.8, "#F3F304");
+						grd.addColorStop(0.92, "#F30404");
+					}
+					
+				} else {
+					// Higher values are red
+					grd.addColorStop(0, "#F30404");
+					grd.addColorStop(0.3, "#F3F304");
+					grd.addColorStop(0.7, "#33C433");
+				}
+
+				context.strokeStyle = "white";
+				context.fillStyle = grd;
+				//context.fillStyle = "#009933";
+				//context.imageSmoothingEnabled = true;
+
+				yScale = height / stat.max;
+
+				if (stat.data > stat.max) {
+					stat.data = stat.max;
+				}
+
+				if (type == "packetloss" && stat.data == 0.0) {
+					stat.data = 0.1;
+				}
+
+				var x = width - 1;
+				var y = height - stat.data * yScale;
+				var w = 1;
+
+				context.fillStyle = grd;
+				context.fillRect(x, y, w, height);
+
+				// shift everything to the left:
+				var imageData = context.getImageData(1, 0, width - 1, height);
+				context.putImageData(imageData, 0, 0);
+				// now clear the right-most pixels:
+				context.clearRect(width - 1, 0, 1, height);
+			}
+			
+			
+			
+		</script>
+	
+		<script type="module">
+			import SpeedTest from 'https://cdn.skypack.dev/@cloudflare/speedtest';
+
+			const controlEl = document.getElementById('controls');
+			const playButton = document.getElementById("cloudflare");
+			
+			const resultsCl = document.getElementById("cloudflareresults");
+			
+			var Runstate = false;
+			const engine = new SpeedTest({
+			  autoStart: false
+			});
+			engine.onRunningChange = (running) => {playButton.textContent = running ? 'Running...' : 'Finished!';Runstate=running;}
+			engine.onResultsChange = ({ type }) => {
+			   console.log(type);
+			   if (Runstate){
+				console.log(engine.results.raw);
+			   }
+			   resultsCl.style.color = "green";
+			   resultsCl.innerHTML = Runstate ? '<b>Please wait</b><br .><br .>Testing in progress: '+type : 'Finished!';
+			};
+			
+			engine.onFinish = results => {
+			  console.log(results.getSummary());
+			  console.log(results.getScores());
+			  logData({['summary']: results.getSummary()});
+			  logData({['scores']: results.getScores()});
+			  next2a();
+			};
+			playButton.skip=true;
+			playButton.textContent = "Start test";
+			playButton.disabled = null;
+	
+			playButton.onclick = function(){playButton.disabled=true;playButton.onclick=null;engine.play();}
+
+		</script>
+	</body>
+</html>

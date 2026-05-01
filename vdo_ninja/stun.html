@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ICE Candidates Viewer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+        .status.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+        tr:hover {
+            background: #f5f5f5;
+        }
+        .type-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .type-host { background: #e8f5e9; color: #2e7d32; }
+        .type-srflx { background: #e3f2fd; color: #1976d2; }
+        .type-relay { background: #fff3e0; color: #f57c00; }
+        .type-prflx { background: #f3e5f5; color: #7b1fa2; }
+        .server-select {
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WebRTC ICE Candidates Viewer</h1>
+        
+        <div class="server-select">
+            <label for="stunServer">STUN Server: </label>
+            <select id="stunServer">
+                <option value="stun:stun.l.google.com:19302">Google STUN (stun.l.google.com:19302)</option>
+                <option value="stun:stun1.l.google.com:19302">Google STUN 1 (stun1.l.google.com:19302)</option>
+                <option value="stun:stun2.l.google.com:19302">Google STUN 2 (stun2.l.google.com:19302)</option>
+                <option value="stun:stun3.l.google.com:19302">Google STUN 3 (stun3.l.google.com:19302)</option>
+                <option value="stun:stun4.l.google.com:19302">Google STUN 4 (stun4.l.google.com:19302)</option>
+                <option value="stun:stun.cloudflare.com:3478">Cloudflare STUN (stun.cloudflare.com:3478)</option>
+            </select>
+        </div>
+        
+        <div class="controls">
+            <button id="gatherBtn">Gather ICE Candidates</button>
+            <button id="clearBtn">Clear Results</button>
+            <button id="checkBtn">Check Browser Settings</button>
+        </div>
+        
+        <div id="status" class="status" style="display: none;"></div>
+        
+        <div id="checkResults" class="check-results" style="display: none;"></div>
+        
+        <div id="results" style="display: none;">
+            <h2>ICE Candidates</h2>
+            <table id="candidatesTable">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Protocol</th>
+                        <th>IP Address</th>
+                        <th>Port</th>
+                        <th>Priority</th>
+                        <th>Foundation</th>
+                    </tr>
+                </thead>
+                <tbody id="candidatesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let pc = null;
+        const candidates = [];
+        
+        const gatherBtn = document.getElementById('gatherBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const checkBtn = document.getElementById('checkBtn');
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        const candidatesBody = document.getElementById('candidatesBody');
+        const stunServerSelect = document.getElementById('stunServer');
+        const checkResultsDiv = document.getElementById('checkResults');
+        
+        // OBS Mode - hide unnecessary UI and auto-run
+        if (window.obsstudio !== undefined) {
+            document.querySelector('h1').style.display = 'none';
+            document.querySelector('.server-select').style.display = 'none';
+            document.querySelector('.controls').style.display = 'none';
+            document.querySelector('.container').style.padding = '10px';
+            document.body.style.padding = '10px';
+            
+            // Compact styles for OBS
+            const style = document.createElement('style');
+            style.textContent = `
+                .check-item { margin: 5px 0; padding: 8px; }
+                .check-description { font-size: 13px; }
+                .settings-list li { font-size: 13px; margin: 3px 0; }
+                table { font-size: 13px; }
+                th, td { padding: 6px; }
+                h2 { margin: 10px 0 10px 0; font-size: 18px; }
+                .status { margin: 10px 0; padding: 8px; }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        function showStatus(message, type = 'info') {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+        
+        function parseCandidate(candidateString) {
+            const parts = candidateString.split(' ');
+            return {
+                foundation: parts[0],
+                component: parts[1],
+                protocol: parts[2],
+                priority: parts[3],
+                ip: parts[4],
+                port: parts[5],
+                type: parts[7]
+            };
+        }
+        
+        function addCandidateToTable(candidate) {
+            const parsed = parseCandidate(candidate.candidate);
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td><span class="type-badge type-${parsed.type}">${parsed.type.toUpperCase()}</span></td>
+                <td>${parsed.protocol.toUpperCase()}</td>
+                <td>${parsed.ip}</td>
+                <td>${parsed.port}</td>
+                <td>${parsed.priority}</td>
+                <td>${parsed.foundation}</td>
+            `;
+            candidatesBody.appendChild(row);
+        }
+        
+        async function detectWebRTCRestrictions() {
+            const restrictions = [];
+            
+            // Test for mDNS candidates (privacy mode)
+            const testConfig = {
+                iceServers: [{urls: 'stun:stun.l.google.com:19302'}]
+            };
+            
+            try {
+                const testPc = new RTCPeerConnection(testConfig);
+                const testDc = testPc.createDataChannel('test');
+                
+                let foundHost = false;
+                let foundSrflx = false;
+                let foundMdns = false;
+                let candidateCount = 0;
+                
+                return new Promise((resolve) => {
+                    const timeout = setTimeout(() => {
+                        testPc.close();
+                        
+                        if (candidateCount === 0) {
+                            restrictions.push('WebRTC might be completely disabled');
+                        }
+                        if (!foundHost && !foundMdns) {
+                            restrictions.push('Local IP addresses are hidden (privacy mode enabled)');
+                        }
+                        if (foundMdns) {
+                            restrictions.push('mDNS candidates detected (local IPs anonymized)');
+                        }
+                        if (!foundSrflx) {
+                            restrictions.push('STUN server connection might be blocked');
+                        }
+                        
+                        resolve(restrictions);
+                    }, 3000);
+                    
+                    testPc.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            candidateCount++;
+                            const parsed = parseCandidate(event.candidate.candidate);
+                            
+                            if (parsed.type === 'host') {
+                                if (parsed.ip.endsWith('.local')) {
+                                    foundMdns = true;
+                                } else {
+                                    foundHost = true;
+                                }
+                            } else if (parsed.type === 'srflx') {
+                                foundSrflx = true;
+                            }
+                        }
+                    };
+                    
+                    testPc.createOffer().then(offer => {
+                        return testPc.setLocalDescription(offer);
+                    }).catch(err => {
+                        clearTimeout(timeout);
+                        testPc.close();
+                        restrictions.push('WebRTC API error: ' + err.message);
+                        resolve(restrictions);
+                    });
+                });
+                
+            } catch (error) {
+                restrictions.push('WebRTC not available: ' + error.message);
+                return restrictions;
+            }
+        }
+        
+        async function gatherCandidates() {
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            
+            candidates.length = 0;
+            candidatesBody.innerHTML = '';
+            gatherBtn.disabled = true;
+            
+            showStatus('Detecting WebRTC restrictions...', 'info');
+            
+            // Check for restrictions first
+            const restrictions = await detectWebRTCRestrictions();
+            if (restrictions.length > 0) {
+                showStatus('Detected restrictions: ' + restrictions.join('; '), 'error');
+                await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+            
+            showStatus('Gathering ICE candidates...', 'info');
+            
+            const stunServer = stunServerSelect.value;
+            const config = {
+                iceServers: [{ urls: stunServer }],
+                iceCandidatePoolSize: 10
+            };
+            
+            try {
+                pc = new RTCPeerConnection(config);
+                
+                // Create a data channel to trigger ICE gathering
+                const dc = pc.createDataChannel('test');
+                
+                pc.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        candidates.push(event.candidate);
+                        addCandidateToTable(event.candidate);
+                        resultsDiv.style.display = 'block';
+                        
+                        // Count candidate types
+                        const types = candidates.reduce((acc, c) => {
+                            const type = parseCandidate(c.candidate).type;
+                            acc[type] = (acc[type] || 0) + 1;
+                            return acc;
+                        }, {});
+                        const typeStr = Object.entries(types).map(([k,v]) => `${k}: ${v}`).join(', ');
+                        
+                        showStatus(`Gathering candidates... Found ${candidates.length} (${typeStr})`, 'info');
+                    } else {
+                        showStatus(`Gathering complete. Found ${candidates.length} candidates.`, 'success');
+                        gatherBtn.disabled = false;
+                    }
+                };
+                
+                pc.onicegatheringstatechange = () => {
+                    console.log('ICE gathering state:', pc.iceGatheringState);
+                    if (pc.iceGatheringState === 'complete') {
+                        showStatus(`Gathering complete. Found ${candidates.length} candidates.`, 'success');
+                        gatherBtn.disabled = false;
+                    }
+                };
+                
+                pc.oniceconnectionstatechange = () => {
+                    console.log('ICE connection state:', pc.iceConnectionState);
+                };
+                
+                // Create offer with ICE restart
+                const offer = await pc.createOffer({
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true,
+                    iceRestart: true
+                });
+                await pc.setLocalDescription(offer);
+                
+                // Set a timeout in case gathering takes too long
+                setTimeout(() => {
+                    if (gatherBtn.disabled) {
+                        showStatus(`Gathering timed out. Found ${candidates.length} candidates.`, 'success');
+                        gatherBtn.disabled = false;
+                    }
+                }, 10000);
+                
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, 'error');
+                gatherBtn.disabled = false;
+                console.error('WebRTC error:', error);
+            }
+        }
+        
+        function clearResults() {
+            if (pc) {
+                pc.close();
+                pc = null;
+            }
+            candidates.length = 0;
+            candidatesBody.innerHTML = '';
+            resultsDiv.style.display = 'none';
+            statusDiv.style.display = 'none';
+            checkResultsDiv.style.display = 'none';
+        }
+        
+        async function checkBrowserSettings() {
+            clearResults();
+            checkResultsDiv.innerHTML = '';
+            checkResultsDiv.style.display = 'block';
+            statusDiv.style.display = 'none';
+            
+            // Check basic WebRTC support
+            if (typeof RTCPeerConnection === 'undefined') {
+                addCheckItem('error', 'WebRTC Not Supported', 
+                    'WebRTC is not available in this browser. This could mean you\'re using an older browser or WebRTC has been disabled.');
+                return;
+            }
+            
+            addCheckItem('success', 'WebRTC API Available', 
+                'The browser supports WebRTC and the API is accessible.');
+            
+            // Test restriction detection
+            showStatus('Testing WebRTC restrictions...', 'info');
+            const restrictions = await detectWebRTCRestrictions();
+            statusDiv.style.display = 'none';
+            
+            // Analyze restrictions
+            if (restrictions.length === 0) {
+                addCheckItem('success', 'No WebRTC Restrictions', 
+                    'Your browser is configured to allow full WebRTC functionality. You should see all types of ICE candidates including local IP addresses.');
+            }
+            
+            if (restrictions.includes('mDNS candidates detected (local IPs anonymized)')) {
+                addCheckItem('warning', 'mDNS Anonymization Active', 
+                    'Your browser is hiding local IP addresses by converting them to .local addresses (like abc123.local). ' +
+                    'This is a privacy feature that prevents websites from seeing your real local network addresses. ' +
+                    'Expected: 192.168.1.100, but seeing: abc123def.local',
+                    [
+                        'In Chrome: Go to chrome://flags/#enable-webrtc-hide-local-ips-with-mdns and set to "Disabled"',
+                        'This is often enabled by default in newer Chrome versions for privacy'
+                    ]);
+            }
+            
+            if (restrictions.includes('Local IP addresses are hidden (privacy mode enabled)')) {
+                addCheckItem('warning', 'Local IPs Completely Hidden', 
+                    'Your browser is not exposing ANY local IP addresses. This is a strict privacy setting that prevents WebRTC from revealing network information.',
+                    [
+                        'Check browser privacy settings',
+                        'Disable VPN browser extensions',
+                        'Check privacy-focused extensions like uBlock Origin settings'
+                    ]);
+            }
+            
+            if (restrictions.includes('STUN server connection might be blocked')) {
+                addCheckItem('error', 'STUN Server Blocked', 
+                    'Cannot connect to STUN servers to determine your public IP address. This means only local candidates will be available.',
+                    [
+                        'Check firewall settings',
+                        'Verify network allows UDP traffic on port 3478/19302',
+                        'Try a different network connection'
+                    ]);
+            }
+            
+            // Environment checks
+            if (window.self !== window.top) {
+                addCheckItem('info', 'Running in iFrame', 
+                    'This page is running inside an iframe (like Claude.ai\'s artifact viewer). ' +
+                    'iFrames often have additional security restrictions that limit WebRTC functionality.');
+            }
+            
+            if (location.protocol === 'https:') {
+                addCheckItem('success', 'Secure Context (HTTPS)', 
+                    'Running on HTTPS. WebRTC has full functionality in secure contexts.');
+            } else if (location.protocol === 'http:') {
+                addCheckItem('warning', 'Insecure Context (HTTP)', 
+                    'Running on HTTP. Some browsers restrict WebRTC features on non-secure origins.',
+                    ['Consider moving to HTTPS for full WebRTC support']);
+            }
+            
+            // Browser-specific guidance
+            const ua = navigator.userAgent;
+            if (ua.includes('Chrome')) {
+                addCheckItem('info', 'Chrome Browser Detected', 
+                    'Chrome has several flags and settings that control WebRTC behavior:',
+                    [
+                        '<b>chrome://flags/#enable-webrtc-hide-local-ips-with-mdns</b> - Controls mDNS anonymization',
+                        '<b>chrome://settings/content/location</b> - Location permissions can affect WebRTC',
+                        '<b>chrome://settings/privacy</b> - Check "WebRTC IP handling policy"',
+                        'Extensions like WebRTC Leak Prevent, uBlock Origin, or Privacy Badger may block WebRTC'
+                    ]);
+            } else if (ua.includes('Firefox')) {
+                addCheckItem('info', 'Firefox Browser Detected', 
+                    'Firefox has about:config settings that control WebRTC:',
+                    [
+                        '<b>media.peerconnection.enabled</b> - Must be true (enables WebRTC)',
+                        '<b>media.peerconnection.ice.default_address_only</b> - If true, only shows default network interface',
+                        '<b>media.peerconnection.ice.no_host</b> - If true, hides all local IPs',
+                        '<b>media.peerconnection.ice.proxy_only_if_behind_proxy</b> - Forces proxy use'
+                    ]);
+            }
+            
+            // Check for OBS Studio
+            if (window.obsstudio !== undefined) {
+                addCheckItem('warning', 'OBS Browser Source', 
+                    'OBS browser sources hide local IPs by default. Restart OBS with:',
+                    [
+                        '<code style="word-break: break-all;">obs64.exe --disable-web-security --allow-running-insecure-content --ignore-certificate-errors --use-fake-ui-for-media-stream</code>'
+                    ]);
+            }
+        }
+        
+        function addCheckItem(type, title, description, solutions = []) {
+            const item = document.createElement('div');
+            item.className = `check-item ${type}`;
+            
+            let icon = '';
+            switch(type) {
+                case 'success': icon = '✅'; break;
+                case 'warning': icon = '⚠️'; break;
+                case 'error': icon = '❌'; break;
+                case 'info': icon = 'ℹ️'; break;
+            }
+            
+            let html = `<div class="check-title">${icon} ${title}</div>`;
+            html += `<div class="check-description">${description}</div>`;
+            
+            if (solutions.length > 0) {
+                html += '<ul class="settings-list">';
+                solutions.forEach(solution => {
+                    html += `<li>${solution}</li>`;
+                });
+                html += '</ul>';
+            }
+            
+            item.innerHTML = html;
+            checkResultsDiv.appendChild(item);
+        }
+        
+        gatherBtn.addEventListener('click', gatherCandidates);
+        clearBtn.addEventListener('click', clearResults);
+        checkBtn.addEventListener('click', checkBrowserSettings);
+        
+        // Auto-run if in OBS
+        if (window.obsstudio !== undefined) {
+            setTimeout(async () => {
+                // First check browser settings
+                await checkBrowserSettings();
+                // Then gather candidates
+                setTimeout(() => {
+                    gatherCandidates();
+                }, 100);
+            }, 500);
+        }
+    </script>
+</body>
+</html>

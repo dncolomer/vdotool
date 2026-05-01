@@ -1,0 +1,363 @@
+<html>
+<head><title>Kick + Video</title>
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0,user-scalable=no" />
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+<style>
+
+body{
+	padding:0;
+	margin:0;
+	background-color:#000;
+	width:100vw;
+	height:100vh;
+	color:white;
+	overscroll-behavior: contain;
+	overflow: hidden;
+	display:block;
+}
+
+iframe {
+	width:100%;
+	height:100%;
+	border:0;
+	margin:0;
+	padding:0;
+	display:block;
+}
+
+
+input{
+	padding:10px 2px;
+	width:calc(100vw - 60px);
+	font-size: min(4vw, 20px);
+	margin:10px 0 30px 0;
+	z-index: 1000;
+	color:black;
+	display:block;
+	
+}
+#clean{
+	max-width:100%;
+	width: 90vw;
+    max-width: 100%;
+    display: inline-block;
+}
+h1{
+	color: white;
+    font-family: verdana;
+    margin: 10px 3px 30px 3px;
+	color:white;
+}
+
+button {
+	font-size: min(10vw, 28px);
+	color:black;
+	display:inline-block;
+}
+
+#controlbar {
+	position: absolute;
+    top: 0;
+    left: 0;
+    background-color: #0000;
+    height:  max(7vh, 50px);
+    width: 100%;
+    display: none;
+	justify-content: center;
+}
+#container2{
+	background-color:#000;
+}
+#container1{
+	transition: all ease 0.4ms;
+}
+#controlbar button{
+	vertical-align: middle;
+    text-align: center;
+    height: 100%;
+	background-color: black;
+	color: white;
+	box-shadow: inset 0 0 20px 7px #FFF7;
+	font-size: 1.0em;
+	border-radius: 19px;
+	max-width: 20%;
+	margin: 0;
+    padding: 0 2px;
+}
+.pressed {
+	background-color: #A00!important;
+}
+
+.loading {
+	width: 100%!important; height:100%!important; position: absolute; top: 0; right:unset;left:0;opacity:100%; animation: fadeIn 3s;
+}
+.fullwindow {
+	height: calc(100% - max(7vh, 50px)) !important; width:100%!important; position: absolute; top:  max(7vh, 50px)!important; right:unset!important;left:0!important;
+}
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  10% { opacity: 0; }
+  50% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+@media screen and (orientation:portrait) {
+	#container2{
+		width:100%;height:100%;display:none;
+	}
+	#container1{
+		width: 50vw;height: 50vh; display:none;  top: 0; right: 0%; position: absolute;
+	}
+	
+}
+
+@media screen and (orientation:landscape) {
+	#container2{
+		width:60vw;height:100%;display:none;
+		z-index:5;
+	}
+	#container1{
+		width: 50vw; height:100%; max-height: calc(100vh - 100px); display:none; position: fixed; top: 0; right: -10vw;
+	}
+	
+}
+.hide{
+	width: 1px!important;
+	height: 1px!important;
+	opacity: 0.5;
+}
+</style>
+</head>
+<body>
+	<div id="container2" ></div>
+	<div id="container1" class="loading"></div>
+	<div id="controlbar" >
+		<button id="hidepreview">Hide Preview</button>
+		<button id="mutemic">Mute Mic</button>
+		<button id="mutevideo">Mute Video</button>
+		<button id="togglesettings">Settings</button>
+		<button id="hangup">Hangup</button>
+	</div>
+	<div id="clean">
+		<h1>Use VDO.Ninja and Kick chat at the same time</h1>
+		
+		
+		
+		
+		VDO.Ninja Stream ID or URL:
+		<input placeholder="Enter a VDON stream ID or VDON URL" id="viewlink" type="text" />
+		Kick Username or URL:
+		<input placeholder="Enter the Kick channel name" id="kick" type="text" />
+		<button onclick="loadIframes()" style="background-color: #d1fed1;; padding:10px;margin:10px;">START</button>
+		<button onclick="clearInput()" style="background-color: #f4cccc;margin:10px 0px 10px 10vh;padding:10px;">CLEAR</button>
+		<br /><br /><br />
+		<p>
+			This app lets you publish video/audio via VDO.Ninja at the same time as viewing your Kick chat.<br /><br />If you have feature requests or suggestions, please report them at https://discord.vdo.ninja in the #feature-request channel.
+		</p>
+		<h2>If on mobile, enter "desktop site" mode within your browser's settings</h2>
+	</div>
+<script>
+
+window.addEventListener("orientationchange", function() {
+  // Announce the new orientation number
+ // alert(window.orientation);
+}, false);
+
+function removeStorage(cname){
+	localStorage.removeItem(cname);
+}
+
+function setStorage(cname, cvalue, hours=9999){ // not actually a cookie
+	var now = new Date();
+	var item = {
+		value: cvalue,
+		expiry: now.getTime() + (hours * 60 * 60 * 1000),
+	};
+	try{
+		localStorage.setItem(cname, JSON.stringify(item));
+	}catch(e){errorlog(e);}
+}
+
+function getStorage(cname) {
+	try {
+		var itemStr = localStorage.getItem(cname);
+	} catch(e){
+		errorlog(e);
+		return;
+	}
+	if (!itemStr) {
+		return "";
+	}
+	var item = JSON.parse(itemStr);
+	var now = new Date();
+	if (now.getTime() > item.expiry) {
+		localStorage.removeItem(cname);
+		return "";
+	}
+	return item.value;
+}
+if (getStorage("kickChatLink")){
+	document.getElementById("kick").value = getStorage("kickChatLink");
+}
+if (getStorage("vdoNinjaKickURL")){
+	document.getElementById("viewlink").value = getStorage("vdoNinjaKickURL");
+}
+function clearInput(){
+	var confirmit = confirm("Are you sure you want to clear the input fields and local storage?");
+	if (confirmit){
+		removeStorage("kickChatLink");
+		removeStorage("vdoNinjaKickURL");
+		document.getElementById("viewlink").value  = "";
+		document.getElementById("kick").value = "";
+	}
+}
+
+var iframe = null;
+function sendSelfCommand(action, value=null){
+	iframe.contentWindow.postMessage({"target":null, "action":action, "value":value}, '*');
+}
+
+var injectCSS = `
+	#controlButtons{
+		display:none!important;
+	}
+`;
+
+injectCSS = encodeURIComponent(btoa(injectCSS));
+
+function loadIframes(url=false){ 
+
+	var roomname = document.getElementById("viewlink").value;
+	var kick = document.getElementById("kick").value;
+	
+	document.getElementById("clean").parentNode.removeChild(document.getElementById("clean"));
+	document.getElementById("container1").style.display="inline-block";
+	document.getElementById("container2").style.display="inline-block";
+	
+	
+	var path = window.location.host+window.location.pathname.split("/").slice(0,-1).join("/");
+	path = path.replace("/examples","");
+	
+	if (roomname.startsWith("https://")){
+		var room1 = roomname;
+	} else {
+		var room1 = "https://"+path+"/?push="+roomname+"&webcam&autostart&vd=front&ad=1&transparent&noheader&fullscreen&cleanish&b64css="+injectCSS;
+	}
+	
+	var room2 = kick.startsWith("https://") ? kick : `https://kick.com/${kick}/chatroom`;
+
+	iframe = document.createElement("iframe");
+	iframe.allow = "autoplay;camera;microphone;fullscreen;picture-in-picture;";
+	iframe.src = room1;
+	
+	document.getElementById("container1").appendChild(iframe);
+	
+	////////////  LISTEN FOR EVENTS
+
+	var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+	var eventer = window[eventMethod];
+	var messageEvent = eventMethod === "attachEvent" ? "onmessage" : "message";
+
+
+	/// If you have a routing system setup, you could have just one global listener for all iframes instead.
+	
+	eventer(messageEvent, function (e) {
+		if (e.source != iframe.contentWindow){return} // reject messages send from other iframes
+		console.warn(e.data);
+		
+		if ("action" in e.data){
+			if (e.data.action === "seeding-started"){
+				document.getElementById("controlbar").style.display="inline-flex";
+				document.getElementById("container1").classList.remove("loading");
+			}
+			
+			if (e.data.action === "settings-menu-state"){
+				if (e.data.value==true){
+					togglesettings.dataset.value = "true";
+					togglesettings.classList.add("pressed");
+					document.getElementById("container1").classList.add("fullwindow");
+				} else {
+					togglesettings.dataset.value = "false";
+					togglesettings.classList.remove("pressed");
+					document.getElementById("container1").classList.remove("fullwindow");
+				}
+			}
+			
+		}
+	});
+	
+	
+	setStorage("kickChatLink", room2);
+
+	setStorage("vdoNinjaKickURL", room1);
+	
+	
+	setTimeout(function(){
+		var iframe2 = document.createElement("iframe");
+		iframe2.allow = "autoplay;camera;microphone;fullscreen;picture-in-picture;";
+		iframe2.src = room2;
+		document.getElementById("container2").appendChild(iframe2);
+	},1000);
+	
+}
+
+var hangup = document.getElementById("hangup");
+hangup.onclick = function(){
+	iframe.contentWindow.postMessage({"hangup":true}, '*');
+}
+
+var togglesettings = document.getElementById("togglesettings");
+togglesettings.onclick = function(){
+	iframe.contentWindow.postMessage({"toggleSettings":"toggle"}, '*');
+}
+
+var mutemic = document.getElementById("mutemic");
+mutemic.onclick = function(){
+	if (this.dataset.value!=="false"){
+		this.dataset.value = "false";
+		this.classList.add("pressed");
+		this.innerText = "Un-Mute Mic";
+		sendSelfCommand("mic",false);
+	} else {
+		this.classList.remove("pressed");
+		this.innerText = "Mute Mic";
+		this.dataset.value = "true";
+		sendSelfCommand("mic",true);
+	}
+}
+
+var mutevideo = document.getElementById("mutevideo");
+mutevideo.onclick = function(){
+	if (this.dataset.value!=="false"){
+		this.dataset.value = "false";
+		this.classList.add("pressed");
+		this.innerText = "Un-Mute camera";
+		sendSelfCommand("camera",false);
+	} else {
+		this.classList.remove("pressed");
+		this.innerText = "Mute Camera";
+		this.dataset.value = "true";
+		sendSelfCommand("camera",true);
+	}
+}
+
+var hidepreview = document.getElementById("hidepreview");
+hidepreview.onclick = function(){
+	if (this.dataset.value!=="false"){
+		this.dataset.value = "false";
+		this.classList.add("pressed");
+		this.innerText = "Show Preview";
+		document.getElementById("container1").classList.add("hide");
+		document.getElementById("container2").classList.add("fullwindow");
+	} else {
+		this.classList.remove("pressed");
+		this.innerText = "Hide Preview";
+		this.dataset.value = "true";
+		document.getElementById("container1").classList.remove("hide");
+		document.getElementById("container2").classList.remove("fullwindow");
+	}
+	
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,460 @@
+/* Minimal visual refresh overrides — non-invasive, CSS-only. */
+
+/* 1) Palette and radii overrides via existing tokens */
+:root {
+    --button-radius: 8px;
+    --lighttheme-2: #f6f7f9; /* surfaces */
+    --lighttheme-3: #eceef2; /* containers */
+    --lighttheme-4: #d9dde5; /* borders */
+    --lighttheme-6: #c3c7d0; /* subtle lines */
+    --lighttheme-text: #111;
+
+    /* keep original semantics; just slightly modernize */
+    --container-color: #3a3d45; /* dark surface used in many cards */
+
+    /* global accent (aligned with about.html) */
+    --accent-color: #3e8fd8;
+    --accent-hover-color: #56a5ea;
+
+    /* unified link colors (light theme) — aligned with about.html accent */
+    --a-link: #3e8fd8;      /* base: #4299e1 softened */
+    --a-visited: #3e8fd8;
+    --a-hover: #56a5ea;     /* lighter hover */
+    --a-focus: #56a5ea;
+    --a-active: #2f7ec4;
+
+    /* lighter links used in specific sections */
+    --a-lighter-link: #2d6aa6;
+    --a-lighter-visited: #2d6aa6;
+    --a-lighter-hover: #3e7fbd;
+    --a-lighter-focus: #3e7fbd;
+    --a-lighter-active: #246295;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* soften Discord greys slightly */
+        --discord-grey-5: #2f3237;
+        --discord-grey-7: #3a3d45;
+        --discord-text: hsl(210 10% 92% / 1);
+        /* muted icon color to match subdued typography */
+        --muted-icon: #c8ccd4;
+        /* unified link colors (dark theme) */
+        --a-dark-link: #9ec7ee;   /* tinted to about.html accent */
+        --a-dark-visited: #9ec7ee;
+        --a-dark-hover: #b9d8f6;
+        --a-dark-focus: #b9d8f6;
+        --a-dark-active: #8abbe8;
+        --a-darker-link: #bcd8f4;
+        --a-darker-visited: #bcd8f4;
+        --a-darker-hover: #cfe6fb;
+        --a-darker-focus: #cfe6fb;
+        --a-darker-active: #a9cdef;
+        /* accent for dark UI */
+        --accent-color: #6fb7ef;
+        --accent-hover-color: #8ec9f4;
+    }
+}
+
+/* 2) Typographic refresh (safe defaults) */
+body {
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* subtle depth */
+    background-image: radial-gradient(1200px 800px at 10% -10%, rgba(255,255,255,0.025), transparent 60%),
+                      radial-gradient(1000px 600px at 110% 0%, rgba(0,0,0,0.08), transparent 60%);
+}
+
+/* 3) Cards and columns (landing containers) */
+.column.card,
+.column {
+    /* Use solid backgrounds to preserve icon contrast and avoid transparency */
+    background-color: var(--lighttheme-3) !important;
+    backdrop-filter: saturate(120%) blur(2px);
+    border: 1px solid var(--lighttheme-4);
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08), 0 1px 0 rgba(255,255,255,0.02) inset;
+}
+.darktheme .column.card,
+.darktheme .column {
+    background-color: var(--discord-grey-7) !important;
+    border: 1px solid #4a4d55;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.02) inset;
+}
+
+.column:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.15);
+}
+
+/* Prevent hover-lift effect when a tile is expanded full-window */
+.skip-animation,
+.in-animation {
+    transition: none !important;
+}
+.skip-animation:hover,
+.in-animation:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* 4) Container content panels */
+.container-inner {
+    padding: 14px 16px;
+    border-radius: 12px;
+}
+/* preserve existing backgrounds from main.css; no overrides here */
+
+/* 5) Buttons and inputs (respect existing tokens) */
+button {
+    border-radius: var(--button-radius);
+    transition: box-shadow .15s ease, transform .08s ease, filter .15s ease;
+}
+button:hover {
+    box-shadow: 0 6px 14px rgba(0,0,0,0.12);
+}
+button:active {
+    transform: translateY(1px);
+}
+
+/* Accessible focus treatment */
+:where(a, button, [role="button"], input, select, textarea):focus-visible {
+    outline: 2px solid var(--a-hover);
+    outline-offset: 2px;
+}
+.darktheme :where(a, button, [role="button"], input, select, textarea):focus-visible {
+    outline-color: var(--a-dark-hover);
+}
+
+input[type="text"], input[type="search"], input[type="number"], select {
+    border: 1px solid var(--lighttheme-4);
+    background: var(--lighttheme-2);
+    color: var(--lighttheme-text);
+    border-radius: 10px;
+    padding: 6px 10px;
+}
+.darktheme input[type="text"],
+.darktheme input[type="search"],
+.darktheme input[type="number"],
+.darktheme select {
+    border: 1px solid #4a4d55;
+    background: var(--discord-grey-5);
+    color: var(--discord-text);
+}
+
+/* 17) Radios/checkboxes: make checked state feel active */
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: var(--accent-color);
+}
+.darktheme input[type="radio"],
+.darktheme input[type="checkbox"] {
+    accent-color: var(--accent-color);
+}
+input[type="radio"] + label,
+input[type="checkbox"] + label { cursor: pointer; }
+input[type="radio"]:checked + label,
+input[type="checkbox"]:checked + label {
+    color: var(--a-link);
+    font-weight: 600;
+}
+/* Override: do not color labels on selection — only the control gets color */
+input[type="radio"]:checked + label,
+input[type="checkbox"]:checked + label {
+    color: inherit !important;
+    font-weight: inherit !important;
+}
+.darktheme input[type="radio"]:checked + label,
+.darktheme input[type="checkbox"]:checked + label {
+    color: inherit !important;
+}
+
+/* Higher-contrast placeholders (theme-aware) */
+input::placeholder,
+textarea::placeholder {
+    color: #6b7686 !important; /* slightly darker than default for readability */
+}
+.darktheme :not(.promptModalInner) > input::placeholder,
+.darktheme :not(.promptModalInner) > textarea::placeholder {
+    color: var(--muted-icon, #c8ccd4) !important; /* brighter on dark for contrast */
+}
+
+/* Vendor placeholder fallbacks */
+::-webkit-input-placeholder { color: #6b7686 !important; }
+::-moz-placeholder { color: #6b7686 !important; }
+:-ms-input-placeholder { color: #6b7686 !important; }
+:-moz-placeholder { color: #6b7686 !important; }
+.darktheme ::-webkit-input-placeholder { color: var(--muted-icon, #c8ccd4) !important; }
+.darktheme ::-moz-placeholder { color: var(--muted-icon, #c8ccd4) !important; }
+.darktheme :-ms-input-placeholder { color: var(--muted-icon, #c8ccd4) !important; }
+.darktheme :-moz-placeholder { color: var(--muted-icon, #c8ccd4) !important; }
+
+
+/* Light theme icon subtlety */
+.column.card .las { color: #5b6574; }
+
+/* 13) High-contrast treatment for copy links (reshare) */
+/* The anchor element itself carries .grabLinks; ensure we target it directly */
+a.grabLinks:link,
+a.grabLinks:visited {
+    color: var(--a-link) !important;
+    text-decoration: underline;
+}
+.darktheme a.grabLinks:link,
+.darktheme a.grabLinks:visited {
+    color: var(--a-dark-link) !important;
+    text-decoration: underline;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.6);
+}
+a.grabLinks:hover,
+a.grabLinks:active {
+    color: var(--a-hover) !important;
+}
+.darktheme a.grabLinks:hover,
+.darktheme a.grabLinks:active {
+    color: var(--a-dark-hover) !important;
+}
+
+/* Copy-this-URL label: increase contrast subtly */
+#copythisurl { color: #5b6574 !important; }
+.darktheme #copythisurl { color: var(--muted-icon) !important; }
+
+/* 13b) Fix dark-mode audio source multiselect contrast */
+.darktheme ul#audioSource,
+.darktheme ul#audioSource3 {
+    background-color: var(--discord-grey-6) !important;
+    border: 1px solid var(--discord-grey-8) !important;
+}
+.darktheme ul#audioSource label,
+.darktheme ul#audioSource3 label {
+    background-color: transparent !important;
+    color: var(--discord-text) !important;
+}
+
+/* Ensure selected audio source labels don't turn white */
+ul#audioSource input:checked + label,
+ul#audioSource3 input:checked + label {
+    color: #111 !important;
+}
+.darktheme ul#audioSource input:checked + label,
+.darktheme ul#audioSource3 input:checked + label {
+    color: var(--discord-text) !important;
+}
+
+/* 8) Director/Guest toolbar polish (glass, non-invasive) */
+#subControlButtons {
+    background-color: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+.darktheme #subControlButtons {
+    background-color: rgba(28, 31, 36, 0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+}
+
+#subControlButtons div, #subControlButtons span button {
+    border-radius: 10px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+#subControlButtons div:hover { border-radius: 8px; }
+
+/* Controls grid buttons: consistent shape & hover */
+.controlsGrid button {
+    border-radius: 8px;
+    padding: 6px 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: transform .08s ease, box-shadow .15s ease, filter .15s ease;
+}
+.controlsGrid button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+}
+
+/* Director message box: glass pane */
+.controlsGrid .director-message-box {
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+    border: 1px solid rgba(0,0,0,0.08);
+}
+.darktheme .controlsGrid .director-message-box {
+    background: rgba(58,61,69,0.55);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+.darktheme .controlsGrid .director-message-box textarea {
+    background-color: rgba(64,66,73,0.7);
+    backdrop-filter: blur(2px);
+}
+
+/* 9) Optional: utility class for explicit glass usage (not applied anywhere yet) */
+.glass {
+    background-color: rgba(255,255,255,0.6);
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+}
+.darktheme .glass {
+    background-color: rgba(28,31,36,0.6);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+/* 13) Close buttons and director link icons — unify intensity */
+.close-btn, .overlayCloseBtn { color: #5b6574; }
+.close-btn:hover, .overlayCloseBtn:hover { color: var(--a-hover); }
+.darktheme .close-btn, .darktheme .overlayCloseBtn { color: var(--muted-icon); }
+.darktheme .close-btn:hover, .darktheme .overlayCloseBtn:hover { color: var(--a-dark-hover); }
+
+.director-link-icons .las { color: #5b6574; }
+.director-link-icons .las:hover { color: var(--a-hover); }
+.darktheme .director-link-icons .las { color: var(--muted-icon); }
+.darktheme .director-link-icons .las:hover { color: var(--a-dark-hover); }
+
+/* 14) Modal glass and alert polish (safe: background/border only) */
+.modal-content,
+.alertModalInner,
+.popup-message {
+    background-color: rgba(255,255,255,0.80) !important;
+    backdrop-filter: blur(8px) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) saturate(120%);
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    border-radius: 10px !important;
+}
+.darktheme .modal-content,
+.darktheme .alertModalInner,
+.darktheme .popup-message {
+    background-color: rgba(34,37,44,0.70) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+}
+
+/* 15) Chat send button harmony */
+.chatBarInputButton {
+    background-color: var(--accent-color) !important;
+    color: #000 !important;
+    border: 1px solid #2f7ec4 !important;
+    border-radius: 8px !important;
+}
+.chatBarInputButton:hover {
+    background-color: var(--accent-hover-color) !important;
+}
+
+/* 16) Solo link accent harmonization */
+a.soloLink:link, a.soloLink:visited { color: var(--a-link); }
+.darktheme a.soloLink:link, .darktheme a.soloLink:visited { color: var(--a-dark-link); }
+a.soloLink:hover { color: var(--a-hover); }
+.darktheme a.soloLink:hover { color: var(--a-dark-hover); }
+
+/* 10) Header glass — subtle and safe */
+#header {
+    background-color: rgba(15, 19, 29, 0.60) !important;
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.darktheme #header {
+    background-color: rgba(14, 17, 24, 0.60) !important;
+}
+
+/* 11) Chat module glass and cohesion */
+#chatModule {
+    background-color: rgba(255,255,255,0.75) !important;
+    backdrop-filter: blur(10px) saturate(120%);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    border-radius: 10px !important;
+    overflow: hidden;
+}
+.darktheme #chatModule {
+    background-color: rgba(28,31,36,0.65) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+}
+.chat-header {
+    background-color: transparent !important;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.darktheme .chat-header { border-bottom-color: rgba(255,255,255,0.08); }
+.chat-input-area { background-color: transparent !important; }
+
+/* Chat links harmonized with accent */
+div#chatBody a {
+    color: var(--a-link) !important;
+    background-color: rgba(62,143,216,0.1) !important;
+    border: 1px solid currentColor !important;
+}
+.darktheme div#chatBody a {
+    color: var(--a-dark-link) !important;
+    background-color: rgba(158,199,238,0.10) !important;
+    border-color: var(--a-dark-link) !important;
+}
+
+/* 12) Primary CTA harmony */
+.gobutton {
+    background-color: var(--accent-color) !important;
+    border-color: #2f7ec4 !important;
+}
+.gobutton:hover {
+    background-color: var(--accent-hover-color) !important;
+    border-color: #2f7ec4 !important;
+}
+
+/* 20) Message cards — softer backgrounds and accents */
+.message-card { border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+.warning.message-card { background: #fffbe8; border-left: 4px solid #f2df75; }
+.info.message-card { background: #eef3fb; border-left: 4px solid #9fc4f5; }
+.darktheme .message-card { background-color: #2f3237; box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+.darktheme .warning.message-card { background: #3a3d45; border-left-color: #f2df75; }
+.darktheme .info.message-card { background: #363b46; border-left-color: #9fc4f5; }
+
+/* 21) Tooltips — readability and polish */
+.tooltip .tooltiptext {
+    background-color: rgba(15,19,29,0.92) !important;
+    color: #e8eef6 !important;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 8px;
+    box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+}
+.darktheme .tooltip .tooltiptext { background-color: rgba(34,37,44,0.95) !important; }
+
+/* 22) Sliders — theme-aware styling */
+input[type="range"] { -webkit-appearance: none; background: transparent; height: 24px; }
+input[type="range"]:focus { outline: none; }
+/* WebKit */
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; background: var(--lighttheme-4); border-radius: 999px; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent-color); border: 1px solid #2f7ec4; margin-top: -5px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+/* Firefox */
+input[type="range"]::-moz-range-track { height: 6px; background: var(--lighttheme-4); border-radius: 999px; }
+input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent-color); border: 1px solid #2f7ec4; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+input[type="range"]::-moz-range-progress { height: 6px; background: var(--accent-color); border-radius: 999px; }
+.darktheme input[type="range"]::-webkit-slider-runnable-track { background: var(--discord-grey-6); }
+.darktheme input[type="range"]::-moz-range-track { background: var(--discord-grey-6); }
+.darktheme input[type="range"]::-moz-range-progress { background: var(--a-dark-link); }
+.darktheme input[type="range"]::-webkit-slider-thumb { background: var(--a-dark-link); border-color: #6b8db3; }
+.darktheme input[type="range"]::-moz-range-thumb { background: var(--a-dark-link); border-color: #6b8db3; }
+
+/* 23) Non-expanded tiles — prevent scrollbars */
+.column.card:not(.skip-animation):not(.in-animation) { overflow-y: hidden !important; }
+
+/* 25) Create a Room (#container-1) — reduce boldness, improve contrast */
+.darktheme #container-1 th b,
+.darktheme #container-1 td b { font-weight: 400 !important; }
+.darktheme #container-1 th,
+.darktheme #container-1 td,
+.darktheme #container-1 label { color: #fff !important; }
+.darktheme #container-1 [data-translate="guests-only-see-director"],
+.darktheme #container-1 [data-translate="scenes-can-see-director"] { color: #fff !important; font-weight: 400 !important; }
+
+.invite_setting_group {
+	padding: 20px;
+}
+
+#videoname4 {
+	padding: 25px;
+}
+
+/* Subtle vertical balance for all tile headings */
+.column.card > i { margin-top: 17px!important;}
+

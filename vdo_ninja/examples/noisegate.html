@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Noise Gate Converter — Classic → "My Gate"</title>
+  <style>
+    :root {
+      --bg: #0e1116;
+      --panel: #171b23;
+      --muted: #9aa4b2;
+      --text: #e7edf3;
+      --accent: #6ee7b7;
+      --accent-2: #60a5fa;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: radial-gradient(1200px 600px at 20% -10%, #131826 0%, #0f1320 45%, var(--bg) 100%);
+      color: var(--text); font: 14px/1.35 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell;
+    }
+    .wrap { max-width: 1100px; margin: 32px auto; padding: 0 16px; }
+    header { display: flex; gap: 16px; align-items: center; justify-content: space-between; }
+    h1 { font-size: 22px; margin: 0; letter-spacing: 0.2px; }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.0) 30%), var(--panel);
+            border: 1px solid rgba(255,255,255,.06); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+    .grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+    .inputs { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 12px; }
+    label { display: block; font-weight: 600; color: #cdd6e1; margin-bottom: 6px; }
+    input[type="number"] { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.08);
+      background: #0e1320; color: var(--text); outline: none; }
+    input[type="number"]:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(96,165,250,.25); }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .muted { color: var(--muted); }
+    .pill { padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.04); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12.5px; }
+    pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+    button { cursor: pointer; border: 0; padding: 10px 14px; border-radius: 12px; color: #0a0d12; background: var(--accent);
+      font-weight: 700; letter-spacing: .2px; }
+    button.secondary { background: #222836; color: #e8eef6; border: 1px solid rgba(255,255,255,.08); }
+    button.danger { background: var(--danger); color: #0a0d12; }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .section-title { font-size: 13px; color: #a3b0c2; text-transform: uppercase; letter-spacing: .12em; margin: 16px 0 8px; }
+
+    /* meters */
+    .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .meter { position: relative; height: 16px; border-radius: 999px; background: #121826;
+             border: 1px solid rgba(255,255,255,.08); overflow: hidden; }
+    .meter .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; background: linear-gradient(90deg, var(--accent-2), var(--accent));
+                   transition: width .08s linear; }
+
+    .foot { margin-top: 14px; color: #90a1b6; font-size: 12.5px; }
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .code-block { background: #0b0f19; border: 1px solid rgba(255,255,255,.08); padding: 12px; border-radius: 12px; }
+    .caption { color: #9eb0c6; font-size: 12.5px; margin: 8px 0 2px; }
+    .kbd { font-family: ui-monospace, monospace; background: #0e1422; border: 1px solid rgba(255,255,255,.08); border-bottom-width: 2px; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Classic → <span class="pill mono">My Gate</span> converter</h1>
+      <div class="row">
+        <button id="startBtn" class="secondary">Start live test</button>
+        <button id="resetBtn" class="secondary" title="Reset to sensible defaults">Reset</button>
+      </div>
+    </header>
+
+    <div class="grid" style="margin-top: 16px;">
+      <section class="card">
+        <div class="section-title">Inputs — classic noise gate</div>
+        <div class="inputs">
+          <div>
+            <label for="thr">Threshold (dBFS)</label>
+            <input id="thr" type="number" step="1" min="-120" max="0" value="-50" />
+            <div class="muted" style="margin-top:6px">Linear amplitude: <span id="linThresh" class="mono">0.003162</span></div>
+          </div>
+          <div>
+            <label for="att">Attack (ms)</label>
+            <input id="att" type="number" step="1" min="0" max="2000" value="1" />
+          </div>
+          <div>
+            <label for="rel">Release (ms)</label>
+            <input id="rel" type="number" step="1" min="0" max="4000" value="100" />
+          </div>
+          <div>
+            <label for="hold">Hold (ms)</label>
+            <input id="hold" type="number" step="1" min="0" max="4000" value="10" />
+          </div>
+          <div>
+            <label for="range">Range / Depth (% reduction when closed)</label>
+            <input id="range" type="number" step="1" min="0" max="100" value="80" />
+            <div class="muted" style="margin-top:6px">Closed gain: <span id="downGain" class="mono">20%</span></div>
+          </div>
+        </div>
+
+        <div class="section-title">Live meter (optional)</div>
+        <div class="meters">
+          <div>
+            <div class="muted">Input level (approx dBFS)</div>
+            <div class="meter"><div id="inFill" class="fill" style="--v:0"></div></div>
+          </div>
+          <div>
+            <div class="muted">Gate gain (%)</div>
+            <div class="meter"><div id="gainFill" class="fill" style="--v:100"></div></div>
+          </div>
+        </div>
+        <div class="foot">Tip: set <span class="kbd">Range</span> for how deep your gate closes. Classic gates often call this <em>Range</em> or <em>Depth</em>. The rest maps 1:1.</div>
+      </section>
+
+      <section class="card">
+        <div class="section-title">Outputs — what your code expects</div>
+        <div class="cols">
+          <div>
+            <div class="caption">Calls you make when the detector toggles</div>
+            <div class="code-block mono" id="callsBlock">
+<pre>// gate CLOSE (after Hold):
+<span id="gateDownCall">changeGatingGain(20, 100)</span>
+
+// gate OPEN (on speech):
+<span id="gateUpCall">changeGatingGain(100, 1)</span></pre>
+            </div>
+          </div>
+          <div>
+            <div class="caption">URL params / compact settings string</div>
+            <div class="code-block mono">
+<pre>?noisegate=1&amp;noisegatesettings=<span id="settingsStr">-50,1,100,10,20</span></pre>
+            </div>
+
+            <div class="caption">Individual values</div>
+            <div class="code-block mono" id="kv">
+<pre>{
+  thresholdDb: <span id="kv_thr">-50</span>,
+  attackMs: <span id="kv_att">1</span>,
+  releaseMs: <span id="kv_rel">100</span>,
+  holdMs: <span id="kv_hold">10</span>,
+  closedGainPercent: <span id="kv_closed">20</span>
+}</pre>
+            </div>
+            <div class="row" style="margin-top:8px; gap:8px;">
+              <button class="secondary" id="copyUrl">Copy URL</button>
+              <button class="secondary" id="copyCalls">Copy calls</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Drop‑in helper (optional)</div>
+        <div class="code-block mono" style="max-height: 320px; overflow: auto;">
+<pre id="helperCode">// Convert classic gate knobs to your changeGatingGain() usage.
+function classicalToMyGate({ thresholdDb, attackMs, releaseMs, holdMs, rangePct = 80 }) {
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const downGainPercent = 100 - clamp(rangePct, 0, 100); // % of full when closed
+  const linearThreshold = Math.pow(10, thresholdDb / 20);
+  return {
+    thresholdDb,
+    linearThreshold,         // for detector if you need it
+    attackMs: Math.max(0, attackMs|0),
+    releaseMs: Math.max(0, releaseMs|0),
+    holdMs: Math.max(0, holdMs|0),
+    downGainPercent,         // e.g., 20 means -80% depth
+    gateDownCall: `changeGatingGain(${downGainPercent}, ${releaseMs|0})`,
+    gateUpCall:   `changeGatingGain(100, ${attackMs|0})`,
+    // compact string your app can parse
+    noisegatesettings: [thresholdDb, attackMs|0, releaseMs|0, holdMs|0, downGainPercent|0].join(',')
+  };
+}
+
+// Simple detector that drives your changeGatingGain() based on an AnalyserNode.
+// Uses threshold + hold; release/attack are handled by changeGatingGain ramps.
+function wireClassicGateDetector({ analyser, audioCtx, thresholdDb, holdMs, attackMs, releaseMs, downGainPercent }) {
+  const buf = new Float32Array(analyser.fftSize);
+  let state = 'open';
+  let holdUntil = 0;
+
+  function setGainPct(percent, ms) {
+    const t = audioCtx.currentTime;
+    const v = percent / 100;
+    try {
+      // mirrors your changeGatingGain() behavior
+      analyser.disconnect; // no-op keeps linter happy
+      window.changeGatingGain ? window.changeGatingGain(percent, ms) : null;
+    } catch (e) {}
+  }
+
+  function tick() {
+    analyser.getFloatTimeDomainData(buf);
+    let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+    const rms = Math.sqrt(s / buf.length) + 1e-12;
+    const db = 20 * Math.log10(rms);
+
+    const now = performance.now();
+    if (db > thresholdDb) {
+      holdUntil = now + holdMs;
+      if (state !== 'open') { setGainPct(100, attackMs); state = 'open'; }
+    } else if (now > holdUntil) {
+      if (state !== 'closed') { setGainPct(100 - downGainPercent, releaseMs); state = 'closed'; }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+</pre>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // ==== Utility ==== //
+    const $ = (id) => document.getElementById(id);
+    const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+    const dbToLin = (db) => Math.pow(10, db / 20);
+
+    function compute() {
+      const thr = parseFloat($("thr").value || -50);
+      const att = parseInt($("att").value || 0, 10);
+      const rel = parseInt($("rel").value || 0, 10);
+      const hold = parseInt($("hold").value || 0, 10);
+      const range = clamp(parseInt($("range").value || 80, 10), 0, 100);
+
+      const downGainPercent = 100 - range; // % of full volume when closed
+      const cfg = {
+        thresholdDb: thr,
+        linearThreshold: dbToLin(thr),
+        attackMs: att, releaseMs: rel, holdMs: hold,
+        downGainPercent
+      };
+
+      $("linThresh").textContent = cfg.linearThreshold.toFixed(6);
+      $("downGain").textContent = (cfg.downGainPercent).toFixed(0) + '%';
+      $("gateDownCall").textContent = `changeGatingGain(${cfg.downGainPercent}, ${cfg.releaseMs})`;
+      $("gateUpCall").textContent   = `changeGatingGain(100, ${cfg.attackMs})`;
+      $("settingsStr").textContent  = [cfg.thresholdDb, cfg.attackMs, cfg.releaseMs, cfg.holdMs, cfg.downGainPercent].join(',');
+
+      $("kv_thr").textContent = cfg.thresholdDb;
+      $("kv_att").textContent = cfg.attackMs;
+      $("kv_rel").textContent = cfg.releaseMs;
+      $("kv_hold").textContent = cfg.holdMs;
+      $("kv_closed").textContent = cfg.downGainPercent;
+
+      return cfg;
+    }
+
+    // bind inputs
+    Array.from(document.querySelectorAll('input')).forEach(i => i.addEventListener('input', compute));
+    compute();
+
+    // Copy helpers
+    $("copyUrl").addEventListener('click', () => {
+      const s = `?noisegate=1&noisegatesettings=${$("settingsStr").textContent}`;
+      navigator.clipboard.writeText(s);
+      notify('Copied URL params');
+    });
+    $("copyCalls").addEventListener('click', () => {
+      const s = `${$("gateDownCall").textContent}\n${$("gateUpCall").textContent}\n`;
+      navigator.clipboard.writeText(s);
+      notify('Copied function calls');
+    });
+
+    function notify(msg) {
+      const el = document.createElement('div');
+      el.textContent = msg; el.style.position = 'fixed'; el.style.right = '16px'; el.style.bottom = '16px';
+      el.style.background = 'rgba(20,26,37,.95)'; el.style.border = '1px solid rgba(255,255,255,.08)'; el.style.padding = '10px 12px'; el.style.borderRadius = '10px';
+      document.body.appendChild(el); setTimeout(() => el.remove(), 1200);
+    }
+
+    $("resetBtn").addEventListener('click', () => {
+      $("thr").value = -50; $("att").value = 1; $("rel").value = 100; $("hold").value = 10; $("range").value = 80; compute();
+    });
+
+    // ==== Live test (optional) ==== //
+    let ctx, src, gateNode, analyser, raf, buf;
+    let state = 'open', holdUntil = 0;
+
+    const inFill = $("inFill"), gainFill = $("gainFill");
+
+    async function start() {
+      if (ctx) return stop();
+      try {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const stream = await navigator.mediaDevices.getUserMedia({audio: { echoCancellation:false, noiseSuppression:false, autoGainControl:false }});
+        src = ctx.createMediaStreamSource(stream);
+        gateNode = ctx.createGain(); gateNode.gain.value = 1.0;
+        src.connect(gateNode);
+        analyser = ctx.createAnalyser(); analyser.fftSize = 2048; buf = new Float32Array(analyser.fftSize);
+        gateNode.connect(analyser); gateNode.connect(ctx.destination);
+        loop();
+        $("startBtn").textContent = 'Stop live test';
+      } catch (e) {
+        notify('Mic permission denied or unavailable');
+      }
+    }
+
+    function stop() {
+      cancelAnimationFrame(raf); raf = null;
+      if (ctx) { try { ctx.close(); } catch (e) {} }
+      ctx = src = gateNode = analyser = null; state = 'open';
+      inFill.style.width = '0%'; gainFill.style.width = '100%';
+      $("startBtn").textContent = 'Start live test';
+    }
+
+    function setGainPct(pct, ms) {
+      if (!gateNode) return;
+      const t = ctx.currentTime; const v = clamp(pct,0,100)/100;
+      try {
+        gateNode.gain.cancelScheduledValues(t);
+        gateNode.gain.setValueAtTime(gateNode.gain.value, t);
+        gateNode.gain.linearRampToValueAtTime(v, t + Math.max(0, ms)/1000);
+      } catch (e) {
+        gateNode.gain.value = v;
+      }
+    }
+
+    function loop() {
+      const cfg = compute();
+      analyser.getFloatTimeDomainData(buf);
+      let s = 0; for (let i = 0; i < buf.length; i++) s += buf[i]*buf[i];
+      const rms = Math.sqrt(s/buf.length) + 1e-12;
+      const db = 20*Math.log10(rms);
+
+      // simple display: map -100..0 dB to 0..100
+      const inPct = clamp(100 + db, 0, 100);
+      inFill.style.width = inPct + '%';
+
+      const now = performance.now();
+      if (db > cfg.thresholdDb) {
+        holdUntil = now + cfg.holdMs;
+        if (state !== 'open') { setGainPct(100, cfg.attackMs); state = 'open'; }
+      } else if (now > holdUntil) {
+        if (state !== 'closed') { setGainPct(cfg.downGainPercent, cfg.releaseMs); state = 'closed'; }
+      }
+
+      const gv = gateNode.gain.value * 100; gainFill.style.width = clamp(gv, 0, 100) + '%';
+      raf = requestAnimationFrame(loop);
+    }
+
+    $("startBtn").addEventListener('click', () => ctx ? stop() : start());
+
+    // Expose the core converter globally in case you want to copy it out via DevTools
+    window.classicalToMyGate = function(args){
+      const range = clamp(args.rangePct ?? 80, 0, 100);
+      const downGainPercent = 100 - range;
+      return {
+        thresholdDb: args.thresholdDb,
+        linearThreshold: dbToLin(args.thresholdDb),
+        attackMs: args.attackMs|0,
+        releaseMs: args.releaseMs|0,
+        holdMs: args.holdMs|0,
+        downGainPercent,
+        gateDownCall: `changeGatingGain(${downGainPercent}, ${args.releaseMs|0})`,
+        gateUpCall:   `changeGatingGain(100, ${args.attackMs|0})`,
+        noisegatesettings: [args.thresholdDb, args.attackMs|0, args.releaseMs|0, args.holdMs|0, downGainPercent|0].join(',')
+      };
+    };
+  </script>
+</body>
+</html>

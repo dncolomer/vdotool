@@ -1,0 +1,342 @@
+/* Authentication UI Styles */
+
+/* Auth Container */
+#auth-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-modal {
+  background: var(--main-bg, #1a1a1a);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  max-width: 400px;
+  width: 90%;
+  animation: authModalSlide 0.3s ease-out;
+}
+
+@keyframes authModalSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.auth-modal h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-color, #fff);
+  font-size: 1.5rem;
+  text-align: center;
+}
+
+.auth-modal p {
+  color: var(--text-color-secondary, #aaa);
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+/* Auth Buttons */
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.auth-button {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.875rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: white;
+}
+
+.auth-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.auth-button:active {
+  transform: translateY(0);
+}
+
+.auth-button img {
+  width: 20px;
+  height: 20px;
+}
+
+.auth-button.google {
+  background: #4285f4;
+}
+
+.auth-button.google:hover {
+  background: #357ae8;
+}
+
+.auth-button.discord {
+  background: #5865f2;
+}
+
+.auth-button.discord:hover {
+  background: #4752c4;
+}
+
+.auth-button.twitch {
+  background: #9146ff;
+}
+
+.auth-button.twitch:hover {
+  background: #772ce8;
+}
+
+/* Skip Auth Button */
+.skip-auth {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: transparent;
+  border: 1px solid var(--border-color, #444);
+  color: var(--text-color-secondary, #aaa);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.skip-auth:hover {
+  border-color: var(--text-color-secondary, #aaa);
+  color: var(--text-color, #fff);
+}
+
+/* User Info Display */
+.user-info-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.user-info-display img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--primary-color, #4285f4);
+}
+
+.user-info-display .user-details {
+  flex: 1;
+}
+
+.user-info-display .user-name {
+  font-weight: 600;
+  color: var(--text-color, #fff);
+  font-size: 0.9rem;
+}
+
+.user-info-display .user-handle {
+  color: var(--text-color-secondary, #aaa);
+  font-size: 0.8rem;
+}
+
+/* Auth Badge in Control Boxes */
+.user-auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.user-auth-badge img {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.user-auth-badge .user-handle {
+  font-weight: 600;
+  color: var(--primary-color, #4285f4);
+}
+
+.user-auth-badge .user-provider {
+  font-size: 0.7rem;
+  opacity: 0.7;
+  text-transform: capitalize;
+}
+
+.user-auth-badge .user-provider.google {
+  color: #4285f4;
+}
+
+.user-auth-badge .user-provider.discord {
+  color: #5865f2;
+}
+
+.user-auth-badge .user-provider.twitch {
+  color: #9146ff;
+}
+
+/* Access Denied Modal */
+.access-denied-modal {
+  text-align: center;
+}
+
+.access-denied-modal h3 {
+  color: #ff4444;
+  margin-bottom: 1rem;
+}
+
+.access-denied-modal p {
+  margin-bottom: 1.5rem;
+}
+
+.access-denied-modal button {
+  padding: 0.75rem 2rem;
+  background: var(--primary-color, #4285f4);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+}
+
+.access-denied-modal button:hover {
+  background: var(--primary-color-dark, #357ae8);
+}
+
+/* Room Settings Panel */
+.room-settings-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--main-bg, #1a1a1a);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 10001;
+}
+
+.room-settings-panel h3 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-color, #fff);
+}
+
+.setting-group {
+  margin-bottom: 1.5rem;
+}
+
+.setting-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color, #fff);
+  font-weight: 500;
+}
+
+.setting-group select,
+.setting-group input[type="text"] {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 4px;
+  color: var(--text-color, #fff);
+}
+
+.setting-group input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+/* Access Requests */
+.access-requests {
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.access-requests h4 {
+  margin: 0 0 1rem 0;
+  color: #ffa500;
+}
+
+.access-request {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.access-request img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.access-request span {
+  flex: 1;
+  color: var(--text-color, #fff);
+}
+
+.access-request button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.access-request button:first-of-type {
+  background: #4caf50;
+  color: white;
+  margin-right: 0.5rem;
+}
+
+.access-request button:first-of-type:hover {
+  background: #45a049;
+}
+
+.access-request button:last-of-type {
+  background: #f44336;
+  color: white;
+}
+
+.access-request button:last-of-type:hover {
+  background: #da190b;
+}

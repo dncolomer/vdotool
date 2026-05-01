@@ -1,0 +1,1503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VDO.Ninja OBS Control Dock</title>
+    <style>
+body { 
+    font-family: sans-serif; 
+    margin: 5px; 
+    background-color: #13141A; 
+    color: #e0e0e0;
+    font-size: 13px; 
+}
+.container { 
+    margin-bottom: 10px; 
+    padding: 8px; 
+    background-color: #272A33; 
+    border-radius: 5px; 
+    border: 1px solid #3a3a48;
+}
+.collapsible {
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 0;
+    position: relative;
+    font-weight: bold;
+    background: rgba(255,255,255,0.03);
+    margin: -8px -8px 8px -8px;
+    padding-left: 12px;
+    border-bottom: 1px solid #3a3a48;
+}
+.collapsible::after {
+    content: '▼';
+    position: absolute;
+    right: 12px;
+    font-size: 12px;
+    color: #8a8a9a;
+    transition: transform 0.2s ease;
+}
+.collapsible.collapsed::after {
+    content: '►';
+    transform: none;
+}
+.collapsible:hover {
+    background: rgba(255,255,255,0.08);
+}
+.collapsible::before {
+    content: 'Click to ' attr(data-state);
+    position: absolute;
+    right: 30px;
+    font-size: 10px;
+    color: #666;
+    font-weight: normal;
+}
+.collapsible[data-state="expand"]::before {
+    content: 'Click to expand';
+}
+.collapsible[data-state="collapse"]::before {
+    content: 'Click to collapse';
+}
+.collapsible-content {
+    max-height: 1000px;
+    overflow: hidden;
+    transition: max-height 0.2s ease-out;
+    padding-top: 5px;
+}
+.collapsible-content.collapsed {
+    max-height: 0;
+    padding-top: 0;
+}
+label { 
+    display: block; 
+    margin-bottom: 5px; 
+}
+input[type="text"], input[type="password"], select {
+    width: calc(100% - 16px); 
+    padding: 5px; 
+    margin-bottom: 8px;
+    border: 1px solid #424254; 
+    border-radius: 3px; 
+    background-color: #3C404D; 
+    color: #e0e0e0;
+}
+select {
+    padding: 6px 5px;
+    height: auto;
+}
+button {
+    padding: 6px 10px; 
+    background-color: #3C404D; 
+    color: white;
+    border: none; 
+    border-radius: 3px; 
+    cursor: pointer; 
+    margin-right: 3px;
+    margin-bottom: 3px;
+    font-size: 12px;
+}
+button.connected { 
+    background-color: #4C80AF; 
+}
+button.disconnected { 
+    background-color: #484860;
+}
+button:hover { 
+    background-color: #5a5a7a; 
+}
+.blur-field {
+    filter: blur(5px);
+    transition: filter 0.2s ease;
+}
+.blur-field:focus {
+    filter: blur(0);
+}
+#vdoNinjaIframe { 
+    width: 1px; 
+    height: 1px; 
+    position: absolute; 
+    left: -1000px; 
+    top: -1000px; 
+    border: 0; 
+}
+.log-area {
+    height: 100px; 
+    background-color: #1a1a24; 
+    color: #ccc; 
+    border: 1px solid #424254;
+    overflow-y: scroll; 
+    padding: 5px; 
+    font-family: monospace; 
+    font-size: 0.9em;
+    margin-top: 5px; 
+    white-space: pre-wrap;
+}
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 5px;
+    background-color: #555;
+}
+.status-indicator.connected { 
+    background-color: #4C80AF; 
+}
+.status-indicator.error { 
+    background-color: #f44336; 
+}
+.stream-list { 
+    max-height: 120px; 
+    overflow-y: auto; 
+    background-color: #1a1a24; 
+    border: 1px solid #424254;
+    border-radius: 3px;
+    padding: 5px;
+    margin-top: 3px;
+}
+.stream-item {
+    padding: 4px;
+    border-bottom: 1px solid #3c3c4a;
+    font-size: 12px;
+    word-break: break-word;
+}
+.stream-item:last-child {
+    border-bottom: none;
+}
+h1, h2 {
+    color: #c8c8c8;
+    margin: 5px 0;
+    font-size: 1.1em;
+}
+h1 {
+    font-size: 1.2em;
+}
+small {
+    color: #8a8a9a;
+    font-size: 0.85em;
+}
+.add-stream-btn {
+    background-color: #4C80AF;
+    color: white;
+    padding: 2px 4px;
+    font-size: 11px;
+}
+.status-line {
+    font-size: 12px;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+}
+input[type="checkbox"] {
+    accent-color: #4C80AF;
+    margin-right: 5px;
+}
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    margin-bottom: 3px;
+}
+.checkbox-label input {
+    margin-right: 4px;
+}
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #1a1a24;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb {
+    background: #3C404D;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #4C80AF;
+}
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3C404D #1a1a24;
+}
+.flex-row {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+#obsSceneNameInput {
+    display: none !important;
+}
+#loadScenesBtn {
+    display: inline-block;
+    margin-left: 5px;
+    vertical-align: top;
+}
+    </style>
+</head>
+<body>
+    <h1>VDO.Ninja OBS Control</h1>
+
+    <div class="container">
+        <h2 class="collapsible" data-state="collapse">OBS WebSocket Connection</h2>
+        <div class="collapsible-content">
+            <label for="obsWsUrl">WebSocket URL:</label>
+            <input type="text" id="obsWsUrl" value="ws://localhost:4455">
+
+            <label for="obsWsPassword">Password:</label>
+            <input type="password" id="obsWsPassword" value="">
+
+            <div class="status-line">
+				<button id="obsConnectBtn">Connect to OBS</button>
+                <span id="obsConnectionStatus">Status: Disconnected</span>
+                <span id="obsStatusIndicator" class="status-indicator"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="collapsible" data-state="collapse">VDO.Ninja Settings</h2>
+        <div class="collapsible-content">
+            <label for="vdoNinjaRoom">Room Name:</label>
+            <input type="text" id="vdoNinjaRoom" placeholder="e.g., MyNinjaRoom" class="blur-field">
+
+            <label for="vdoNinjaPassword">Password:</label>
+            <input type="password" id="vdoNinjaPassword" placeholder="Room or &password">
+
+            <label for="vdoNinjaStreamIds">Stream IDs:</label>
+            <input type="text" id="vdoNinjaStreamIds" placeholder="streamId1,streamId2" class="blur-field">
+            <small>Room Name or Stream ID(s) needed</small>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="collapsible" data-state="expand">OBS Target Settings</h2>
+        <div class="collapsible-content collapsed">
+            <label for="obsSceneSelect">Target Scene:</label>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <select id="obsSceneSelect" style="flex: 1;">
+                    <option value="">Select a scene...</option>
+                </select>
+                <button id="loadScenesBtn">Re-Fetch Scenes</button>
+            </div>
+            <input type="text" id="obsSceneNameInput" style="display:none;">
+
+            <label for="sourceSizing">New Source Sizing:</label>
+			
+			<select id="sourceSizing">
+				<option value="autoGrid">Auto Grid Layout</option>
+				<option value="bestFit">Best Fit (Preserve Aspect)</option>
+				<option value="stretchToFill">Stretch to Fill Screen</option>
+				<option value="defaultSize">Default (1920x1080 at 0,0)</option>
+			</select>
+
+            <div id="autoSourceOptions">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="autoAddSources" checked>
+                    Auto-add new streams as sources
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="autoRemoveSources" checked>
+                    Auto-remove sources on disconnect
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="collapsible" data-state="expand">Stream ID Mappings</h2>
+        <div class="collapsible-content collapsed">
+            <div id="streamMappingContainer">
+				<div id="streamMappings"></div>
+				<button id="addStreamMappingBtn">Add New Mapping</button>
+			</div>
+            </div>
+    </div>
+
+    <div class="container">
+        <h2 class="collapsible" data-state="collapse">Active Streams</h2>
+        <div class="collapsible-content">
+            <div id="streamList" class="stream-list">
+                <div class="stream-item">No active streams</div>
+            </div>
+        </div>
+    </div>
+
+    <iframe id="vdoNinjaIframe" allow="encrypted-media;sync-xhr;usb;web-share;cross-origin-isolated;midi *;geolocation;camera *;microphone *;fullscreen;picture-in-picture;display-capture;accelerometer;autoplay;gyroscope;screen-wake-lock;"></iframe>
+
+    <div class="container">
+        <h2 class="collapsible" data-state="expand">Log</h2>
+        <div class="collapsible-content collapsed">
+            <div id="logArea" class="log-area"></div>
+        </div>
+    </div>
+
+    <script>
+// DOM elements
+const obsWsUrlInput = document.getElementById('obsWsUrl');
+const obsWsPasswordInput = document.getElementById('obsWsPassword');
+const obsConnectBtn = document.getElementById('obsConnectBtn');
+const obsConnectionStatus = document.getElementById('obsConnectionStatus');
+const obsStatusIndicator = document.getElementById('obsStatusIndicator');
+
+const vdoNinjaRoomInput = document.getElementById('vdoNinjaRoom');
+const vdoNinjaPasswordInput = document.getElementById('vdoNinjaPassword');
+const vdoNinjaStreamIdsInput = document.getElementById('vdoNinjaStreamIds');
+const vdoNinjaIframe = document.getElementById('vdoNinjaIframe');
+
+const obsSceneNameInput = document.getElementById('obsSceneNameInput');
+const obsSceneSelect = document.getElementById('obsSceneSelect');
+const sourceSizingSelect = document.getElementById('sourceSizing');
+const autoAddSourcesCheckbox = document.getElementById('autoAddSources');
+const autoRemoveSourcesCheckbox = document.getElementById('autoRemoveSources');
+const streamListContainer = document.getElementById('streamList');
+const logArea = document.getElementById('logArea');
+const loadScenesBtn = document.getElementById('loadScenesBtn');
+let vdoNinjaConnected = false;
+
+// Set up collapsible sections
+document.querySelectorAll('.collapsible').forEach(header => {
+    header.addEventListener('click', function() {
+        this.classList.toggle('collapsed');
+        const content = this.nextElementSibling;
+        if (content.classList.contains('collapsible-content')) {
+            content.classList.toggle('collapsed');
+            // Update the data-state attribute
+            if (content.classList.contains('collapsed')) {
+                this.setAttribute('data-state', 'expand');
+            } else {
+                this.setAttribute('data-state', 'collapse');
+            }
+        }
+    });
+});
+
+const vdoNinjaConnectBtn = document.createElement('button');
+vdoNinjaConnectBtn.id = 'vdoNinjaConnectBtn';
+vdoNinjaConnectBtn.textContent = 'Connect to VDO.Ninja';
+vdoNinjaConnectBtn.style.marginTop = '5px';
+
+const vdoNinjaStatusIndicator = document.createElement('span');
+vdoNinjaStatusIndicator.id = 'vdoNinjaStatusIndicator';
+vdoNinjaStatusIndicator.className = 'status-indicator';
+
+const vdoNinjaConnectionStatus = document.createElement('span');
+vdoNinjaConnectionStatus.id = 'vdoNinjaConnectionStatus';
+vdoNinjaConnectionStatus.textContent = 'Status: Disconnected';
+vdoNinjaConnectionStatus.style.marginLeft = '5px';
+
+// Add these elements after the vdoNinjaPassword input
+const vdoNinjaSettingsContainer = document.querySelector('.container:nth-child(2)');
+const buttonsDiv = document.createElement('div');
+buttonsDiv.style.marginTop = '5px';
+buttonsDiv.className = 'status-line';
+buttonsDiv.appendChild(vdoNinjaConnectBtn);
+buttonsDiv.appendChild(vdoNinjaConnectionStatus);
+buttonsDiv.appendChild(vdoNinjaStatusIndicator);
+vdoNinjaSettingsContainer.querySelector('.collapsible-content').appendChild(buttonsDiv);
+
+vdoNinjaConnectBtn.addEventListener('click', () => {
+    if (vdoNinjaConnected) {
+        disconnectFromVdoNinja();
+    } else {
+        connectToVdoNinja();
+    }
+});
+
+// State variables
+let obs = null;
+let obsConnected = false;
+let activeStreams = {};
+let obsScenes = [];
+let requestCallbacks = {};
+
+let vdoNinjaLastActivityTime = 0;
+let vdoNinjaConnectionCheckTimer = null;
+
+// Helper functions
+function logMessage(message) {
+	console.log(message);
+	const timestamp = new Date().toLocaleTimeString();
+	logArea.innerHTML += `[${timestamp}] ${message}\n`;
+	logArea.scrollTop = logArea.scrollHeight;
+}
+
+function generateRequestId(type) {
+	return `${type}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+}
+
+function toggleVdoNinjaInputs(disabled) {
+    vdoNinjaRoomInput.disabled = disabled;
+    vdoNinjaPasswordInput.disabled = disabled;
+    vdoNinjaStreamIdsInput.disabled = disabled;
+}
+function updateVdoNinjaButtonState(connected) {
+    vdoNinjaConnected = connected;
+    
+    if (connected) {
+        vdoNinjaConnectBtn.textContent = 'Disconnect';
+        vdoNinjaConnectBtn.classList.add('connected');
+        vdoNinjaConnectBtn.classList.remove('disconnected');
+        vdoNinjaConnectionStatus.textContent = 'Status: Connected';
+        vdoNinjaStatusIndicator.classList.add('connected');
+    } else {
+        vdoNinjaConnectBtn.textContent = 'Connect to VDO.Ninja';
+        vdoNinjaConnectBtn.classList.remove('connected');
+        vdoNinjaConnectBtn.classList.add('disconnected');
+        vdoNinjaConnectionStatus.textContent = 'Status: Disconnected';
+        vdoNinjaStatusIndicator.classList.remove('connected');
+    }
+    
+    // Toggle input fields based on connection state
+    toggleVdoNinjaInputs(connected);
+}
+
+function saveSettings() {
+    const settings = {
+        obsWsUrl: obsWsUrlInput.value,
+        obsWsPassword: obsWsPasswordInput.value,
+        vdoNinjaRoom: vdoNinjaRoomInput.value,
+        vdoNinjaPassword: vdoNinjaPasswordInput.value,
+        vdoNinjaStreamIds: vdoNinjaStreamIdsInput.value,
+        obsSceneName: obsSceneSelect.value,
+        sourceSizing: sourceSizingSelect.value,
+        autoAddSources: autoAddSourcesCheckbox.checked,
+        autoRemoveSources: autoRemoveSourcesCheckbox.checked,
+        vdoNinjaConnected: vdoNinjaConnected
+        // Removed cloneToMainScene if you choose to remove the global checkbox
+        // cloneToMainScene: document.getElementById('cloneToMainScene')?.checked || false 
+    };
+    localStorage.setItem('obsNinjaSettings', JSON.stringify(settings));
+    
+    const mappings = getStreamMappings();
+    localStorage.setItem('obsNinjaStreamMappings', JSON.stringify(mappings));
+}
+
+
+function calculateGridPositions(totalSources, canvasWidth, canvasHeight) {
+    const positions = [];
+    
+    let cols = Math.ceil(Math.sqrt(totalSources));
+    let rows = Math.ceil(totalSources / cols);
+    
+    const cellWidth = canvasWidth / cols;
+    const cellHeight = canvasHeight / rows;
+    
+    const lastRowItems = totalSources - ((rows - 1) * cols);
+    const lastRowOffset = (cols - lastRowItems) * (cellWidth / 2);
+    
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const index = row * cols + col;
+            if (index < totalSources) {
+                let xPos = col * cellWidth;
+                if (row === rows - 1 && lastRowItems < cols) {
+                    xPos += lastRowOffset;
+                }
+                positions.push({
+                    x: xPos,
+                    y: row * cellHeight,
+                    width: cellWidth,
+                    height: cellHeight
+                });
+            }
+        }
+    }
+    return positions;
+}
+function disconnectFromVdoNinja() {
+    vdoNinjaIframe.src = 'about:blank'; 
+    if (vdoNinjaConnectionCheckTimer) {
+        clearTimeout(vdoNinjaConnectionCheckTimer);
+        vdoNinjaConnectionCheckTimer = null;
+    }
+    activeStreams = {};
+    updateStreamList();
+    updateVdoNinjaButtonState(false);
+    saveSettings();
+}
+
+function connectToVdoNinja() {
+    const room = vdoNinjaRoomInput.value.trim();
+    const streamIds = vdoNinjaStreamIdsInput.value.trim();
+
+    if (!room && !streamIds) {
+        logMessage("VDO.Ninja Error: Room Name or Stream ID(s) must be provided.");
+        return;
+    }
+
+    initializeVdoNinjaIframe();
+    vdoNinjaConnectionStatus.textContent = 'Status: Connecting...';
+    vdoNinjaConnectBtn.textContent = 'Cancel';
+    
+    if (vdoNinjaConnectionCheckTimer) {
+        clearTimeout(vdoNinjaConnectionCheckTimer);
+    }
+    vdoNinjaConnectionCheckTimer = setTimeout(() => {
+        if (Date.now() - vdoNinjaLastActivityTime > 10000) {
+            logMessage("VDO.Ninja connection timed out. No activity received.");
+            vdoNinjaConnectionStatus.textContent = 'Status: Connection Failed';
+            vdoNinjaConnectBtn.textContent = 'Connect to VDO.Ninja';
+        }
+    }, 10000);
+    toggleVdoNinjaInputs(true);
+    saveSettings();
+}
+
+function addNewStreamMapping(streamId = '', label = '', sceneName = '', matchType = 'streamId', shouldClone = true, shouldSwitch = false) {
+    const streamMappings = document.getElementById('streamMappings');
+    const mappingDiv = document.createElement('div');
+    mappingDiv.className = 'stream-mapping';
+    mappingDiv.style.margin = '5px 0';
+    
+    mappingDiv.innerHTML = `
+        <div style="margin-bottom: 5px;">
+            <label style="font-size: 11px; margin-bottom: 2px; display: block;">Stream Mapping</label>
+            <div class="flex-row" style="align-items: center; flex-wrap: nowrap; margin-bottom: 2px;">
+                <input type="text" placeholder="Stream ID" value="${streamId instanceof PointerEvent ? '' : streamId}" class="mapping-stream-id" style="width:80px; margin-right: 4px;">
+                <input type="text" placeholder="Label (optional)" value="${label}" class="mapping-label" style="width:120px; margin-right: 4px;">
+                <select class="mapping-match-type" style="width:90px; margin-right: 4px;">
+                    <option value="streamId" ${matchType === 'streamId' ? 'selected' : ''}>ID Only</option>
+                    <option value="label" ${matchType === 'label' ? 'selected' : ''}>Label Only</option>
+                    <option value="both" ${matchType === 'both' ? 'selected' : ''}>Both Required</option>
+                    <option value="either" ${matchType === 'either' ? 'selected' : ''}>Either Match</option>
+                </select>
+                <select class="mapping-scene-name" style="width:130px;">
+                    <option value="">Select a scene...</option>
+                </select>
+                <button class="remove-mapping-btn" style="width:auto; padding:3px 5px; margin-left: 4px;">×</button>
+            </div>
+            <div class="flex-row" style="margin-top: 3px; gap: 8px;">
+                <label class="checkbox-label" style="margin-bottom: 0;">
+                    <input type="checkbox" class="mapping-clone-to-main" ${shouldClone ? 'checked' : ''}>
+                    Clone to main scene
+                </label>
+                <label class="checkbox-label" style="margin-bottom: 0;">
+                    <input type="checkbox" class="mapping-switch-to-scene" ${shouldSwitch ? 'checked' : ''}>
+                    Switch to scene on add
+                </label>
+            </div>
+            <small style="color: #8a8a9a; font-size: 10px; display: block; margin-top: 2px;">
+                ID Only: Match by Stream ID only | Label Only: Match by label only | 
+                Both Required: Must match both | Either Match: Match if either matches
+            </small>
+        </div>
+    `;
+    
+    streamMappings.appendChild(mappingDiv);
+    const sceneDropdown = mappingDiv.querySelector('.mapping-scene-name');
+    
+    // Populate dropdown with existing scenes
+    populateSceneDropdown(obsScenes, sceneDropdown);
+    
+    // Set the scene name if provided and valid
+    if (sceneName && obsScenes.some(scene => scene.sceneName === sceneName)) {
+        sceneDropdown.value = sceneName;
+    }
+    
+    const removeBtn = mappingDiv.querySelector('.remove-mapping-btn');
+    removeBtn.addEventListener('click', () => {
+        mappingDiv.remove();
+        saveSettings();
+    });
+    
+    const inputs = mappingDiv.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        input.addEventListener('change', saveSettings);
+    });
+}
+
+
+function setupStreamMappingUI() {
+    const streamMappingContainer = document.getElementById('streamMappingContainer');
+    const addStreamMappingBtn = document.getElementById('addStreamMappingBtn');
+    
+    // If you decide to remove the global "cloneToMainScene" checkbox, remove the following block
+    /*
+    const cloneCheckboxDiv = document.createElement('div');
+    cloneCheckboxDiv.innerHTML = `
+        <label class="checkbox-label">
+            <input type="checkbox" id="cloneToMainScene">
+            Also clone mapped streams to main scene
+        </label>
+    `;
+    // Ensure streamMappingContainer.parentNode exists if you keep this
+    if (streamMappingContainer.parentNode) {
+        streamMappingContainer.parentNode.insertAdjacentElement('afterend', cloneCheckboxDiv);
+        const cloneCheckbox = document.getElementById('cloneToMainScene');
+        if (cloneCheckbox) {
+            cloneCheckbox.addEventListener('change', saveSettings);
+        }
+    }
+    */
+    
+    // Corrected event listener for adding new stream mapping
+    addStreamMappingBtn.addEventListener('click', () => {
+        addNewStreamMapping(); // Call without arguments
+    });
+    
+    loadStreamMappings();
+}
+
+function loadSettings() {
+    const settingsJson = localStorage.getItem('obsNinjaSettings');
+    if (settingsJson) {
+        try {
+            const settings = JSON.parse(settingsJson);
+            obsWsUrlInput.value = settings.obsWsUrl || '';
+            obsWsPasswordInput.value = settings.obsWsPassword || '';
+            vdoNinjaRoomInput.value = settings.vdoNinjaRoom || '';
+            vdoNinjaPasswordInput.value = settings.vdoNinjaPassword || '';
+            vdoNinjaStreamIdsInput.value = settings.vdoNinjaStreamIds || '';
+            obsSceneSelect.value = settings.obsSceneName || '';
+            sourceSizingSelect.value = settings.sourceSizing || 'autoGrid';
+            autoAddSourcesCheckbox.checked = settings.autoAddSources !== false;
+            autoRemoveSourcesCheckbox.checked = settings.autoRemoveSources !== false;
+            
+            // Removed loading for 'cloneToMainScene' if you remove the global checkbox
+            /*
+            if (document.getElementById('cloneToMainScene') && typeof settings.cloneToMainScene !== 'undefined') {
+                document.getElementById('cloneToMainScene').checked = settings.cloneToMainScene;
+            }
+            */
+            
+            if (settings.vdoNinjaConnected) {
+                // connectToVdoNinja(); // User can reconnect manually
+            }
+        } catch (e) {
+            logMessage(`Error loading settings: ${e.message}`);
+            localStorage.removeItem('obsNinjaSettings');
+        }
+    } else {
+        sourceSizingSelect.value = 'autoGrid';
+    }
+    setupStreamMappingUI(); // Call this after other settings are potentially loaded
+}
+
+
+function updateStreamList() {
+    console.log("Updating stream list with:", activeStreams);
+    if (Object.keys(activeStreams).length === 0) {
+        streamListContainer.innerHTML = '<div class="stream-item">No active streams</div>';
+        return;
+    }
+
+    streamListContainer.innerHTML = '';
+    for (const streamId in activeStreams) {
+        const stream = activeStreams[streamId];
+        const streamDiv = document.createElement('div');
+        streamDiv.className = 'stream-item';
+        
+        const targetInfo = getTargetSceneForStream(streamId, stream.label);
+        const targetSceneName = targetInfo.scene; // This is the scene name string
+        const isDefaultScene = targetSceneName === getTargetScene();
+        
+        streamDiv.innerHTML = `
+            <div style="font-weight: bold;">${stream.label || streamId}</div>
+            <small>ID: ${streamId}${stream.label ? ` | Label: ${stream.label}` : ''}</small>
+            <small style="display: block; color: #8a8a9a;">
+                → Target Scene: ${targetSceneName} ${isDefaultScene ? '(default)' : '(mapped)'}
+            </small>
+            ${stream.sourceCreated ? '<span style="color:#4CAF50"> ✓ Added to OBS</span>' : ''}
+            <button class="add-stream-btn" data-stream-id="${streamId}" style="margin-top: 3px;">Add to OBS</button>
+        `;
+        streamListContainer.appendChild(streamDiv);
+
+        const btn = streamDiv.querySelector('.add-stream-btn');
+        btn.addEventListener('click', () => {
+            // Pass the targetInfo object which contains { scene: sceneName, mapping: mappingObject }
+            addStreamToObs(streamId, stream.label, targetInfo);
+        });
+    }
+    console.log("Stream list updated:", streamListContainer.innerHTML);
+}
+
+obsConnectBtn.addEventListener('click', () => {
+    if (obsConnected && obs) {
+        logMessage("Disconnecting from OBS WebSocket...");
+        if (obs) {
+            obs.close();
+            obs = null;
+        }
+    } else {
+        connectToOBS();
+    }
+});
+
+function getTargetSceneForStream(streamId, streamLabel = '') {
+    const mappings = getStreamMappings();
+    const defaultTargetScene = getTargetScene(); // The scene selected in the main "Target Scene" dropdown
+
+    for (const mapping of mappings) {
+        let isMatch = false;
+        switch (mapping.matchType) {
+            case 'streamId': isMatch = mapping.streamId && streamId === mapping.streamId; break;
+            case 'label':    isMatch = mapping.label && streamLabel && streamLabel === mapping.label; break;
+            case 'both':     isMatch = mapping.streamId && mapping.label && streamId === mapping.streamId && streamLabel === mapping.label; break;
+            case 'either':   isMatch = (mapping.streamId && streamId === mapping.streamId) || (mapping.label && streamLabel && streamLabel === mapping.label); break;
+        }
+        if (isMatch && mapping.sceneName) { // Ensure mapping has a scene
+            return { scene: mapping.sceneName, mapping: mapping }; // Return object with scene name and full mapping
+        }
+    }
+    return { scene: defaultTargetScene, mapping: null }; // Default to main target scene if no match or mapping has no scene
+}
+
+function updateSceneDropdowns() {
+    // Store current values before updating dropdowns
+    const currentMainValue = obsSceneSelect.value;
+    const mappingSelects = document.querySelectorAll('.mapping-scene-name');
+    const currentMappingValues = Array.from(mappingSelects).map(select => select.value);
+    
+    // Update main scene dropdown
+    populateSceneDropdown(obsScenes, obsSceneSelect);
+    
+    // Restore main scene selection if still valid
+    if (currentMainValue && obsScenes.some(scene => scene.sceneName === currentMainValue)) {
+        obsSceneSelect.value = currentMainValue;
+    }
+    
+    // Update and restore mapping scene dropdowns
+    mappingSelects.forEach((select, index) => {
+        populateSceneDropdown(obsScenes, select);
+        if (currentMappingValues[index] && obsScenes.some(scene => scene.sceneName === currentMappingValues[index])) {
+            select.value = currentMappingValues[index];
+        }
+    });
+}
+function loadStreamMappings() {
+    const settingsJson = localStorage.getItem('obsNinjaStreamMappings');
+    if (settingsJson) {
+        try {
+            const mappings = JSON.parse(settingsJson);
+            for (const mapping of mappings) {
+                addNewStreamMapping(
+                    mapping.streamId, 
+                    mapping.label, 
+                    mapping.sceneName, 
+                    mapping.matchType,
+                    mapping.cloneToMain !== undefined ? mapping.cloneToMain : true,
+                    mapping.switchToScene !== undefined ? mapping.switchToScene : false
+                );
+            }
+            
+            // If scenes are already loaded, update the dropdowns
+            if (obsScenes && obsScenes.length > 0) {
+                updateSceneDropdowns();
+            }
+        } catch (e) {
+            logMessage(`Error loading stream mappings: ${e.message}`);
+        }
+    }
+}
+function getStreamMappings() {
+    const mappings = [];
+    const mappingDivs = document.querySelectorAll('.stream-mapping');
+    mappingDivs.forEach(div => {
+        const streamId = div.querySelector('.mapping-stream-id').value.trim();
+        const label = div.querySelector('.mapping-label').value.trim();
+        const matchType = div.querySelector('.mapping-match-type').value;
+        const sceneName = div.querySelector('.mapping-scene-name').value.trim();
+        const cloneToMain = div.querySelector('.mapping-clone-to-main').checked;
+        const switchToScene = div.querySelector('.mapping-switch-to-scene').checked;
+        if (sceneName && (streamId || label)) { // Ensure a scene and some identifier exists
+            mappings.push({ streamId, label, matchType, sceneName, cloneToMain, switchToScene });
+        }
+    });
+    return mappings;
+}
+
+async function connectToOBS() {
+    let url = obsWsUrlInput.value.trim();
+    const password = obsWsPasswordInput.value;
+    if (!url) {
+        logMessage("Error: OBS WebSocket URL is required.");
+        return;
+    }
+    if (!url.startsWith('ws://') && !url.startsWith('wss://')) {
+        url = 'ws://' + url;
+        obsWsUrlInput.value = url; 
+    }
+    obsConnectionStatus.textContent = 'Status: Connecting...';
+    obsStatusIndicator.classList.remove('connected', 'error');
+    logMessage(`Attempting to connect to OBS at ${url}...`);
+    
+    const connectionTimeoutId = setTimeout(() => {
+        if (obs && obs.readyState !== WebSocket.OPEN) {
+            logMessage("Connection attempt timed out");
+            if (obs) { try { obs.close(); } catch (e) {} obs = null; }
+            obsConnectionStatus.textContent = 'Status: Error - Connection timed out';
+            obsStatusIndicator.classList.add('error');
+        }
+    }, 10000); 
+    
+    try {
+        obs = new WebSocket(url);
+        obs.onopen = () => logMessage("WebSocket connection opened. Waiting for Hello message...");
+        obs.onmessage = async (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                if (message.op === 0) { // Hello
+                    logMessage("Received Hello from OBS WebSocket server");
+                    // logMessage(JSON.stringify(message)); // Optional: raw hello message
+                    try {
+                        const identifyPayload = { op: 1, d: { rpcVersion: 1, eventSubscriptions: (1 << 0) | (1 << 1) } };
+                        if (message.d && message.d.authentication) {
+                            const { challenge, salt } = message.d.authentication;
+                            if (password) {
+                                identifyPayload.d.authentication = await generateAuthResponse(password, salt, challenge);
+                                logMessage("Authentication data prepared");
+                            } else { logMessage("Warning: Server requires authentication but no password provided"); }
+                        }
+                        // logMessage("Sending Identify message: " + JSON.stringify(identifyPayload)); // Optional: raw identify
+                        obs.send(JSON.stringify(identifyPayload));
+                    } catch (error) {
+                        logMessage(`Error during authentication setup: ${error.message}`);
+                        if (obs) obs.close();
+                    }
+                } else if (message.op === 2) { // Identified (auth success)
+                    clearTimeout(connectionTimeoutId);
+                    logMessage("OBS Authentication successful!");
+                    obsConnected = true;
+                    obsConnectBtn.textContent = 'Disconnect';
+                    obsConnectBtn.classList.add('connected');
+                    obsConnectBtn.classList.remove('disconnected');
+                    obsConnectionStatus.textContent = 'Status: Connected';
+                    obsStatusIndicator.classList.add('connected');
+                    onObsConnected();
+                } else if (message.op === 7) { // RequestResponse
+                    if (message.d && message.d.requestId && requestCallbacks[message.d.requestId]) {
+                        requestCallbacks[message.d.requestId](message.d);
+                        delete requestCallbacks[message.d.requestId];
+                    }
+                    if (message.d && message.d.requestStatus && message.d.requestStatus.code !== 100) {
+                        logMessage(`OBS Request Error (${message.d.requestType || 'Unknown'}): ${message.d.requestStatus.comment || 'Unknown error'}`);
+                    }
+                } else if (message.op === 5) { // Event
+                    logMessage(`Received event: ${message.d ? message.d.eventType : 'Unknown'}`);
+                } else {
+                    // logMessage(`Received message op ${message.op}: ${JSON.stringify(message)}`); // Optional: other messages
+                }
+            } catch (error) { logMessage(`Error processing WebSocket message: ${error.message}`); }
+        };
+        obs.onerror = (error) => {
+            clearTimeout(connectionTimeoutId);
+            logMessage(`OBS WebSocket Error: ${error.message || 'Unknown WebSocket error'}`);
+            obsStatusIndicator.classList.add('error');
+            obsConnectionStatus.textContent = 'Status: Error';
+        };
+        obs.onclose = (event) => {
+            clearTimeout(connectionTimeoutId);
+            let closeReason = event.code ? `Code: ${event.code}` : 'Unknown reason';
+            if (event.code === 4009) closeReason = 'Authentication Failed - incorrect password';
+            logMessage(`OBS WebSocket Connection Closed. ${closeReason}`);
+            obsConnected = false;
+            obsConnectBtn.textContent = 'Connect to OBS';
+            obsConnectBtn.classList.remove('connected');
+            obsConnectBtn.classList.add('disconnected');
+            obsConnectionStatus.textContent = 'Status: Disconnected';
+            obsStatusIndicator.classList.remove('connected', 'error');
+            onObsDisconnected();
+        };
+    } catch (error) {
+        clearTimeout(connectionTimeoutId);
+        logMessage(`Error creating WebSocket connection: ${error.message}`);
+        obsConnectionStatus.textContent = 'Status: Error';
+        obsStatusIndicator.classList.add('error');
+    }
+}
+
+async function generateAuthResponse(password, salt, challenge) {
+    try {
+        const encoder = new TextEncoder();
+        const secretString = password + salt;
+        const secretData = encoder.encode(secretString);
+        let secretHash;
+        if (window.crypto && window.crypto.subtle) {
+            const hashBuffer = await window.crypto.subtle.digest('SHA-256', secretData);
+            secretHash = new Uint8Array(hashBuffer);
+        } else {
+            await loadJsShaLibrary(); // Ensure jsSHA is loaded
+            const shaObj = new jsSHA("SHA-256", "TEXT", { encoding: "UTF8" });
+            shaObj.update(secretString);
+            const hashHex = shaObj.getHash("HEX");
+            secretHash = new Uint8Array(hashHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        }
+        const secretBase64 = btoa(String.fromCharCode.apply(null, secretHash));
+        const authString = secretBase64 + challenge;
+        const authData = encoder.encode(authString);
+        let authHash;
+        if (window.crypto && window.crypto.subtle) {
+            const hashBuffer = await window.crypto.subtle.digest('SHA-256', authData);
+            authHash = new Uint8Array(hashBuffer);
+        } else {
+            // jsSHA already loaded
+            const shaObj = new jsSHA("SHA-256", "TEXT", { encoding: "UTF8" });
+            shaObj.update(authString);
+            const hashHex = shaObj.getHash("HEX");
+            authHash = new Uint8Array(hashHex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+        }
+        return btoa(String.fromCharCode.apply(null, authHash));
+    } catch (error) {
+        logMessage(`Auth generation error: ${error.message}`);
+        throw error;
+    }
+}
+
+function sendRequest(requestType, requestData = {}) {
+	return new Promise((resolve, reject) => {
+		if (!obsConnected || !obs) { reject(new Error("Not connected to OBS")); return; }
+		const requestId = generateRequestId(requestType);
+		requestCallbacks[requestId] = (response) => {
+			if (response.requestStatus.code === 100) resolve(response.responseData || {});
+			else reject(new Error(`Request ${requestType} failed: ${response.requestStatus.comment}`));
+		};
+		const request = { op: 6, d: { requestType, requestId, requestData } };
+		try { obs.send(JSON.stringify(request)); } 
+        catch (error) { delete requestCallbacks[requestId]; reject(error); }
+		setTimeout(() => {
+			if (requestCallbacks[requestId]) {
+				delete requestCallbacks[requestId];
+				reject(new Error(`Request timeout for ${requestType}`));
+			}
+		}, 5000);
+	});
+}
+
+function onObsConnected() {
+    logMessage("OBS Connected. Fetching scenes...");
+    
+    // Fetch scenes first, then handle VDO.Ninja connection
+    fetchObsScenes().then(() => {
+        // Now that scenes are loaded, check if VDO.Ninja should be reconnected
+        const settingsJson = localStorage.getItem('obsNinjaSettings');
+        if (settingsJson) {
+            try {
+                const settings = JSON.parse(settingsJson);
+                if (settings.vdoNinjaConnected && (settings.vdoNinjaRoom || settings.vdoNinjaStreamIds)) {
+                    connectToVdoNinja();
+                }
+            } catch (e) { 
+                logMessage(`Error re-connecting VDO.Ninja: ${e.message}`); 
+            }
+        }
+        
+        // Apply auto-grid after everything is loaded
+        if (sourceSizingSelect.value === 'autoGrid') {
+            setTimeout(rearrangeAllStreamsInScene, 1000, getTargetScene()); 
+        }
+    });
+}
+function onObsDisconnected() {
+    logMessage("OBS Disconnected.");
+    for (const streamId in activeStreams) {
+        activeStreams[streamId].sourceCreated = false;
+    }
+    updateStreamList();
+}
+
+async function fetchObsScenes() {
+    if (!obsConnected || !obs) return;
+    logMessage("Fetching OBS scenes...");
+    try {
+        const response = await sendRequest('GetSceneList');
+        if (response && response.scenes) {
+            obsScenes = response.scenes;
+            updateSceneDropdowns();
+            
+            // Properly restore main scene selection after scenes are loaded
+            const savedSettings = localStorage.getItem('obsNinjaSettings');
+            if (savedSettings) {
+                try {
+                    const settings = JSON.parse(savedSettings);
+                    if (settings.obsSceneName && obsScenes.some(s => s.sceneName === settings.obsSceneName)) {
+                        obsSceneSelect.value = settings.obsSceneName;
+                    }
+                } catch (e) {
+                    logMessage(`Error restoring scene selection: ${e.message}`);
+                }
+            }
+            
+            // Restore mapping scene selections after scenes are loaded
+            const savedMappings = localStorage.getItem('obsNinjaStreamMappings');
+            if (savedMappings) {
+                try {
+                    const mappings = JSON.parse(savedMappings);
+                    const mappingSceneSelects = document.querySelectorAll('.mapping-scene-name');
+                    mappingSceneSelects.forEach((select, index) => {
+                        if (mappings[index] && mappings[index].sceneName) {
+                            if (obsScenes.some(scene => scene.sceneName === mappings[index].sceneName)) {
+                                select.value = mappings[index].sceneName;
+                            }
+                        }
+                    });
+                } catch (e) {
+                    logMessage(`Error restoring mapping scene selections: ${e.message}`);
+                }
+            }
+        }
+    } catch (error) { 
+        logMessage(`Error fetching OBS scenes: ${error.message}`); 
+    }
+}
+
+
+function populateSceneDropdown(scenesData, selectElement = obsSceneSelect) {
+    const currentValue = selectElement.value;
+    selectElement.innerHTML = '<option value="">Select a scene...</option>';
+    
+    if (!scenesData || scenesData.length === 0) {
+        return;
+    }
+    
+    scenesData.forEach(scene => {
+        const option = document.createElement('option');
+        option.value = scene.sceneName;
+        option.textContent = scene.sceneName;
+        selectElement.appendChild(option);
+    });
+    
+    // Restore the value if it still exists in the list
+    if (currentValue && scenesData.some(scene => scene.sceneName === currentValue)) {
+        selectElement.value = currentValue;
+    }
+}
+
+function getTargetScene() { return obsSceneSelect.value || ''; }
+
+function getVdoNinjaViewUrl(streamId, includeCommonParams = true) {
+    const room = vdoNinjaRoomInput.value.trim();
+    const ninjaPassword = vdoNinjaPasswordInput.value;
+    let url = "https://vdo.ninja/?";
+    if (room) url += `view=${encodeURIComponent(streamId)}&solo&room=${encodeURIComponent(room)}`;
+    else url += `view=${encodeURIComponent(streamId)}`;
+    if (ninjaPassword) url += `&password=${encodeURIComponent(ninjaPassword)}`;
+    if (includeCommonParams) url += "&cleanoutput&proaudio&ab=160&transparent&autoplay&codec=h264";
+    return url;
+}
+
+function initializeVdoNinjaIframe() {
+    const room = vdoNinjaRoomInput.value.trim();
+    const streamIds = vdoNinjaStreamIdsInput.value.trim();
+    if (!room && !streamIds) { logMessage("VDO.Ninja: Room or Stream ID(s) needed."); return; }
+    let vdoNinjaUrl = "https://vdo.ninja/?";
+    if (room) {
+        vdoNinjaUrl += `room=${encodeURIComponent(room)}`;
+        if (streamIds) vdoNinjaUrl += `&view=${encodeURIComponent(streamIds.split(',').map(s => s.trim()).join(','))}&solo`;
+    } else if (streamIds) {
+        vdoNinjaUrl += `view=${encodeURIComponent(streamIds.split(',').map(s => s.trim()).join(','))}`;
+    }
+    if (vdoNinjaPasswordInput.value) vdoNinjaUrl += `&password=${encodeURIComponent(vdoNinjaPasswordInput.value)}`;
+    vdoNinjaUrl += "&cleanoutput&dataonly&nocursor&nopush&noaudio&novideo&cors="+encodeURIComponent(window.location.origin);
+    logMessage(`Loading VDO.Ninja iframe: ${vdoNinjaUrl}`);
+    vdoNinjaIframe.src = 'about:blank'; 
+    vdoNinjaIframe.setAttribute('crossorigin', 'anonymous');
+    vdoNinjaIframe.setAttribute('allow', 'autoplay; camera; microphone; fullscreen; display-capture; clipboard-write');
+    // Sandbox might be too restrictive for some VDO.Ninja features, but good for security
+    // vdoNinjaIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups'); 
+    setTimeout(() => { vdoNinjaIframe.src = vdoNinjaUrl; }, 10);
+    saveSettings();
+}
+
+window.addEventListener("message", (event) => {
+    if (!event.origin.startsWith("https://vdo.ninja") || event.source !== vdoNinjaIframe.contentWindow) return;
+    const data = event.data;
+    vdoNinjaLastActivityTime = Date.now();
+    if (!vdoNinjaConnected) {
+        updateVdoNinjaButtonState(true);
+        if (vdoNinjaConnectionCheckTimer) { clearTimeout(vdoNinjaConnectionCheckTimer); vdoNinjaConnectionCheckTimer = null; }
+        logMessage("VDO.Ninja connection established.");
+    }
+    // if (data.action !== 'view-stats-updated') console.log("VDO.Ninja message:", data);
+
+    if (data && data.streamID) {
+        const streamId = data.streamID;
+        const label = data.label || `Stream ${streamId}`;
+        
+        if ((data.action === "view-connection" && data.value === true) || 
+            (data.action === "guest-connected") || 
+            (data.action === "push-connection" && data.value === true)) {
+            logMessage(`VDO.Ninja stream connected: ${label} (ID: ${streamId})`);
+            activeStreams[streamId] = { label, sourceCreated: false, streamId, uuid: data.UUID || null, connected: true };
+            updateStreamList();
+            if (autoAddSourcesCheckbox.checked) {
+                const targetInfo = getTargetSceneForStream(streamId, label);
+                addStreamToObs(streamId, label, targetInfo);
+            }
+        } else if ((data.action === "view-connection" && data.value === false) || 
+                   (data.action === "push-connection" && data.value === false)) {
+            if (activeStreams[streamId]) {
+                logMessage(`VDO.Ninja stream disconnected: ${label} (ID: ${streamId})`);
+                if (autoRemoveSourcesCheckbox && autoRemoveSourcesCheckbox.checked) {
+                    removeStreamFromObs(streamId); // Pass targetInfo if available or let removeStreamFromObs determine it
+                }
+                delete activeStreams[streamId];
+                updateStreamList();
+            }
+        } else if (data.action === "view-connection-info" && data.value && data.value.label) {
+            if (activeStreams[streamId]) {
+                activeStreams[streamId].label = data.value.label;
+                updateStreamList();
+            }
+        }
+    }
+}, false);
+
+function startVdoNinjaConnectionMonitor() {
+    setInterval(() => {
+        if (vdoNinjaConnected && Date.now() - vdoNinjaLastActivityTime > 45000) {
+            logMessage("VDO.Ninja connection lost (no activity).");
+            vdoNinjaConnectionStatus.textContent = 'Status: Connection Lost';
+            vdoNinjaStatusIndicator.classList.remove('connected');
+            vdoNinjaConnectBtn.textContent = 'Reconnect';
+            // Consider calling disconnectFromVdoNinja() or parts of it if full reset is desired
+        }
+    }, 30000);
+}
+
+async function addStreamToObs(streamId, streamLabel, targetInfo = null) {
+    if (!obsConnected || !obs) { logMessage("Cannot add stream: Not connected to OBS."); return; }
+
+    const resolvedTargetInfo = targetInfo || getTargetSceneForStream(streamId, streamLabel);
+    const targetSceneName = resolvedTargetInfo.scene;
+    const mappingRule = resolvedTargetInfo.mapping;
+
+    if (!targetSceneName) { logMessage("Cannot add stream: Target OBS scene name is required."); return; }
+
+    const sourceName = `VDO.Ninja_${streamId}`;
+    const mainDefaultScene = getTargetScene();
+    
+    let shouldCloneThisStreamToMain = false;
+    if (mappingRule && mappingRule.sceneName !== mainDefaultScene && mappingRule.cloneToMain) {
+        shouldCloneThisStreamToMain = true;
+    }
+
+    let shouldSwitchToThisScene = false;
+    if (mappingRule && mappingRule.switchToScene) {
+        shouldSwitchToThisScene = true;
+    }
+
+    const vdoNinjaStreamUrl = getVdoNinjaViewUrl(streamId);
+    let canvasWidth = 1920, canvasHeight = 1080;
+    try {
+        const videoSettings = await sendRequest('GetVideoSettings');
+        if (videoSettings && videoSettings.baseWidth && videoSettings.baseHeight) {
+            canvasWidth = videoSettings.baseWidth; canvasHeight = videoSettings.baseHeight;
+        }
+    } catch (error) { logMessage(`Canvas size error: ${error.message}, using default.`); }
+
+    const inputSettings = { url: vdoNinjaStreamUrl, width: canvasWidth, height: canvasHeight, fps: 30, reroute_audio: true, restart_when_active: false, shutdown: false };
+
+    logMessage(`Adding source '${sourceName}' to scene '${targetSceneName}'. Cloning to main: ${shouldCloneThisStreamToMain}. Switching: ${shouldSwitchToThisScene}`);
+
+    try {
+        let sourceExistsGlobally = false;
+        let initialSceneItemId = null;
+        let clonedSceneItemId = null;
+
+        try {
+            const sources = await sendRequest('GetInputList');
+            sourceExistsGlobally = sources.inputs.some(input => input.inputName === sourceName);
+        } catch (error) { logMessage(`Error checking global source list: ${error.message}`); }
+
+        if (!sourceExistsGlobally) {
+            // Create the input and add it to the target scene
+            const createInputResponse = await sendRequest('CreateInput', { 
+                sceneName: targetSceneName,
+                inputName: sourceName, 
+                inputKind: 'browser_source', 
+                inputSettings, 
+                sceneItemEnabled: true 
+            });
+            logMessage(`Source '${sourceName}' created and added to scene '${targetSceneName}'.`);
+            
+            // Get the scene item ID that was just created
+            try {
+                const itemInfo = await sendRequest('GetSceneItemId', { 
+                    sceneName: targetSceneName, 
+                    sourceName: sourceName 
+                });
+                initialSceneItemId = itemInfo.sceneItemId;
+                logMessage(`Source item ID: ${initialSceneItemId}`);
+            } catch (e) {
+                logMessage(`Couldn't get scene item ID for new source: ${e.message}`);
+            }
+            
+            // Clone to main scene if needed
+            if (shouldCloneThisStreamToMain && mainDefaultScene && mainDefaultScene !== targetSceneName) {
+                try {
+                    const createCloneResponse = await sendRequest('CreateSceneItem', {
+                        sceneName: mainDefaultScene, 
+                        sourceName: sourceName
+                    });
+                    clonedSceneItemId = createCloneResponse.sceneItemId;
+                    logMessage(`Source '${sourceName}' cloned to main scene '${mainDefaultScene}'. Item ID: ${clonedSceneItemId}`);
+                } catch (error) {
+                    logMessage(`Error cloning source to main scene '${mainDefaultScene}': ${error.message}`);
+                }
+            }
+        } else {
+            // Update existing input settings
+            await sendRequest('SetInputSettings', { inputName: sourceName, inputSettings });
+            logMessage(`Settings updated for existing source '${sourceName}'.`);
+            
+            // Check if already in target scene
+            try {
+                const itemInfo = await sendRequest('GetSceneItemId', { sceneName: targetSceneName, sourceName: sourceName });
+                initialSceneItemId = itemInfo.sceneItemId;
+                logMessage(`Existing source '${sourceName}' already in scene '${targetSceneName}'. Item ID: ${initialSceneItemId}`);
+            } catch (e) {
+                if (e.message.toLowerCase().includes("not found")) {
+                    const createItemResponse = await sendRequest('CreateSceneItem', { sceneName: targetSceneName, sourceName: sourceName });
+                    initialSceneItemId = createItemResponse.sceneItemId;
+                    logMessage(`Existing source '${sourceName}' added to scene '${targetSceneName}'. Item ID: ${initialSceneItemId}`);
+                } else { throw e; }
+            }
+            
+            // Check if already in main scene or add if cloning
+            if (shouldCloneThisStreamToMain && mainDefaultScene && mainDefaultScene !== targetSceneName) {
+                try {
+                    const existingItemInfo = await sendRequest('GetSceneItemId', { sceneName: mainDefaultScene, sourceName: sourceName });
+                    clonedSceneItemId = existingItemInfo.sceneItemId;
+                    logMessage(`Source '${sourceName}' already in main scene '${mainDefaultScene}'. Item ID: ${clonedSceneItemId}`);
+                } catch (e) {
+                    if (e.message.toLowerCase().includes("not found")) {
+                        try {
+                            const createCloneResponse = await sendRequest('CreateSceneItem', { sceneName: mainDefaultScene, sourceName: sourceName });
+                            clonedSceneItemId = createCloneResponse.sceneItemId;
+                            logMessage(`Source '${sourceName}' cloned to main scene '${mainDefaultScene}'. Item ID: ${clonedSceneItemId}`);
+                        } catch (createError) {
+                            logMessage(`Error creating clone in main scene '${mainDefaultScene}': ${createError.message}`);
+                        }
+                    } else {
+                        logMessage(`Error checking main scene '${mainDefaultScene}': ${e.message}`);
+                    }
+                }
+            }
+        }
+
+        if (activeStreams[streamId]) activeStreams[streamId].sourceCreated = true;
+        updateStreamList();
+
+        // Apply transforms
+        if (initialSceneItemId) {
+            await applyTransformAndGrid(targetSceneName, sourceName, canvasWidth, canvasHeight, initialSceneItemId);
+        }
+
+        if (clonedSceneItemId) {
+            await applyTransformAndGrid(mainDefaultScene, sourceName, canvasWidth, canvasHeight, clonedSceneItemId);
+        }
+        
+        if (shouldSwitchToThisScene) {
+            await sendRequest('SetCurrentProgramScene', { sceneName: targetSceneName });
+            logMessage(`Switched to scene '${targetSceneName}'.`);
+        }
+
+    } catch (error) { 
+        logMessage(`Error adding stream '${sourceName}' to OBS: ${error.message}`); 
+        if (activeStreams[streamId]) activeStreams[streamId].sourceCreated = false;
+        updateStreamList();
+    }
+}
+
+async function applyTransformAndGrid(sceneName, sourceName, canvasWidth, canvasHeight, sceneItemId = null) {
+    if (!sceneName) {
+        logMessage(`Cannot apply transform: Scene name not provided for source '${sourceName}'.`);
+        return;
+    }
+    let itemIdToTransform = sceneItemId;
+
+    if (!itemIdToTransform) { // If ID not provided, try to fetch it
+        try {
+            logMessage(`Workspaceing scene item ID for '${sourceName}' in '${sceneName}' for transform (ID not passed).`);
+            const itemInfo = await sendRequest('GetSceneItemId', { sceneName, sourceName });
+            if (itemInfo && itemInfo.sceneItemId) {
+                itemIdToTransform = itemInfo.sceneItemId;
+            } else {
+                // This case should ideally not be hit if creation was successful
+                logMessage(`Could not find scene item ID for '${sourceName}' in '${sceneName}' (fetch attempt).`);
+                return; 
+            }
+        } catch (error) {
+            // This is where the user's logged error "OBS Request Error (GetSceneItemId): No scene items were found..." likely originated
+            logMessage(`Error fetching scene item ID for transform of '${sourceName}' in '${sceneName}': ${error.message}`);
+            return; 
+        }
+    }
+
+    // Proceed with itemIdToTransform
+    if (!itemIdToTransform) {
+        logMessage(`Cannot apply transform for '${sourceName}' in '${sceneName}': Valid Scene Item ID not available.`);
+        return;
+    }
+
+    if (sourceSizingSelect.value === 'autoGrid') {
+        // rearrangeAllStreamsInScene will handle transforms for all relevant items in the grid.
+        // It's generally better to call this once after all items are added/removed for a scene.
+        await rearrangeAllStreamsInScene(sceneName); 
+    } else {
+        try {
+            const transform = calculateTransform(sourceSizingSelect.value, canvasWidth, canvasHeight, canvasWidth, canvasHeight);
+            await sendRequest('SetSceneItemTransform', { sceneName, sceneItemId: itemIdToTransform, sceneItemTransform: transform });
+            logMessage(`Applied non-grid transform to '${sourceName}' (Item ID: ${itemIdToTransform}) in '${sceneName}'.`);
+        } catch (error) {
+            logMessage(`Error applying non-grid transform to '${sourceName}' (Item ID: ${itemIdToTransform}) in '${sceneName}': ${error.message}`);
+        }
+    }
+}
+
+
+async function rearrangeAllStreamsInScene(sceneName) {
+    if (!obsConnected || !obs || !sceneName || sourceSizingSelect.value !== 'autoGrid') return;
+    logMessage(`Rearranging streams in scene '${sceneName}' using autoGrid.`);
+    try {
+        let canvasWidth = 1920, canvasHeight = 1080;
+        try {
+            const videoSettings = await sendRequest('GetVideoSettings');
+            if (videoSettings && videoSettings.baseWidth && videoSettings.baseHeight) {
+                canvasWidth = videoSettings.baseWidth; canvasHeight = videoSettings.baseHeight;
+            }
+        } catch (error) { logMessage(`Canvas size error for rearrange: ${error.message}`); }
+
+        const sceneItemsResponse = await sendRequest('GetSceneItemList', { sceneName });
+        const vdoNinjaSourcesInScene = sceneItemsResponse.sceneItems.filter(item => 
+            item.sourceName.startsWith('VDO.Ninja_') && 
+            Object.values(activeStreams).some(as => `VDO.Ninja_${as.streamId}` === item.sourceName && as.connected) // Only active, connected VDO.Ninja streams
+        );
+
+        if (vdoNinjaSourcesInScene.length === 0) { 
+            logMessage(`No active VDO.Ninja sources found in scene '${sceneName}' to rearrange.`);
+            return;
+        }
+        
+        const positions = calculateGridPositions(vdoNinjaSourcesInScene.length, canvasWidth, canvasHeight);
+        for (let i = 0; i < vdoNinjaSourcesInScene.length; i++) {
+            const item = vdoNinjaSourcesInScene[i];
+            const transform = calculateTransform('autoGrid', canvasWidth, canvasHeight, canvasWidth, canvasHeight, positions[i]);
+            await sendRequest('SetSceneItemTransform', { sceneName, sceneItemId: item.sceneItemId, sceneItemTransform: transform });
+        }
+        logMessage(`Rearranged ${vdoNinjaSourcesInScene.length} sources in scene '${sceneName}'.`);
+    } catch (error) { logMessage(`Error rearranging streams in scene '${sceneName}': ${error.message}`); }
+}
+
+
+function calculateTransform(sizingMode, sourceWidth, sourceHeight, canvasWidth, canvasHeight, gridPosition = null) {
+    let transform = { alignment: 5, boundsType: "OBS_BOUNDS_NONE", boundsAlignment: 0, boundsWidth: sourceWidth, boundsHeight: sourceHeight, positionX: 0, positionY: 0, scaleX: 1.0, scaleY: 1.0, rotation: 0.0, cropTop: 0, cropBottom: 0, cropLeft: 0, cropRight: 0, sourceWidth, sourceHeight, width: sourceWidth, height: sourceHeight };
+    switch (sizingMode) {
+        case 'stretchToFill': transform.boundsType = "OBS_BOUNDS_STRETCH"; transform.boundsWidth = canvasWidth; transform.boundsHeight = canvasHeight; transform.width = canvasWidth; transform.height = canvasHeight; break;
+        case 'bestFit':       transform.boundsType = "OBS_BOUNDS_SCALE_INNER"; transform.boundsWidth = canvasWidth; transform.boundsHeight = canvasHeight; transform.width = canvasWidth; transform.height = canvasHeight; break;
+        case 'autoGrid':
+            if (gridPosition) {
+                transform.boundsType = "OBS_BOUNDS_SCALE_INNER"; // Fit within the grid cell
+                transform.positionX = gridPosition.x; transform.positionY = gridPosition.y;
+                transform.boundsWidth = gridPosition.width; transform.boundsHeight = gridPosition.height;
+                transform.width = gridPosition.width; transform.height = gridPosition.height;
+            } else { // Fallback if no grid position (shouldn't happen if called correctly)
+                transform.boundsType = "OBS_BOUNDS_SCALE_INNER"; transform.boundsWidth = canvasWidth; transform.boundsHeight = canvasHeight; transform.width = canvasWidth; transform.height = canvasHeight;
+            }
+            break;
+        case 'defaultSize':
+        default: transform.positionX = (canvasWidth - sourceWidth) / 2; transform.positionY = (canvasHeight - sourceHeight) / 2; break;
+    }
+    return transform;
+}
+
+async function removeStreamFromObs(streamId) {
+    if (!obsConnected || !obs) return;
+    const sourceName = `VDO.Ninja_${streamId}`;
+    logMessage(`Attempting to remove source '${sourceName}' from OBS.`);
+
+    const streamInfo = activeStreams[streamId];
+    const targetInfo = streamInfo ? getTargetSceneForStream(streamId, streamInfo.label) : getTargetSceneForStream(streamId, '');
+    
+    const scenesToCheck = new Set();
+    if (targetInfo.scene) scenesToCheck.add(targetInfo.scene); // Mapped or default scene
+    scenesToCheck.add(getTargetScene()); // Always check the main selected scene
+
+    // If it was potentially cloned from a mapping
+    if (targetInfo.mapping && targetInfo.mapping.cloneToMain && targetInfo.scene !== getTargetScene()) {
+        scenesToCheck.add(getTargetScene()); // Add main scene if it was cloned there
+    }
+    
+    let removedFromAnyScene = false;
+    for (const sceneName of scenesToCheck) {
+        if (await tryRemoveFromScene(sourceName, sceneName)) {
+            removedFromAnyScene = true;
+        }
+    }
+
+    // Optional: If not found in likely scenes, consider removing the input globally if no longer in any scene item.
+    // This is more complex as it requires checking all scenes. For now, just removing from target/main.
+    // If you want to remove the input itself if it's not used anywhere:
+    // 1. Check if the source item exists in *any* scene.
+    // 2. If not, then call sendRequest('RemoveInput', { inputName: sourceName });
+    // This is usually not necessary as OBS handles unused sources gracefully.
+
+    if (!removedFromAnyScene) {
+        logMessage(`Source '${sourceName}' not found in relevant scenes for removal or already removed.`);
+    }
+    // Rearrange streams in affected scenes
+    if (sourceSizingSelect.value === 'autoGrid') {
+        for (const sceneName of scenesToCheck) {
+            setTimeout(() => rearrangeAllStreamsInScene(sceneName), 200); // Delay for removal to process
+        }
+    }
+}
+
+async function tryRemoveFromScene(sourceName, sceneName) {
+    if (!sceneName) return false;
+    try {
+        const itemInfo = await sendRequest('GetSceneItemId', { sceneName, sourceName });
+        if (itemInfo && itemInfo.sceneItemId) {
+            await sendRequest('RemoveSceneItem', { sceneName, sceneItemId: itemInfo.sceneItemId });
+            logMessage(`Removed source '${sourceName}' from scene '${sceneName}'.`);
+            return true;
+        }
+    } catch (error) {
+        if (!error.message.toLowerCase().includes("not found")) { // Log only unexpected errors
+            logMessage(`Error trying to remove '${sourceName}' from '${sceneName}': ${error.message}`);
+        }
+    }
+    return false;
+}
+
+function loadJsShaLibrary() {
+    return new Promise((resolve, reject) => {
+        if (typeof jsSHA !== 'undefined') { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jsSHA/3.3.0/sha256.js'; // Ensure this is a reliable CDN
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load jsSHA library'));
+        document.head.appendChild(script);
+    });
+}
+
+// Event handlers
+obsSceneSelect.addEventListener('change', () => { obsSceneNameInput.value = obsSceneSelect.value; saveSettings(); });
+[obsWsUrlInput, obsWsPasswordInput, vdoNinjaRoomInput, vdoNinjaPasswordInput, vdoNinjaStreamIdsInput, autoAddSourcesCheckbox, autoRemoveSourcesCheckbox].forEach(el => el.addEventListener('change', saveSettings));
+sourceSizingSelect.addEventListener('change', () => {
+    saveSettings();
+    if (sourceSizingSelect.value === 'autoGrid') {
+        rearrangeAllStreamsInScene(getTargetScene()); // Rearrange current target scene
+    }
+});
+loadScenesBtn.addEventListener('click', fetchObsScenes);
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadSettings(); 
+    logMessage("VDO.Ninja OBS Control Dock Initialized.");
+    const secureFields = document.querySelectorAll('#vdoNinjaRoom, #vdoNinjaStreamIds');
+    secureFields.forEach(field => {
+        field.classList.add('blur-field');
+        field.addEventListener('focus', () => field.classList.remove('blur-field'));
+        field.addEventListener('blur', () => field.classList.add('blur-field'));
+    });
+    if (!document.getElementById('autoRemoveSources')) { // Defensive check
+        const autoSourceOptions = document.getElementById('autoSourceOptions');
+        if (autoSourceOptions) { /* ... ensure it's created if somehow missing ... */ }
+    }
+    startVdoNinjaConnectionMonitor();
+});
+</script>
+</body>
+</html>

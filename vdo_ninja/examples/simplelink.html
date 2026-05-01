@@ -1,0 +1,437 @@
+
+<html>
+<head>
+	<meta charset="utf8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+	<meta content="utf-8" http-equiv="encoding" />
+	<meta name="copyright" content="&copy; 2025 Steve Seguin" />
+	<meta name="license" content="https://github.com/steveseguin/vdo.ninja/LICENSE.md" />
+	<meta name="sourcecode" content="https://github.com/steveseguin/vdo.ninja" />
+	<meta name="stance-on-war" content="Steve Seguin condemns Russia's brutal invasion of Ukraine 💙💛." />
+	<meta name="robots" content="index, follow">
+	<link rel="author" href="/about" />
+	<link rel="me" href="https://vdo.ninja/about" />
+
+	<!-- Primary Meta Tags -->
+	<title>Simple Link Generator</title>
+	<meta id="metaTitle" name="title" content="VDO.Ninja" />
+	<meta name="description" content="Bring live video from your smartphone, computer, or friends directly into your Studio. 100% free." />
+	<meta name="author" content="Steve Seguin" />
+    <style>
+        /* Previous styles remain the same */
+        :root {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-color: #e0e0e0;
+            --border-color: #404040;
+            --highlight-color: #3d7eaa;
+            --input-bg: #363636;
+            --hover-bg: #383838;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.5;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+		
+		.main-title {
+            color: var(--text-color);
+            text-align: center;
+            margin: 20px 0;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            color: var(--text-color);
+        }
+
+        .device {
+            cursor: pointer;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .device:hover {
+            background: var(--hover-bg);
+        }
+
+        .device.selected {
+            background: var(--highlight-color);
+            border-color: var(--highlight-color);
+        }
+
+        .device-name {
+            font-weight: 500;
+        }
+
+        .device-id {
+            color: #888;
+            font-size: 0.85em;
+            word-break: break-all;
+        }
+
+        .options {
+            display: grid;
+            gap: 15px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 5px 0;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-size: 1rem;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--highlight-color);
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 12px 0;
+            font-size: 1rem;
+        }
+
+        input[type="checkbox"], input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--highlight-color);
+        }
+
+        button {
+            background: var(--highlight-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            width: 100%;
+            max-width: 300px;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            filter: brightness(1.1);
+        }
+
+        #generatedUrl {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-family: monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #broadcastOptions {
+            display: none;
+            border-top: 1px solid var(--border-color);
+            margin-top: 15px;
+            padding-top: 15px;
+        }
+
+        #broadcastOptions.visible {
+            display: block;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .radio-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .radio-row:hover {
+            background: var(--hover-bg);
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 12px;
+                margin: 10px 0;
+            }
+
+            .device {
+                padding: 10px;
+            }
+
+            button {
+                width: 100%;
+                max-width: none;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .options {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
+        }
+		.hidden{
+			display:none;
+		}
+		#generatedUrl:hover {
+            background: var(--hover-bg);
+        }
+
+        #generatedUrl.copied {
+            background: var(--highlight-color);
+            border-color: var(--highlight-color);
+        }
+		
+    </style>
+</head>
+<body>
+	<h1 class="main-title">Simple Link Generator</h1>
+
+    <div class="card">
+        <h2>🎥 Select Video Input Device</h2>
+        <div id="videoInputs"></div>
+    </div>
+    
+    <div class="card">
+        <h2>🎤 Select Audio Input Device</h2>
+        <div id="audioInputs"></div>
+    </div>
+    
+    <div class="card">
+        <h2>⚙️ Options</h2>
+        <div class="options">
+            <div>
+                <input type="text" id="roomName" placeholder="Room Name (optional)" oninput="toggleBroadcastOptions()" />
+                <input type="text" id="password" placeholder="Password (optional)" />
+                <input type="text" id="streamId" placeholder="Stream ID (optional)" />
+                <div class="checkbox-row">
+                    <input type="checkbox" id="autostart" />
+                    <label for="autostart">Auto-start camera/mic</label>
+                </div>
+                <div class="checkbox-row hidden">
+                    <input type="checkbox" id="webcam" checked />
+                    <label for="webcam">Enable webcam mode</label>
+                </div>
+
+                <div id="broadcastOptions">
+                    <h3>Room View Options</h3>
+                    <div class="radio-group">
+                        <div class="radio-row">
+                            <input type="radio" id="normal" name="broadcastMode" value="normal" checked />
+                            <label for="normal">See and hear all (Default)</label>
+                        </div>
+                        <div class="radio-row">
+                            <input type="radio" id="broadcast" name="broadcastMode" value="bc" />
+                            <label for="broadcast">See director, hear all</label>
+                        </div>
+                        <div class="radio-row">
+                            <input type="radio" id="directoronly" name="broadcastMode" value="do" />
+                            <label for="directoronly">Only see/hear director</label>
+                        </div>
+                        <div class="radio-row">
+                            <input type="radio" id="view" name="broadcastMode" value="v" />
+                            <label for="view">See/hear no one</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🔗 Generated URL</h2>
+        <button onclick="generateUrl()">Generate URL</button>
+        <input type="text" id="generatedUrl" readonly placeholder="Generated link will appear here..." />
+    </div>
+
+    <script>
+        const baseUrl = new URL(document.location.origin);
+        let selectedVideo = null;
+        let selectedAudioDevices = [];
+
+        function toggleBroadcastOptions() {
+            const roomName = document.getElementById('roomName').value.trim();
+            const broadcastOptions = document.getElementById('broadcastOptions');
+            broadcastOptions.classList.toggle('visible', roomName.length > 0);
+        }
+
+        function sanitizeDeviceName(deviceName) {
+            return String(deviceName).toLowerCase().replace(/[\W]+/g, "_");
+        }
+
+        function addDevice(element) {
+            const type = element.dataset.deviceType;
+            const device = sanitizeDeviceName(element.querySelector('.device-name').innerText);
+
+            if (type === 'audioinput') {
+                handleAudioSelection(element, device);
+            } else if (type === 'videoinput') {
+                handleVideoSelection(element, device);
+            }
+        }
+
+        function handleAudioSelection(element, device) {
+            if (element.classList.contains('selected')) {
+                const index = selectedAudioDevices.indexOf(device);
+                if (index !== -1) {
+                    selectedAudioDevices.splice(index, 1);
+                }
+                element.classList.remove('selected');
+            } else {
+                selectedAudioDevices.push(device);
+                element.classList.add('selected');
+            }
+        }
+
+        function handleVideoSelection(element, device) {
+            const prevSelected = element.parentElement.querySelector('.selected');
+            if (prevSelected) {
+                prevSelected.classList.remove('selected');
+            }
+            
+            if (element === prevSelected) {
+                selectedVideo = null;
+            } else {
+                selectedVideo = device;
+                element.classList.add('selected');
+            }
+        }
+
+		function generateUrl() {
+            const url = new URL(baseUrl);
+            
+            if (selectedVideo === null) {
+                url.searchParams.set('vd', '0');
+            } else if (selectedVideo) {
+                url.searchParams.set('vd', selectedVideo);
+            }
+
+            if (selectedAudioDevices.length === 0) {
+                url.searchParams.set('ad', '0');
+            } else {
+                url.searchParams.set('ad', selectedAudioDevices.join(','));
+            }
+
+            const roomName = document.getElementById('roomName').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const streamId = document.getElementById('streamId').value.trim();
+            const autostart = document.getElementById('autostart').checked;
+            const webcam = document.getElementById('webcam').checked;
+            const broadcastMode = document.querySelector('input[name="broadcastMode"]:checked').value;
+
+            if (roomName) {
+                url.searchParams.set('r', roomName);
+                if (broadcastMode !== 'normal') {
+                    url.searchParams.set(broadcastMode, '');
+                }
+            }
+            
+            if (password) url.searchParams.set('pw', password);
+            if (streamId) url.searchParams.set('id', streamId);
+            if (autostart) url.searchParams.set('as', '');
+            if (webcam) url.searchParams.set('wc', '');
+			url.searchParams.set('hh', '');
+
+            const urlField = document.getElementById('generatedUrl')
+            urlField.value = decodeURIComponent(url);
+            urlField.classList.add('copied');
+            navigator.clipboard.writeText(urlField.value);
+            setTimeout(() => urlField.classList.remove('copied'), 1000);
+        }
+
+        function prettyPrint(devices, elementId) {
+            let output = "<div class='device-list'>";
+            devices.forEach(device => {
+                output += `
+                    <div class='device' onclick='addDevice(this)' data-device-type='${device.kind}'>
+                        <span class='device-name'>${device.label}</span>
+                        <span class='device-id'>${device.deviceId}</span>
+                    </div>`;
+            });
+            output += "</div>";
+            document.getElementById(elementId).innerHTML = output;
+        }
+
+        async function requestPermissions() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+                stream.getTracks().forEach(track => track.stop());
+            } catch (e) {
+                console.warn("Permission request failed:", e);
+            }
+        }
+		
+		document.getElementById('generatedUrl').onclick = function() {
+            if (this.value) {
+                navigator.clipboard.writeText(this.value).then(() => {
+                    this.classList.add('copied');
+                    setTimeout(() => this.classList.remove('copied'), 1000);
+                });
+            }
+        };
+
+        async function initializeDevices() {
+            await requestPermissions();
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                prettyPrint(devices.filter(d => d.kind === 'videoinput'), 'videoInputs');
+                prettyPrint(devices.filter(d => d.kind === 'audioinput'), 'audioInputs');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        initializeDevices();
+    </script>
+</body>
+</html>

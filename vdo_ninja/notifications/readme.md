@@ -1,0 +1,1 @@
+due to cost and security, the notify.vdo.ninja endpoint can be only accept notifications via the vdo.ninja domain, but developers can listen to those notifications from other domains.

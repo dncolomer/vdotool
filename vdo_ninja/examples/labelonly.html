@@ -1,0 +1,165 @@
+<!--
+  VDO.Ninja Connected Label Overlay
+  Description: Displays the label of the first connected peer in an overlay for OBS Studio
+  
+  Parameters:
+    &room=xx        - Comma-separated room IDs to connect to
+    &password=pp    - Optional password for the rooms
+    &view=xxxx      - Optional view parameter
+  
+  Usage: 
+    - Add as a browser source in OBS Studio
+    - Can be hosted locally: file:///C:/Users/steve/Code/vdoninja/examples/labelonly.html?view=steve123
+    - Or online: https://vdo.ninja/examples/labelonly.html?view=steve123
+  
+  Styling:
+    - Modify the #labelDisplay CSS styles to customize appearance
+    - Background, text color, font size and animations can be adjusted
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta charset="UTF-8">
+    <title>VDO.Ninja - Connected Label</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            background-color: transparent;
+            width: 100%;
+        }
+        
+        .electronDraggable {
+            -webkit-app-region: drag;
+        }
+        
+        body > div {
+            -webkit-app-region: no-drag;
+        }
+        
+        .hidden {
+            display: none;
+            opacity: 0;
+        }
+        
+        #labelDisplay {
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            text-align: center;
+            transition: all 0.5s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        #labelDisplay.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="electronDraggable">
+    <div id="labelDisplay" class="hidden"></div>
+
+    <script>
+        window.onerror = function(errorMsg, url, lineNumber) {
+            console.error(errorMsg, lineNumber);
+            return false;
+        };
+
+        function getById(id) {
+            return document.getElementById(id);
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomID = urlParams.get("room") ? ("&scene&room="+urlParams.get("room")) : "";
+        const password = urlParams.get("password") ? ("&password="+urlParams.get("password")) : "";
+        const view = urlParams.get("view") ? ("&view="+urlParams.get("view")) : "";
+        
+        let iframes = [];
+        let connectedPeers = {};
+        let currentDisplayedLabel = null;
+
+        function updateLabelDisplay() {
+            const labelDisplay = getById("labelDisplay");
+            const peerKeys = Object.keys(connectedPeers);
+            
+            if (peerKeys.length > 0) {
+                const firstPeer = peerKeys[0];
+                const label = connectedPeers[firstPeer];
+                
+                if (label !== currentDisplayedLabel) {
+                    currentDisplayedLabel = label;
+                    labelDisplay.textContent = currentDisplayedLabel;
+                    labelDisplay.classList.remove("hidden");
+                    
+                    // Force repaint
+                    void labelDisplay.offsetWidth;
+                    
+                    labelDisplay.classList.add("visible");
+                }
+            } else {
+                currentDisplayedLabel = null;
+                labelDisplay.classList.remove("visible");
+                setTimeout(() => {
+                    labelDisplay.classList.add("hidden");
+                }, 500);
+            }
+        }
+
+        function RecvDataWindow(room) {
+            const iframe = document.createElement("iframe");
+            iframe.src = `https://vdo.ninja/?ln${password}${room}${view}&notmobile&label=overlaypage&vd=0&ad=0&novideo&noaudio&cleanoutput`;
+            iframe.style.width = "0";
+            iframe.style.height = "0";
+            iframe.style.position = "fixed";
+            iframe.style.left = "-100px";
+            iframe.style.top = "-100px";
+            iframe.id = `frame_${room}`;
+            iframe.allow = "midi;geolocation;microphone;";
+            iframes.push(iframe);
+            document.body.appendChild(iframe);
+
+            window.addEventListener("message", function(e) {
+                if (e.source !== iframe.contentWindow) return;
+                
+                if ("action" in e.data && e.data.UUID) {
+                    if (e.data.action === "push-connection" && "value" in e.data && !e.data.value) {
+                        delete connectedPeers[e.data.UUID];
+                        updateLabelDisplay();
+                    } else if ((e.data.action === "push-connection-info" || e.data.action === "view-connection-info") 
+                             && e.data.value && e.data.value.label) {
+                        connectedPeers[e.data.UUID] = e.data.value.label;
+                        updateLabelDisplay();
+                    } else if (e.data.action === "view-connection" && "value" in e.data && !e.data.value) {
+                        delete connectedPeers[e.data.UUID];
+                        updateLabelDisplay();
+                    } else if ("label" in e.data) {
+                        connectedPeers[e.data.UUID] = e.data.label;
+                        updateLabelDisplay();
+                    }
+                }
+            });
+        }
+
+        if (roomID) {
+            roomID.split(",").forEach(room => {
+                RecvDataWindow(room.trim());
+            });
+        } else {
+            RecvDataWindow("");
+        }
+    </script>
+</body>
+</html>

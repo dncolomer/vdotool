@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Free, open-source live streaming whiteboard with secure E2EE P2P sharing via VDO.Ninja and WHIP support">
+    <meta name="keywords" content="whiteboard, streaming, VDO.Ninja, WHIP, e2ee, p2p, drawing, collaboration">
+    <meta name="author" content="VDO.Ninja">
+    <meta property="og:title" content="VDO.Ninja Whiteboard">
+    <meta property="og:description" content="Free, open-source live streaming whiteboard with secure E2EE P2P sharing">
+    <meta property="og:image" content="https://vdo.ninja/media/logo.png">
+    <meta property="og:url" content="https://vdo.ninja/whiteboard">
+    <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTQgNGgyNHYyNEg0eiIvPjxwYXRoIGZpbGw9IiMwMDAiIGQ9Ik02IDZoMjB2MjBINnoiLz48cGF0aCBmaWxsPSIjZmZmIiBkPSJNOCA4aDE2djRsLTQgOHY0SDEydi00TDggMTJ6Ii8+PC9zdmc+">
+    <title>Whiteboard - Live Streaming Collaboration Tool</title>
+    <style>
+        :root {
+            --canvas-bg: #ffffff;
+            --main-bg: #1a1a1a;
+            --container-bg: #2a2a2a;
+            --button-bg: #404040;
+            --button-hover: #505050;
+            --button-active: #606060;
+            --text-color: #ffffff;
+            --input-bg: #1a1a1a;
+            --border-color: #404040;
+            --accent-color: #898989;
+            --default-brush: #00FF00;
+        }
+
+        [data-theme="dark"] {
+            --canvas-bg: #000000;
+            --main-bg: #0a0a0a;
+            --container-bg: #1a1a1a;
+            --button-bg: #2a2a2a;
+            --button-hover: #3a3a3a;
+            --button-active: #4a4a4a;
+            --text-color: #e0e0e0;
+            --input-bg: #0a0a0a;
+            --border-color: #2a2a2a;
+            --accent-color: #606060;
+            --default-brush: #00FF00;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --canvas-bg: #000000;
+                --main-bg: #0a0a0a;
+                --container-bg: #1a1a1a;
+                --button-bg: #2a2a2a;
+                --button-hover: #3a3a3a;
+                --button-active: #4a4a4a;
+                --text-color: #e0e0e0;
+                --input-bg: #0a0a0a;
+                --border-color: #2a2a2a;
+                --accent-color: #606060;
+                --default-brush: #ffffff;
+            }
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+        }
+        body {
+            background: var(--main-bg);
+            color: var(--text-color);
+            padding: 10px;
+            font-family: system-ui;
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+        .whiteboard-container {
+            flex: 1;
+            background: var(--container-bg);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-height: 0;
+        }
+        #canvas {
+            cursor: crosshair;
+            width: auto;
+            height: auto;
+            background: var(--canvas-bg);
+            border-radius: 4px;
+            max-width: min(100%, calc((100vh - 140px) * 16/9));
+            max-height: calc(100vh - 140px);
+            margin: auto;
+            display: block;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin: auto;
+            padding-top: 40px;
+        }
+        button {
+            background: var(--button-bg);
+            color: var(--text-color);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+		.controls button {
+			position: relative;
+			min-width: 80px;
+		}
+		.controls button.active {
+			background: var(--button-active);
+			outline: 2px solid var(--accent-color);
+			outline-offset: -2px;
+		}
+        button:hover { background: var(--button-hover); }
+        input[type="range"] { accent-color: var(--accent-color); }
+		
+        .text-input {
+            position: absolute; /* Changed from fixed to absolute */
+            background: var(--canvas-bg);
+            border: 1px solid var(--default-brush);
+            outline: none;
+            font-family: Arial;
+            padding: 2px;
+            margin: 0;
+            display: none;
+            color: var(--default-brush);
+            min-width: 100px;
+            z-index: 1000;
+            resize: none;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .modal {
+            background: var(--container-bg);
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            color: var(--text-color);
+            margin: 20px auto;
+        }
+		
+		.modal-buttons button {
+			flex: 1;
+			position: relative;
+		}
+
+		.modal-buttons button.active {
+			outline: 2px solid var(--accent-color);
+			box-shadow: 0 0 10px rgba(137, 137, 137, 0.3);
+		}
+
+		.modal-content {
+			display: none;
+		}
+
+		.modal-content.active {
+			display: block;
+		}
+
+		.mode-description {
+			text-align: center;
+			margin: 15px 0;
+			color: var(--accent-color);
+		}
+        
+        .modal-content {
+            display: none;
+        }
+        
+        .modal-content.active {
+            display: block;
+        }
+        
+        .modal input[type="text"], .modal input[type="url"], .modal input[type="password"] {
+            width: calc(100% - 20px);
+            padding: 8px;
+            margin: 8px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .view-link-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            background: var(--container-bg);
+            padding: 8px;
+            border-radius: 4px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+        .view-link-container input {
+            background: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 4px;
+            flex: 1;
+            min-width: 0;
+            font-size: 14px;
+        }
+        .view-link-container button {
+            white-space: nowrap;
+        }
+        .view-link-container button::after {
+            content: " View Link";
+            display: none;
+        }
+		@media (max-width: 1600px) {
+            .view-link-container input {
+                display: none;
+            }
+            .view-link-container button::after {
+                display: inline;
+            }
+        }
+        @media (min-width: 768px) {
+            .view-link-container {
+                left: auto;
+                width: auto;
+                max-width: 400px;
+            }
+            .controls {
+                padding-top: 10px;
+            }
+        }
+        @media (max-width: 480px) {
+            .controls {
+                padding-top: 50px;
+            }
+            .view-link-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .modal {
+                margin: 10px;
+                width: calc(100% - 20px);
+            }
+        }
+		.font-size-select {
+			background: var(--button-bg);
+			color: var(--text-color);
+			border: none;
+			padding: 8px;
+			border-radius: 4px;
+			cursor: pointer;
+			display: none;
+		}
+
+		.font-size-select.active {
+			display: block;
+		}
+		
+		#themeToggle {
+			font-size: 18px;
+			padding: 6px 12px;
+		}
+		
+		#screenShareToggle {
+			font-size: 18px;
+			padding: 6px 12px;
+			position: relative;
+		}
+		
+		#screenShareToggle.active {
+			background: var(--button-active);
+			outline: 2px solid var(--accent-color);
+			outline-offset: -2px;
+		}
+		
+		.canvas-container {
+			position: relative;
+			margin: auto;
+			display: inline-block;
+		}
+		
+		#backgroundCanvas {
+			position: absolute;
+			top: 0;
+			left: 0;
+			background: var(--canvas-bg);
+			border-radius: 4px;
+			pointer-events: none;
+		}
+		
+		#canvas {
+			position: relative;
+			background: transparent;
+		}
+		
+    </style>
+</head>
+<body>
+
+	<div class="whiteboard-container">
+        <div class="controls">
+            <input type="color" id="colorPicker" value="#00FF00">
+            <input type="range" id="brushSize" min="1" max="50" value="5">
+            <button id="brush" class="active">Brush</button>
+            <button id="text" title="Click away to commit text">Text</button>
+			<select id="fontSize" class="font-size-select">
+				<option value="12">12px</option>
+				<option value="14">14px</option>
+				<option value="16">16px</option>
+				<option value="20">20px</option>
+				<option value="24">24px</option>
+				<option value="32">32px</option>
+				<option value="48">48px</option>
+				<option value="72">72px</option>
+				<option value="96">96px</option>
+			</select>
+            <button id="eraser">Eraser</button>
+            <button id="fill">Fill</button>
+            <button id="clear">Clear</button>
+            <button id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode">🌙</button>
+            <button id="screenShareToggle" onclick="toggleScreenShare()" title="Use screen share as background">🖥️</button>
+        </div>
+        <div class="canvas-container">
+            <canvas id="backgroundCanvas"></canvas>
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+	
+    <input type="text" class="text-input" id="textInput">
+	
+    <div class="modal-overlay">
+		<div class="modal">
+			<h3 style="text-align: center; margin-bottom: 15px;">Whiteboard Publishing Options</h3>
+			<div class="modal-buttons">
+				<button onclick="showMode('vdo')" title="Peer-to-peer encrypted streaming via VDO.Ninja">VDO.Ninja</button>
+				<button onclick="showMode('whip')" title="Stream to any WHIP-compatible service">WHIP</button>
+				<button onclick="showMode('twitch')" title="Stream directly to Twitch">Twitch</button>
+				<button onclick="showMode('playground')" title="Local drawing only - no streaming">Playground</button>
+			</div>
+			<div class="mode-description" id="modeDescription"></div>
+            
+            <div class="modal-content" id="vdo-content">
+                <div class="input-group">
+                    <label>Stream ID (optional)</label>
+                    <input type="text" id="pushId" placeholder="Leave empty for auto-generated ID">
+                </div>
+                <div class="input-group">
+                    <label>Room Name (optional if Stream ID provided)</label>
+                    <input type="text" id="roomName">
+                </div>
+                <div class="input-group">
+                    <label>Password (optional)</label>
+                    <input type="password" id="password">
+                </div>
+                <button onclick="handleVDO()">Start</button>
+            </div>
+			
+			<div class="modal-content" id="twitch-content">
+				<div class="input-group">
+					<label>Twitch Stream Token</label>
+					<input type="password" id="twitchToken" required>
+				</div>
+				<button onclick="handleTwitch()">Start</button>
+			</div>
+            
+			<div class="modal-content" id="whip-content">
+				<div class="input-group">
+					<label>WHIP URL</label>
+					<input type="url" id="whipUrl" required>
+				</div>
+				<div class="input-group">
+					<label>WHIP Token</label>
+					<input type="password" id="whipToken">
+				</div>
+				<button onclick="handleWhip()">Start</button>
+			</div>
+            
+            <div class="modal-content" id="playground-content">
+                <p>Playground mode - no publishing.</p>
+                <button onclick="handlePlayground()">Start</button>
+            </div>
+        </div>
+    </div>
+	<div class="view-link-container" title="This view-link can be shared to let others see your canvas output as a streaming video">
+		<input type="text" id="viewLink" readonly>
+		<button onclick="copyViewLink()">Copy</button>
+	</div>
+	
+<script>
+	const canvas = document.getElementById('canvas');
+	const ctx = canvas.getContext('2d', { willReadFrequently: true });
+	const backgroundCanvas = document.getElementById('backgroundCanvas');
+	const bgCtx = backgroundCanvas.getContext('2d');
+	const colorPicker = document.getElementById('colorPicker');
+	const brushSize = document.getElementById('brushSize');
+	const eraser = document.getElementById('eraser');
+	const fill = document.getElementById('fill');
+	const clear = document.getElementById('clear');
+	
+	let savedCanvasState = null;
+	let textPosition = { x: 0, y: 0 };
+	let screenShareStream = null;
+	let screenShareVideo = null;
+	let animationFrameId = null;
+	
+	// Theme management
+	function initTheme() {
+		const savedTheme = localStorage.getItem('theme');
+		const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+		
+		if (savedTheme) {
+			document.documentElement.setAttribute('data-theme', savedTheme);
+		} else {
+			// Always set an explicit theme based on system preference
+			document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+		}
+		
+		updateThemeButton();
+		updateCanvasBackground();
+		updateDefaultBrushColor();
+	}
+	
+	function toggleTheme() {
+		const currentTheme = document.documentElement.getAttribute('data-theme');
+		const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+		
+		document.documentElement.setAttribute('data-theme', newTheme);
+		localStorage.setItem('theme', newTheme);
+		
+		updateThemeButton();
+		updateCanvasBackground();
+		updateDefaultBrushColor();
+	}
+	
+	function updateThemeButton() {
+		const themeToggle = document.getElementById('themeToggle');
+		const theme = document.documentElement.getAttribute('data-theme');
+		const isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		themeToggle.textContent = isDark ? '☀️' : '🌙';
+	}
+	
+	function updateCanvasBackground() {
+		// Don't update if screen share is active
+		if (screenShareStream) return;
+		
+		const theme = document.documentElement.getAttribute('data-theme');
+		const isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+		const canvasColor = isDark ? '#000000' : '#ffffff';
+		
+		// Fill background canvas with new color
+		bgCtx.fillStyle = canvasColor;
+		bgCtx.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+		
+		// If user hasn't interacted, also clear the main canvas
+		if (!hasInteracted) {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+		}
+	}
+	
+	function updateDefaultBrushColor() {
+		// Set default color to green if not already set
+		if (!lastColor || lastColor === '') {
+			const defaultColor = '#00ff00';
+			colorPicker.value = defaultColor;
+			lastColor = defaultColor;
+			if (currentMode !== 'eraser') {
+				ctx.strokeStyle = defaultColor;
+			}
+		}
+	}
+	
+	// Initialize theme on load
+	window.addEventListener('DOMContentLoaded', () => {
+		initTheme();
+		resizeCanvas();
+		// Set initial stroke color
+		ctx.strokeStyle = lastColor;
+	});
+	
+	// Screen share functionality
+	async function toggleScreenShare() {
+		const screenShareToggle = document.getElementById('screenShareToggle');
+		
+		if (screenShareStream) {
+			// Stop screen share
+			stopScreenShare();
+		} else {
+			// Start screen share
+			try {
+				screenShareStream = await navigator.mediaDevices.getDisplayMedia({
+					video: true,
+					audio: false
+				});
+				
+				screenShareToggle.classList.add('active');
+				
+				// Create video element to capture screen share
+				screenShareVideo = document.createElement('video');
+				screenShareVideo.srcObject = screenShareStream;
+				screenShareVideo.play();
+				
+				// Handle stream ending
+				screenShareStream.getVideoTracks()[0].addEventListener('ended', () => {
+					stopScreenShare();
+				});
+				
+				// Start drawing screen share to background canvas
+				drawScreenShare();
+				
+			} catch (err) {
+				console.error('Error starting screen share:', err);
+				if (err.name === 'NotAllowedError') {
+					// User cancelled the screen share dialog
+				}
+			}
+		}
+	}
+	
+	function stopScreenShare() {
+		const screenShareToggle = document.getElementById('screenShareToggle');
+		screenShareToggle.classList.remove('active');
+		
+		if (screenShareStream) {
+			screenShareStream.getTracks().forEach(track => track.stop());
+			screenShareStream = null;
+		}
+		
+		if (screenShareVideo) {
+			screenShareVideo.pause();
+			screenShareVideo = null;
+		}
+		
+		if (animationFrameId) {
+			cancelAnimationFrame(animationFrameId);
+			animationFrameId = null;
+		}
+		
+		// Restore solid color background
+		updateCanvasBackground();
+	}
+	
+	function drawScreenShare() {
+		if (!screenShareVideo || !screenShareStream) return;
+		
+		// Wait for video to be ready
+		if (screenShareVideo.videoWidth === 0 || screenShareVideo.videoHeight === 0) {
+			animationFrameId = requestAnimationFrame(drawScreenShare);
+			return;
+		}
+		
+		// Calculate how to fit the video
+		const videoAspect = screenShareVideo.videoWidth / screenShareVideo.videoHeight;
+		const canvasAspect = backgroundCanvas.width / backgroundCanvas.height;
+		
+		let drawWidth, drawHeight, offsetX = 0, offsetY = 0;
+		
+		// Use contain fit (show entire screen share, may have letterboxing)
+		if (videoAspect > canvasAspect) {
+			// Video is wider than canvas
+			drawWidth = backgroundCanvas.width;
+			drawHeight = backgroundCanvas.width / videoAspect;
+			offsetY = (backgroundCanvas.height - drawHeight) / 2;
+		} else {
+			// Video is taller than canvas
+			drawHeight = backgroundCanvas.height;
+			drawWidth = backgroundCanvas.height * videoAspect;
+			offsetX = (backgroundCanvas.width - drawWidth) / 2;
+		}
+		
+		// Clear and fill background
+		bgCtx.fillStyle = '#000000';
+		bgCtx.fillRect(0, 0, backgroundCanvas.width, backgroundCanvas.height);
+		
+		// Draw video
+		bgCtx.drawImage(screenShareVideo, offsetX, offsetY, drawWidth, drawHeight);
+		
+		// Continue drawing
+		animationFrameId = requestAnimationFrame(drawScreenShare);
+	}
+		
+	function createAndAppendIframe(config) {
+        if (config.mode === 'playground') return null;
+        
+        let url = new URL("./index.html", window.location.href);
+        
+        if (config.mode === 'vdo') {
+            if (config.room) url.searchParams.set("room", config.room);
+            if (config.push) url.searchParams.set("push", config.push);
+            if (config.password) url.searchParams.set("password", config.password);
+        } else if (config.mode === 'whip') {
+            url.searchParams.set("whippush", config.whipUrl);
+            if (config.whipToken) url.searchParams.set("whippushtoken", config.whipToken);
+        }
+        
+        url.searchParams.set("framegrab", "");
+        url.searchParams.set("view", "");
+	
+        const iframe = document.createElement("iframe");
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.src = url.toString()+window.location.search.replace("&","?");
+		
+		iframe.onload = function(){
+			setTimeout(function(){
+				startStreaming();
+			},100);
+		}
+        document.body.appendChild(iframe);
+        
+        return iframe;
+    }
+
+    function generatePushId() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        return Array.from({length: 8}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    }
+
+	function showMode(mode) {
+		document.querySelectorAll('.modal-content').forEach(el => el.classList.remove('active'));
+		document.querySelectorAll('.modal-buttons button').forEach(btn => btn.classList.remove('active'));
+		document.getElementById(`${mode}-content`).classList.add('active');
+		document.querySelector(`button[onclick="showMode('${mode}')"]`).classList.add('active');
+		
+		const descriptions = {
+			'vdo': 'Stream securely peer-to-peer using VDO.Ninja',
+			'whip': 'Stream to any WHIP-compatible service',
+			'twitch': 'Stream directly to your Twitch channel',
+			'playground': 'Local drawing mode - no streaming'
+		};
+		localStorage.setItem('lastMode', mode);
+		document.getElementById('modeDescription').textContent = descriptions[mode];
+	}
+
+	function handleTwitch() {
+		const twitchToken = document.getElementById('twitchToken').value;
+		if (!twitchToken) {
+			alert('Twitch Stream Token is required');
+			return;
+		}
+		
+		localStorage.setItem('lastTwitchToken', twitchToken);
+		
+		const config = {
+			mode: 'whip',
+			whipUrl: 'https://twitch.vdo.ninja',
+			whipToken: twitchToken
+		};
+		
+		window.iframe = createAndAppendIframe(config);
+		document.querySelector('.modal-overlay').style.display = 'none';
+		setTimeout(function(){startStreaming();},1000);
+	}
+
+    function handleVDO() {
+		const push = document.getElementById('pushId').value || generatePushId();
+		const room = document.getElementById('roomName').value;
+		const password = document.getElementById('password').value;
+		
+		if (!push && !room) {
+			alert('Either Stream ID or Room Name is required');
+			return;
+		}
+		
+		// Save values to localStorage
+		localStorage.setItem('lastPushId', push);
+		if (room) localStorage.setItem('lastRoomName', room);
+		if (password) localStorage.setItem('lastPassword', password);
+		
+		const config = {
+			mode: 'vdo',
+			push,
+			room,
+			password
+		};
+
+		const viewUrl = new URL("./", window.location.href);
+		if (push) viewUrl.searchParams.set("view", push);
+		if (room) viewUrl.searchParams.set("room", room);
+		if (config.push && config.room) viewUrl.searchParams.set("solo", "")
+		if (password) viewUrl.searchParams.set("password", password);
+		
+		document.getElementById('viewLink').value = viewUrl.toString()+"&sharperscreen";
+		document.querySelector('.view-link-container').style.display = 'flex';
+		
+		window.iframe = createAndAppendIframe(config);
+		document.querySelector('.modal-overlay').style.display = 'none';
+	}
+	
+	function copyViewLink() {
+		const viewLink = document.getElementById('viewLink');
+		if (window.innerWidth <= 1600) {
+			// Create temporary input for copying when main input is hidden
+			const tempInput = document.createElement('input');
+			tempInput.value = viewLink.value;
+			document.body.appendChild(tempInput);
+			tempInput.select();
+			document.execCommand('copy');
+			document.body.removeChild(tempInput);
+		} else {
+			viewLink.select();
+			document.execCommand('copy');
+		}
+	}
+
+	function handleWhip() {
+		const whipUrl = document.getElementById('whipUrl').value;
+		const whipToken = document.getElementById('whipToken').value;
+		
+		if (!whipUrl) {
+			alert('WHIP URL is required');
+			return;
+		}
+		
+		localStorage.setItem('lastWhipUrl', whipUrl);
+		if (whipToken) localStorage.setItem('lastWhipToken', whipToken);
+		
+		const config = {
+			mode: 'whip',
+			whipUrl,
+			whipToken
+		};
+		
+		window.iframe = createAndAppendIframe(config);
+		document.querySelector('.modal-overlay').style.display = 'none';
+		setTimeout(function(){startStreaming();},1000);
+	}
+
+    function handlePlayground() {
+        window.iframe = null;
+        document.querySelector('.modal-overlay').style.display = 'none';
+    }
+
+    // Show modal on load instead of creating iframe immediately
+	window.addEventListener('load', () => {
+		if (window.location.search){
+			const getUrlParams = () => Object.fromEntries(new URLSearchParams(window.location.search));
+			const params = getUrlParams();
+			const room = params.room || params.r || false;
+			const push = params.push || params.id || params.permaid || false;
+			const password = params.password || params.p || params.pw || false;
+			const whipUrl = params.whip || params.whipout || params.whippush || false;
+			const whipToken = params.whippushtoken || params.whipouttoken || params.whiptoken || params.token || false;
+			
+			if (room || push){
+				const config = {
+					mode: 'vdo',
+					push,
+					room,
+					password
+				};
+				
+				// Store these values from URL parameters
+				if (push) localStorage.setItem('lastPushId', push);
+				if (room) localStorage.setItem('lastRoomName', room);
+				if (password) localStorage.setItem('lastPassword', password);
+				
+				createAndAppendIframe(config);
+				
+				return;
+			} else if (whipUrl){
+				const config = {
+					mode: 'whip',
+					whipUrl,
+					whipToken
+				};
+				createAndAppendIframe(config);
+				return
+			}
+		}
+		
+		// Load saved credentials
+		const lastWhipUrl = localStorage.getItem('lastWhipUrl');
+		const lastWhipToken = localStorage.getItem('lastWhipToken');
+		const lastTwitchToken = localStorage.getItem('lastTwitchToken');
+		const lastRoomName = localStorage.getItem('lastRoomName');
+		const lastPushId = localStorage.getItem('lastPushId');
+		const lastPassword = localStorage.getItem('lastPassword');
+		
+		if (lastWhipUrl) document.getElementById('whipUrl').value = lastWhipUrl;
+		if (lastWhipToken) document.getElementById('whipToken').value = lastWhipToken;
+		if (lastTwitchToken) document.getElementById('twitchToken').value = lastTwitchToken;
+		if (lastRoomName) document.getElementById('roomName').value = lastRoomName;
+		if (lastPushId) document.getElementById('pushId').value = lastPushId;
+		if (lastPassword) document.getElementById('password').value = lastPassword;
+		
+		document.querySelector('.modal-overlay').style.display = 'flex';
+		
+		// Load last used mode if available
+		const lastMode = localStorage.getItem('lastMode');
+		showMode(lastMode || 'vdo');
+	});
+	
+	let frameGenerator;
+	let useMediaTrackProcessor = true;
+
+	function resizeCanvas() {
+		const container = document.querySelector('.whiteboard-container');
+		const maxWidth = container.clientWidth - 20;
+		const maxHeight = container.clientHeight - 100;
+		const aspectRatio = 16/9;
+		
+		let width = maxWidth;
+		let height = width / aspectRatio;
+		
+		if (height > maxHeight) {
+			height = maxHeight;
+			width = height * aspectRatio;
+		}
+		
+		// Set dimensions for both canvases
+		const finalWidth = useMediaTrackProcessor ? Math.min(1920, Math.max(1280, width)) : 1280;
+		const finalHeight = finalWidth * 9/16;
+		
+		// Size the container
+		const canvasContainer = document.querySelector('.canvas-container');
+		canvasContainer.style.width = finalWidth + 'px';
+		canvasContainer.style.height = finalHeight + 'px';
+		
+		// Size both canvases
+		canvas.width = finalWidth;
+		canvas.height = finalHeight;
+		backgroundCanvas.width = finalWidth;
+		backgroundCanvas.height = finalHeight;
+		
+		// Update composite canvas size if it exists
+		if (compositeCanvas) {
+			compositeCanvas.width = finalWidth;
+			compositeCanvas.height = finalHeight;
+		}
+		
+		// Clear main canvas (it should be transparent)
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		
+		// Update background
+		updateCanvasBackground();
+	}
+
+	//window.addEventListener('resize', resizeCanvas);
+	// Don't call resizeCanvas here - wait for theme to be initialized
+	//resizeCanvas();
+
+	let isDrawing = false;
+	let lastColor = '#00ff00';
+	let hasInteracted = false; // Track if user has drawn on canvas
+	
+	let currentMode = 'brush';
+	const brush = document.getElementById('brush');
+	const text = document.getElementById('text');
+	const modes = {brush, eraser, fill, text};
+	const textInput = document.getElementById('textInput');
+
+	const fontSize = document.getElementById('fontSize');
+
+	function setMode(mode) {
+		currentMode = mode;
+		Object.values(modes).forEach(btn => btn.classList.remove('active'));
+		modes[mode].classList.add('active');
+		if (mode === 'eraser') {
+			ctx.globalCompositeOperation = 'destination-out';
+		} else {
+			ctx.globalCompositeOperation = 'source-over';
+			ctx.strokeStyle = lastColor;
+		}
+		canvas.style.cursor = mode === 'text' ? 'text' : 'crosshair';
+		fontSize.classList.toggle('active', mode === 'text');
+		
+		if (mode !== 'text') {
+			savedCanvasState = null;
+			commitText();
+		}
+	}
+	
+	function commitText() {
+		if (textInput.value && savedCanvasState) {
+			// The final text is already drawn on the canvas
+			hasInteracted = true; // Mark canvas as interacted
+			savedCanvasState = null;
+		}
+		textInput.value = '';
+		textInput.style.display = 'none';
+	}
+
+	brush.addEventListener('click', () => setMode('brush'));
+	eraser.addEventListener('click', () => setMode('eraser'));
+	fill.addEventListener('click', () => setMode('fill'));
+	text.addEventListener('click', () => setMode('text'));
+	document.addEventListener('blur', commitText);
+	
+	textInput.addEventListener('keydown', (e) => {
+		e.stopPropagation();
+		if (e.key === 'Enter') {
+			commitText();
+		} else if (e.key === 'Escape') {
+			textInput.value = '';
+			textInput.style.display = 'none';
+		}
+	});
+
+	document.addEventListener('mousedown', (e) => {
+		if (e.target !== textInput && e.target !== canvas && textInput.style.display === 'block') {
+			commitText();
+		}
+	});
+
+	canvas.addEventListener('mousedown', (e) => {
+		if (currentMode === 'text') {
+			commitText();
+			
+			const rect = canvas.getBoundingClientRect();
+			const canvasX = e.clientX - rect.left;
+			const canvasY = e.clientY - rect.top;
+			
+			// Save canvas state and text position
+			savedCanvasState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+			textPosition.x = (canvasX * (canvas.width / rect.width));
+			textPosition.y = (canvasY * (canvas.height / rect.height));
+			
+			textInput.style.display = 'block';
+			textInput.style.left = (rect.left + canvasX) + 'px';
+			textInput.style.top = (rect.top + canvasY) + 'px';
+			textInput.style.color = lastColor;
+			textInput.style.fontSize = fontSize.value + 'px';
+			textInput.value = '';
+			textInput.focus();
+			e.preventDefault();
+		}
+
+		const rect = canvas.getBoundingClientRect();
+		const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+		const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+		if (currentMode === 'fill') {
+			floodFill(Math.floor(x), Math.floor(y), lastColor);
+			return;
+		}
+
+		isDrawing = true;
+		hasInteracted = true; // Mark canvas as interacted
+		ctx.beginPath();
+		ctx.moveTo(x, y);
+	});
+	
+	textInput.addEventListener('input', () => {
+		if (!savedCanvasState) return;
+		
+		// Restore the saved canvas state
+		ctx.putImageData(savedCanvasState, 0, 0);
+		
+		if (textInput.value) {
+			const scaleFactor = canvas.width / canvas.getBoundingClientRect().width;
+			const adjustedFontSize = Math.floor(parseInt(fontSize.value) * scaleFactor);
+			
+			ctx.font = `${adjustedFontSize}px Arial`;
+			ctx.fillStyle = lastColor;
+			ctx.textBaseline = 'top';
+			ctx.fillText(textInput.value, textPosition.x, textPosition.y);
+		}
+	});
+
+
+	function floodFill(startX, startY, fillColor) {
+		hasInteracted = true; // Mark canvas as interacted
+		const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+		const pixels = imageData.data;
+		
+		const startPos = (startY * canvas.width + startX) * 4;
+		const startR = pixels[startPos];
+		const startG = pixels[startPos + 1];
+		const startB = pixels[startPos + 2];
+		
+		const fillR = parseInt(fillColor.slice(1,3), 16);
+		const fillG = parseInt(fillColor.slice(3,5), 16);
+		const fillB = parseInt(fillColor.slice(5,7), 16);
+
+		if (startR === fillR && startG === fillG && startB === fillB) return;
+
+		const stack = [[startX, startY]];
+		
+		while(stack.length) {
+			const [x, y] = stack.pop();
+			const pos = (y * canvas.width + x) * 4;
+
+			if (x < 0 || x >= canvas.width || y < 0 || y >= canvas.height) continue;
+			if (pixels[pos] !== startR || pixels[pos + 1] !== startG || pixels[pos + 2] !== startB) continue;
+
+			pixels[pos] = fillR;
+			pixels[pos + 1] = fillG;
+			pixels[pos + 2] = fillB;
+			pixels[pos + 3] = 255;
+
+			stack.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
+		}
+		
+		ctx.putImageData(imageData, 0, 0);
+	}
+
+	function draw(e) {
+		if (!isDrawing) return;
+		const rect = canvas.getBoundingClientRect();
+		const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+		const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+		ctx.lineCap = 'round';
+		ctx.lineWidth = brushSize.value;
+		ctx.lineTo(x, y);
+		ctx.stroke();
+		ctx.beginPath();
+		ctx.moveTo(x, y);
+	}
+	
+	canvas.addEventListener('mousemove', draw);
+	canvas.addEventListener('mouseup', () => isDrawing = false);
+	canvas.addEventListener('mouseout', () => isDrawing = false);
+
+	colorPicker.addEventListener('input', () => {
+		lastColor = colorPicker.value;
+		if (currentMode !== 'eraser') {
+			ctx.strokeStyle = lastColor;
+		}
+	});
+	clear.addEventListener('click', () => {
+		hasInteracted = false; // Reset interaction state when clearing
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		updateDefaultBrushColor();
+	});
+	
+	function oscillatorTimeout(callback, delay) {
+		const AudioContext = window.AudioContext || window.webkitAudioContext;
+		const ctx = new AudioContext();
+		
+		const oscillator = ctx.createOscillator();
+		const gain = ctx.createGain();
+		gain.gain.value = 0;
+		oscillator.connect(gain);
+		gain.connect(ctx.destination);
+		
+		let rafId;
+		let startTime = performance.now();
+		let isDone = false;
+
+		const checkTime = (timestamp) => {
+			if (isDone) return;
+			
+			if ((timestamp - startTime) >= delay) {
+				isDone = true;
+				oscillator.onended = () => {};
+				oscillator.disconnect();
+				gain.disconnect();
+				ctx.close();
+				cancelAnimationFrame(rafId);
+				callback();
+				return;
+			}
+			rafId = requestAnimationFrame(checkTime);
+		};
+
+		oscillator.onended = () => {
+			if (isDone) return;
+			isDone = true;
+			cancelAnimationFrame(rafId);
+			oscillator.disconnect();
+			gain.disconnect();
+			ctx.close();
+			callback();
+		};
+		
+		oscillator.start();
+		oscillator.stop(ctx.currentTime + delay/1000);
+		rafId = requestAnimationFrame(checkTime);
+		
+		return {
+			clear: () => {
+				isDone = true;
+				cancelAnimationFrame(rafId);
+				oscillator.onended = () => {};
+				oscillator.disconnect();
+				gain.disconnect();
+				ctx.close();
+			}
+		};
+	}
+
+	// Create a composite canvas for streaming
+	let compositeCanvas = null;
+	let compositeCtx = null;
+	
+	function getCompositeCanvas() {
+		if (!compositeCanvas) {
+			compositeCanvas = document.createElement('canvas');
+			compositeCanvas.width = canvas.width;
+			compositeCanvas.height = canvas.height;
+			compositeCtx = compositeCanvas.getContext('2d');
+		}
+		return { compositeCanvas, compositeCtx };
+	}
+	
+	function drawComposite() {
+		const { compositeCtx } = getCompositeCanvas();
+		
+		// Clear composite canvas
+		compositeCtx.clearRect(0, 0, compositeCanvas.width, compositeCanvas.height);
+		
+		// Draw background canvas
+		compositeCtx.drawImage(backgroundCanvas, 0, 0);
+		
+		// Draw main canvas on top
+		compositeCtx.drawImage(canvas, 0, 0);
+	}
+	
+	async function createCanvasStream() {
+		const { compositeCanvas } = getCompositeCanvas();
+		const stream = compositeCanvas.captureStream(60);
+		const tracks = stream.getVideoTracks();
+		
+		const indicator = new Path2D();
+		indicator.arc(0, 0, 3, 0, Math.PI * 2);
+		indicator.moveTo(5, 0);
+		indicator.arc(0, 0, 5, 0, Math.PI * 2);
+		
+		let rotation = 0;
+		const ROTATION_SPEED = 0.01;
+		const OPACITY_BASE = 0.15;
+		const PULSE_AMOUNT = 0.05;
+		
+		function drawIndicator() {
+			// Draw the composite
+			drawComposite();
+			
+			// Add indicator to composite
+			const { compositeCtx } = getCompositeCanvas();
+			compositeCtx.save();
+			compositeCtx.translate(compositeCanvas.width - 15, compositeCanvas.height - 15);
+			compositeCtx.rotate(rotation);
+			
+			const opacity = OPACITY_BASE + Math.sin(rotation) * PULSE_AMOUNT;
+			compositeCtx.strokeStyle = `rgba(200, 200, 200, ${opacity})`;
+			compositeCtx.lineWidth = 1;
+			compositeCtx.stroke(indicator);
+			
+			compositeCtx.restore();
+			
+			rotation += ROTATION_SPEED;
+			oscillatorTimeout(drawIndicator, 50);
+		}
+		
+		oscillatorTimeout(drawIndicator, 50);
+		tracks.forEach(track => track.contentHint = 'detail');
+		return { stream, tracks };
+	}
+
+	async function startStreaming() {
+		const iframe = document.querySelector('iframe');
+		if (!iframe) return;
+
+		try {
+			if (useMediaTrackProcessor){
+				// Check if MediaStreamTrackProcessor are available
+				if (typeof MediaStreamTrackProcessor === 'function') {
+					const { tracks } = await createCanvasStream();
+
+					// Process each track using MediaStreamTrackProcessor
+					await Promise.all(tracks.map(async track => {
+						const processor = new MediaStreamTrackProcessor(track);
+						const reader = processor.readable.getReader();
+
+						while (true) {
+							const { done, value } = await reader.read();
+							if (done) {
+								if (value) value.close();
+								break;
+							}
+
+							try {
+								iframe.contentWindow.postMessage({
+									type: 'canvas-frame',
+									frame: value
+								}, '*');
+							} finally {
+								value.close();
+							}
+						}
+					}));
+					return;
+				} else {
+					useMediaTrackProcessor = false;
+				}
+			}
+		} catch (e) {
+			console.error("MediaTrackProcessor method failed, will fallback to toDataURL:", e);
+			useMediaTrackProcessor = false;
+			canvas.width=1280;
+			canvas.height=720;
+		}
+
+		// If processor method not used or failed, fallback to toDataURL
+		if (!useMediaTrackProcessor) {
+			frameGenerator = setInterval(() => {
+				drawComposite();
+				const { compositeCanvas } = getCompositeCanvas();
+				const imageData = compositeCanvas.toDataURL('image/webp');
+				iframe.contentWindow.postMessage({
+					type: 'canvas-frame',
+					frame: imageData
+				}, '*');
+			}, 1000/10); // 10 fps
+		}
+	}
+
+	function stopStreaming() {
+		if (frameGenerator) {
+			clearInterval(frameGenerator);
+			frameGenerator = null;
+		}
+	}
+	window.addEventListener('unload', stopStreaming);
+	
+	
+	
+	
+	///////// the following is a loopback webrtc trick to get chrome to not throttle this tab when not visible.
+	try {
+		var receiveChannelCallback = function (e) {
+			remoteConnection.datachannel = event.channel;
+			remoteConnection.datachannel.onmessage = function (e) {};
+			remoteConnection.datachannel.onopen = function (e) {};
+			remoteConnection.datachannel.onclose = function (e) {};
+			setInterval(function () {
+				remoteConnection.datachannel.send("KEEPALIVE");
+			}, 1000);
+		};
+		var errorHandle = function (e) {};
+		var localConnection = new RTCPeerConnection();
+		var remoteConnection = new RTCPeerConnection();
+		localConnection.onicecandidate = e => !e.candidate || remoteConnection.addIceCandidate(e.candidate).catch(errorHandle);
+		remoteConnection.onicecandidate = e => !e.candidate || localConnection.addIceCandidate(e.candidate).catch(errorHandle);
+		remoteConnection.ondatachannel = receiveChannelCallback;
+		localConnection.sendChannel = localConnection.createDataChannel("sendChannel");
+		localConnection.sendChannel.onopen = function (e) {
+			localConnection.sendChannel.send("CONNECTED");
+		};
+		localConnection.sendChannel.onclose = function (e) {};
+		localConnection.sendChannel.onmessage = function (e) {};
+		localConnection
+			.createOffer()
+			.then(offer => localConnection.setLocalDescription(offer))
+			.then(() => remoteConnection.setRemoteDescription(localConnection.localDescription))
+			.then(() => remoteConnection.createAnswer())
+			.then(answer => remoteConnection.setLocalDescription(answer))
+			.then(() => {
+				localConnection.setRemoteDescription(remoteConnection.localDescription);
+				console.log("KEEP ALIVE TRICk ENABLED");
+			})
+			.catch(errorHandle);
+	} catch (e) {
+		console.log(e);
+	}
+	
+	function simulateFocus(element) {
+		// Create and dispatch focusin event
+		const focusInEvent = new FocusEvent('focusin', {
+			view: window,
+			bubbles: true,
+			cancelable: true
+		});
+		element.dispatchEvent(focusInEvent);
+
+		// Create and dispatch focus event
+		const focusEvent = new FocusEvent('focus', {
+			view: window,
+			bubbles: false,
+			cancelable: true
+		});
+		element.dispatchEvent(focusEvent);
+	}
+
+	
+	function preventBackgroundThrottling() {
+		window.onblur = null;
+		window.blurred = false;
+		document.hidden = false;
+		document.mozHidden = false;
+		document.webkitHidden = false;
+		
+		document.hasFocus = () => true;
+		window.onFocus = () => true;
+
+		Object.defineProperties(document, {
+			mozHidden: { value: false, configurable: true },
+			msHidden: { value: false, configurable: true },
+			webkitHidden: { value: false, configurable: true },
+			hidden: { value: false, configurable: true, writable: true },
+			visibilityState: { 
+				get: () => "visible",
+				configurable: true
+			}
+		});
+	}
+
+	const events = [
+		"visibilitychange",
+		"webkitvisibilitychange",
+		"blur",
+		"mozvisibilitychange",
+		"msvisibilitychange"
+	];
+
+	events.forEach(event => {
+		window.addEventListener(event, (e) => {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+		}, true);
+	});
+
+	setInterval(preventBackgroundThrottling, 200);
+</script>
+</body>
+</html>

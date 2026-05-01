@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Director Messenger</title>
+<style>
+	:root {
+		--bg: #13141a;
+		--panel: #181b23;
+		--border: #2b3040;
+		--muted: #f0c674;
+		--danger: #e06c75;
+		--ok: #61c38a;
+		--text: #e8ecf5;
+		--subtext: #98a1b3;
+		--accent: #5aa1f7;
+	}
+
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		margin: 0;
+		padding: 0;
+		height: 100vh;
+		width: 100vw;
+		font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+		color: var(--text);
+		background: var(--bg);
+		scrollbar-color: #303546 #0f1015;
+		overflow: hidden;
+	}
+
+	.app {
+		display: grid;
+		grid-template-rows: auto auto 1fr auto;
+		gap: 6px;
+		height: 100%;
+		padding: 8px;
+		overflow: auto;
+		min-height: 0;
+	}
+
+	header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+	}
+
+	h1 {
+		margin: 0;
+		font-size: 16px;
+		letter-spacing: 0.4px;
+	}
+
+	.status-badges {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+	}
+
+	.badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 10px;
+		border-radius: 999px;
+		background: var(--panel);
+		border: 1px solid var(--border);
+		color: var(--subtext);
+		font-size: 12px;
+	}
+
+	.badge .dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--danger);
+		box-shadow: 0 0 0 2px rgba(224, 108, 117, 0.18);
+	}
+
+	.badge.connected {
+		color: var(--ok);
+		border-color: rgba(97, 195, 138, 0.45);
+	}
+
+	.badge.connected .dot {
+		background: var(--ok);
+		box-shadow: 0 0 0 2px rgba(97, 195, 138, 0.2);
+	}
+
+	.controls {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		flex-wrap: wrap;
+		align-items: center;
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 8px;
+		padding: 6px;
+	}
+
+	.controls label {
+		font-size: 12px;
+		color: var(--subtext);
+	}
+
+	.controls input {
+		min-width: 0;
+		padding: 8px 9px;
+		border-radius: 6px;
+		border: 1px solid var(--border);
+		background: #10131c;
+		color: var(--text);
+		flex: 0 0 110px;
+		width: 110px;
+		max-width: 140px;
+	}
+
+	.controls button {
+		padding: 9px 12px;
+		border-radius: 8px;
+		border: 1px solid var(--border);
+		background: linear-gradient(135deg, #3d7bf1, #295ec7);
+		color: #f8fbff;
+		cursor: pointer;
+		transition: transform 80ms ease, box-shadow 120ms ease;
+	}
+
+	.controls button:active {
+		transform: translateY(1px);
+		box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+	}
+
+	.main {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+		gap: 12px;
+		min-height: 0;
+		overflow-y: auto;
+	}
+
+	.card {
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		padding: 9px;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+	}
+
+	.card h2 {
+		margin: 0 0 8px 0;
+		font-size: 14px;
+		color: var(--subtext);
+		font-weight: 600;
+	}
+
+	.guest-list {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		overflow-y: auto;
+		padding-right: 4px;
+		scrollbar-width: thin;
+	}
+
+	.guest {
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		padding: 8px;
+		display: grid;
+		grid-template-columns: 1fr auto;
+		gap: 8px;
+		background: #121722;
+		cursor: pointer;
+		transition: border-color 120ms ease, background 120ms ease;
+	}
+
+	.guest:hover {
+		border-color: #3d7bf1;
+	}
+
+	.guest.active {
+		border-color: var(--accent);
+		box-shadow: 0 0 0 1px rgba(90, 161, 247, 0.35);
+	}
+
+	.guest .name {
+		font-weight: 600;
+		font-size: 14px;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.guest .meta {
+		color: var(--subtext);
+		font-size: 11px;
+	}
+
+	.status-row {
+		display: flex;
+		gap: 6px;
+		align-items: center;
+		justify-content: flex-end;
+		flex-wrap: wrap;
+	}
+
+	.pill {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 4px 8px;
+		border-radius: 999px;
+		font-size: 11px;
+		color: var(--text);
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid var(--border);
+	}
+
+	.pill .dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: var(--subtext);
+	}
+
+	.pill.ok .dot {
+		background: var(--ok);
+	}
+
+	.pill.muted .dot {
+		background: var(--muted);
+	}
+
+	.pill.off .dot {
+		background: var(--danger);
+	}
+
+	.composer {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		min-height: 0;
+	}
+
+	.selected-target {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: 13px;
+		color: var(--subtext);
+	}
+
+	.selected-target strong {
+		color: var(--text);
+	}
+
+	textarea {
+		width: 100%;
+		min-height: 90px;
+		max-height: 200px;
+		resize: vertical;
+		border-radius: 10px;
+		border: 1px solid var(--border);
+		background: #0e121b;
+		color: var(--text);
+		padding: 10px;
+		font-size: 13px;
+		flex: 1 1 0;
+	}
+
+	.actions {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.actions .left {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		color: var(--subtext);
+		font-size: 12px;
+	}
+
+	.actions button {
+		padding: 10px 14px;
+		border-radius: 10px;
+		border: 1px solid var(--border);
+		background: linear-gradient(135deg, #4ba3f8, #3175dd);
+		color: #f8fbff;
+		cursor: pointer;
+		transition: transform 80ms ease, box-shadow 120ms ease;
+	}
+
+	.actions button:active {
+		transform: translateY(1px);
+		box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25);
+	}
+
+	.helper {
+		font-size: 12px;
+		color: var(--subtext);
+		line-height: 1.5;
+	}
+
+	.log {
+		background: var(--panel);
+		border: 1px solid var(--border);
+		border-radius: 10px;
+		padding: 8px 10px;
+		max-height: 100px;
+		overflow-y: auto;
+		font-size: 12px;
+		color: var(--subtext);
+		scrollbar-width: thin;
+	}
+
+	.log div {
+		margin-bottom: 4px;
+	}
+
+	.empty {
+		text-align: center;
+		padding: 20px;
+		color: var(--subtext);
+		font-size: 13px;
+		border: 1px dashed var(--border);
+		border-radius: 10px;
+		background: rgba(255, 255, 255, 0.02);
+	}
+
+	@media (max-width: 900px) {
+		.app {
+			padding: 6px;
+		}
+	}
+
+	.hidden {
+		display: none !important;
+	}
+
+	.compact header h1 {
+		display: none;
+	}
+
+	.compact header {
+		justify-content: flex-start;
+	}
+
+	/* OBS-like scrollbars */
+	::-webkit-scrollbar {
+		width: 8px;
+		height: 8px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: #0f1015;
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: #313646;
+		border-radius: 8px;
+		border: 2px solid #0f1015;
+	}
+
+	::-webkit-scrollbar-thumb:hover {
+		background: #454b5d;
+	}
+
+	/* Micro layout for very small docks */
+	.micro .app {
+		padding: 4px;
+		gap: 4px;
+	}
+
+	.micro header h1 {
+		display: none;
+	}
+
+	.micro .badge {
+		padding: 3px 6px;
+		font-size: 10px;
+	}
+
+	.micro .badge span:last-child {
+		display: none;
+	}
+
+	.micro .controls {
+		padding: 4px 6px;
+		gap: 6px;
+	}
+
+	.micro .main {
+		grid-template-columns: 1fr;
+		gap: 6px;
+	}
+
+	.micro .card {
+		padding: 7px;
+	}
+
+	.micro .card h2 {
+		font-size: 12px;
+		margin-bottom: 6px;
+	}
+
+	.micro .guest {
+		padding: 6px;
+		gap: 6px;
+	}
+
+	.micro .guest .name {
+		font-size: 13px;
+	}
+
+	.micro .guest .meta {
+		font-size: 10px;
+	}
+
+	.micro .pill {
+		font-size: 10px;
+		padding: 3px 6px;
+	}
+
+	.micro textarea {
+		min-height: 60px;
+		max-height: 140px;
+		font-size: 12px;
+	}
+
+	.micro .actions {
+		gap: 6px;
+	}
+
+	.micro .actions button {
+		padding: 8px 10px;
+	}
+
+	.micro .helper {
+		display: none;
+	}
+
+	.micro .log {
+		max-height: 60px;
+		font-size: 11px;
+	}
+</style>
+</head>
+<body>
+<div class="app">
+	<header>
+		<h1>Director Messenger</h1>
+		<div class="status-badges">
+			<span class="badge" id="connectionBadge"><span class="dot"></span><span id="connectionText">Disconnected</span></span>
+			<span class="badge" id="updateBadge"><span class="dot"></span><span id="updateText">No data yet</span></span>
+		</div>
+	</header>
+
+	<div class="controls" id="controlsBar">
+		<label for="apiInput">API key (&api=)</label>
+	<input id="apiInput" type="password" autocomplete="off" placeholder="your-api-key" />
+		<button id="connectBtn">Connect</button>
+	</div>
+
+	<div class="main">
+		<div class="card">
+			<h2>Room status</h2>
+			<div id="guestList" class="guest-list">
+				<div class="empty">Waiting for details… add &api= to your director link to send updates here.</div>
+			</div>
+		</div>
+		<div class="card">
+			<h2>Send message</h2>
+			<div class="composer">
+				<div class="selected-target">Sending to: <strong id="selectedTarget">Pick a guest</strong></div>
+				<textarea id="messageInput" placeholder="Type a note for the selected guest. Press Enter+Shift to send."></textarea>
+				<div class="actions">
+					<div class="left">
+						<label><input type="checkbox" id="pinToggle" /> Pin for guest</label>
+						<span id="statusHint"></span>
+					</div>
+					<button id="sendBtn">Send</button>
+				</div>
+				<div class="helper">
+					This page rides the VDO.Ninja API. Dock it in OBS and load with the same <code>?api=</code> value as your director tab. Click a guest to target them, then send.
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="log" style="display:none;" id="log"></div>
+</div>
+
+<script>
+	const urlParams = new URLSearchParams(window.location.search);
+	const apiField = document.getElementById("apiInput");
+	const connectBtn = document.getElementById("connectBtn");
+	const controlsBar = document.getElementById("controlsBar");
+	const guestList = document.getElementById("guestList");
+	const messageInput = document.getElementById("messageInput");
+	const sendBtn = document.getElementById("sendBtn");
+	const connectionBadge = document.getElementById("connectionBadge");
+	const connectionText = document.getElementById("connectionText");
+	const updateBadge = document.getElementById("updateBadge");
+	const updateText = document.getElementById("updateText");
+	const selectedTarget = document.getElementById("selectedTarget");
+	const statusHint = document.getElementById("statusHint");
+	const pinToggle = document.getElementById("pinToggle");
+	const logBox = document.getElementById("log");
+	const STORAGE_KEY = "director_messenger_api";
+
+	let socket = null;
+	let socketGeneration = 0;
+	let reconnectTimer = null;
+	let pollTimer = null;
+	let allowReconnect = true;
+	let apiKey = urlParams.get("api") || urlParams.get("id") || urlParams.get("wid") || "";
+	let apiServer = urlParams.get("apiserver") || "wss://api.vdo.ninja:443";
+	let guests = new Map();
+	let selectedStream = null;
+	let lastUpdate = null;
+
+	if (!apiKey) {
+		apiKey = localStorage.getItem(STORAGE_KEY) || "";
+	}
+	apiField.value = apiKey;
+	if (urlParams.get("api") || urlParams.get("id") || urlParams.get("wid")) {
+		controlsBar.classList.add("hidden"); // hide field when API is supplied via URL for OBS dock use
+	}
+
+	function setBadge(state, text) {
+		connectionBadge.classList.toggle("connected", state === "connected");
+		connectionText.textContent = text;
+	}
+
+	function setUpdateBadge(state, text) {
+		updateBadge.classList.toggle("connected", state === "fresh");
+		updateText.textContent = text;
+	}
+
+	function logLine(text) {
+		const row = document.createElement("div");
+		row.textContent = `${new Date().toLocaleTimeString()} — ${text}`;
+		logBox.appendChild(row);
+		logBox.scrollTop = logBox.scrollHeight;
+	}
+
+	function requestDetails() {
+		if (!socket || socket.readyState !== WebSocket.OPEN) return;
+		try {
+			socket.send(JSON.stringify({ action: "getDetails" }));
+		} catch (e) {
+			logLine("Failed to request details.");
+		}
+	}
+
+	function connect() {
+		clearTimeout(reconnectTimer);
+		clearInterval(pollTimer);
+		allowReconnect = true;
+		const gen = ++socketGeneration;
+		apiKey = apiField.value.trim();
+
+		if (!apiKey) {
+			setBadge("disconnected", "Enter an API key");
+			logLine("Missing API key; nothing to connect.");
+			return;
+		}
+
+		if (socket) {
+			try {
+				socket.onclose = null;
+				socket.onerror = null;
+				socket.onopen = null;
+				socket.onmessage = null;
+				socket.close();
+			} catch (e) {}
+		}
+
+		connectBtn.textContent = "Connecting…";
+		const ws = new WebSocket(apiServer);
+		socket = ws;
+		ws._gen = gen;
+
+		ws.onopen = () => {
+			if (ws !== socket || ws._gen !== socketGeneration) return;
+			setBadge("connected", "Connected");
+			connectBtn.textContent = "Disconnect";
+			logLine("API socket connected.");
+			localStorage.setItem(STORAGE_KEY, apiKey);
+			try {
+				ws.send(JSON.stringify({ join: apiKey }));
+				requestDetails();
+				pollTimer = setInterval(requestDetails, 15000);
+			} catch (e) {
+				logLine("Failed to send join message.");
+			}
+		};
+
+		ws.onerror = () => {
+			if (ws !== socket || ws._gen !== socketGeneration) return;
+			setBadge("disconnected", "Error");
+			logLine("API socket error; retrying…");
+		};
+
+		ws.onclose = () => {
+			if (ws !== socket || ws._gen !== socketGeneration) return; // stale close from a superseded socket
+			setBadge("disconnected", "Disconnected");
+			connectBtn.textContent = "Connect";
+			clearInterval(pollTimer);
+			if (reconnectTimer || !allowReconnect) {
+				return;
+			}
+			reconnectTimer = setTimeout(() => {
+				reconnectTimer = null;
+				connect();
+			}, 1500);
+		};
+
+		ws.onmessage = event => {
+			if (ws !== socket || ws._gen !== socketGeneration) return;
+			try {
+				const payload = JSON.parse(event.data);
+				handlePayload(payload);
+			} catch (e) {
+				logLine("Received non-JSON payload.");
+			}
+		};
+	}
+
+	function handlePayload(payload) {
+		let data = payload;
+		if (payload.msg) data = payload.msg;
+		if (payload.update) data = payload.update;
+		if (payload.callback) {
+			data = payload.callback;
+			logLine(`Command response: ${JSON.stringify(data)}`);
+		}
+
+		const detailsPayload =
+			(data.action === "details" && data.value) ||
+			(data.action === "getDetails" && (data.result || data.value)) ||
+			data.result ||
+			data.value;
+
+		if (detailsPayload) {
+			lastUpdate = Date.now();
+			setUpdateBadge("fresh", "Updated");
+			renderGuests(detailsPayload);
+		}
+	}
+
+	function renderGuests(detailMap) {
+		guests = new Map();
+		if (detailMap && typeof detailMap === "object") {
+			Object.keys(detailMap).forEach(streamID => {
+				const entry = detailMap[streamID];
+				if (!entry) {
+					return;
+				}
+				if (entry.director || entry.localStream || entry.localstream) {
+					return;
+				}
+				guests.set(streamID, entry);
+			});
+		}
+
+		guestList.innerHTML = "";
+		if (!guests.size) {
+			const empty = document.createElement("div");
+			empty.className = "empty";
+			empty.textContent = "No guests reported yet.";
+			guestList.appendChild(empty);
+			selectedStream = null;
+			selectedTarget.textContent = "Pick a guest";
+			return;
+		}
+
+		guests.forEach(entry => {
+			const ele = document.createElement("div");
+			ele.className = "guest";
+			ele.dataset.streamId = entry.streamID;
+			if (selectedStream === entry.streamID) {
+				ele.classList.add("active");
+			}
+
+			const left = document.createElement("div");
+			const name = document.createElement("div");
+			name.className = "name";
+			name.textContent = entry.label || entry.streamID;
+			left.appendChild(name);
+
+			const meta = document.createElement("div");
+			meta.className = "meta";
+			const parts = [];
+			if (entry.group && entry.group.length) {
+				parts.push(`Group: ${Array.isArray(entry.group) ? entry.group.join(", ") : entry.group}`);
+			}
+			if (entry.streamID) {
+				parts.push(entry.streamID);
+			}
+			meta.textContent = parts.join(" • ");
+			left.appendChild(meta);
+
+			const statusRow = document.createElement("div");
+			statusRow.className = "status-row";
+
+			const mic = document.createElement("span");
+			mic.className = "pill " + (entry.muted ? "muted" : "ok");
+			mic.innerHTML = `<span class="dot"></span>${entry.muted ? "Mic muted" : "Mic live"}`;
+
+			const cam = document.createElement("span");
+			cam.className = "pill " + (entry.videoMuted ? "muted" : "ok");
+			cam.innerHTML = `<span class="dot"></span>${entry.videoMuted ? "Video off" : "Video on"}`;
+
+			statusRow.appendChild(mic);
+			statusRow.appendChild(cam);
+
+			if (entry.screenSharing) {
+				const share = document.createElement("span");
+				share.className = "pill ok";
+				share.innerHTML = '<span class="dot"></span>Screen';
+				statusRow.appendChild(share);
+			}
+
+			ele.appendChild(left);
+			ele.appendChild(statusRow);
+
+			ele.addEventListener("click", () => {
+				selectedStream = entry.streamID;
+				selectedTarget.textContent = entry.label || entry.streamID;
+				document.querySelectorAll(".guest").forEach(g => g.classList.remove("active"));
+				ele.classList.add("active");
+			});
+
+			guestList.appendChild(ele);
+		});
+	}
+
+	function sendMessage() {
+		const message = messageInput.value.trim();
+		if (!socket || socket.readyState !== WebSocket.OPEN) {
+			logLine("Cannot send; not connected.");
+			return;
+		}
+		if (!selectedStream) {
+			logLine("Select a guest first.");
+			return;
+		}
+		if (!message) {
+			return;
+		}
+
+		const action = pinToggle.checked ? "sendPinnedDirectorChat" : "sendDirectorChat";
+		const payload = { target: selectedStream, action, value: message };
+
+		try {
+			socket.send(JSON.stringify(payload));
+			logLine(`Sent "${message}" to ${selectedStream}${pinToggle.checked ? " (pinned)" : ""}.`);
+			messageInput.value = "";
+		} catch (e) {
+			logLine("Failed to send message.");
+		}
+	}
+
+	sendBtn.addEventListener("click", sendMessage);
+	messageInput.addEventListener("keydown", e => {
+		if (e.key === "Enter" && e.shiftKey) {
+			e.preventDefault();
+			sendMessage();
+		}
+	});
+
+	function disconnect(manual = false) {
+		allowReconnect = false;
+		clearTimeout(reconnectTimer);
+		reconnectTimer = null;
+		clearInterval(pollTimer);
+		pollTimer = null;
+		if (socket) {
+			const ws = socket;
+			socket = null;
+			try {
+				ws.onclose = null;
+				ws.onerror = null;
+				ws.onopen = null;
+				ws.onmessage = null;
+				ws.close();
+			} catch (e) {}
+		}
+		setBadge("disconnected", "Disconnected");
+		connectBtn.textContent = "Connect";
+		if (manual) {
+			logLine("Disconnected.");
+		}
+	}
+
+	const resizeObserver = new ResizeObserver(entries => {
+		const width = entries[0].contentRect.width;
+		document.body.classList.toggle("compact", width < 520);
+		document.body.classList.toggle("micro", width < 360 || window.innerHeight < 360);
+	});
+	resizeObserver.observe(document.body);
+
+	connectBtn.addEventListener("click", () => {
+		if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+			disconnect(true);
+		} else {
+			connect();
+		}
+	});
+
+	if (apiKey) {
+		connect();
+	} else {
+		setBadge("disconnected", "Enter an API key");
+	}
+
+	setInterval(() => {
+		if (!lastUpdate) {
+			return;
+		}
+		const seconds = Math.round((Date.now() - lastUpdate) / 1000);
+		setUpdateBadge("fresh", `Updated ${seconds}s ago`);
+	}, 5000);
+</script>
+</body>
+</html>

@@ -1,0 +1,1781 @@
+<!-- codecs.html !-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VDO.Ninja Codec Support Detector</title>
+  <meta id="metaTitle" name="title" content="VDO.Ninja Codec Support Detector">
+  <meta name="description" content="Check browser codec support for VDO.Ninja. Detect hardware acceleration for video encoding and decoding.">
+  <meta name="author" content="Steve Seguin">
+  <meta name="copyright" content="&copy; 2024 Steve Seguin">
+  <meta name="license" content="https://github.com/steveseguin/vdo.ninja/LICENSE.md">
+  <meta name="sourcecode" content="https://github.com/steveseguin/vdo.ninja">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://vdo.ninja/codec">
+  <link rel="author" href="/about">
+  
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#0f131d">
+  
+  <link rel="shortcut icon" href="data:image/x-icon;," type="image/x-icon">
+  <link id="favicon1" rel="icon" type="image/png" sizes="32x32" href="./media/favicon-32x32.png">
+  <link id="favicon2" rel="icon" type="image/png" sizes="16x16" href="./media/favicon-16x16.png">
+  <link id="favicon3" rel="icon" href="./media/favicon.ico">
+  
+  <!-- X (Twitter) Card Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:creator" content="@SteveSeguin">
+  <meta name="twitter:title" content="VDO.Ninja Codec Support Detector">
+  <meta name="twitter:description" content="Check browser codec support for VDO.Ninja. Detect hardware acceleration for video encoding and decoding.">
+  <meta name="twitter:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
+  
+  <!-- Open Graph Tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://vdo.ninja/codec">
+  <meta property="og:title" content="VDO.Ninja Codec Support Detector">
+  <meta property="og:description" content="Check browser codec support for VDO.Ninja. Detect hardware acceleration for video encoding and decoding.">
+  <meta property="og:image" content="https://vdo.ninja/media/vdoNinja_logo_full.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="VDO.Ninja">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #e0e0e0;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #121212;
+    }
+    
+    h1, h2, h3 {
+      color: #4296f5;
+    }
+	
+	a { 
+		color: #4296f5;
+	}
+    .container {
+      background-color: #1e1e1e;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .codec-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .codec-item {
+      background-color: #2a2a2a;
+      border-radius: 6px;
+      padding: 15px;
+      border-left: 4px solid #4296f5;
+      position: relative;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    
+    .badge-hw {
+      background-color: #34a853;
+      color: white;
+    }
+    
+    .badge-sw {
+      background-color: #fbbc04;
+      color: white;
+    }
+    
+    .badge-recorder {
+      background-color: #4296f5;
+      color: white;
+    }
+    
+    .badge-webcodec {
+      background-color: #ea4335;
+      color: white;
+    }
+    
+    .badge-webrtc {
+      background-color: #8f44eb;
+      color: white;
+    }
+    
+    .badge-mediacapabilities {
+      background-color: #ff6d01;
+      color: white;
+    }
+    
+    .badge-encoder {
+      background-color: #01c0ff;
+      color: white;
+    }
+    
+    .badge-decoder {
+      background-color: #ff01c0;
+      color: white;
+    }
+    
+    .codec-name {
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    .details {
+      font-size: 14px;
+      color: #aaa;
+      margin-top: 10px;
+    }
+    
+    .status-bar {
+      height: 4px;
+      width: 100%;
+      background-color: #333;
+      position: relative;
+      margin-bottom: 20px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    
+    .status-progress {
+      position: absolute;
+      height: 100%;
+      background-color: #4296f5;
+      transition: width 0.3s;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 15px;
+      border-bottom: 1px solid #444;
+    }
+    
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      color: #aaa;
+    }
+    
+    .tab.active {
+      border-bottom: 3px solid #4296f5;
+      font-weight: bold;
+      color: #e0e0e0;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    button {
+      background-color: #4296f5;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    button:hover {
+      background-color: #2979e2;
+    }
+    
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
+    
+    #error-message {
+      color: #ff5252;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    
+    .toggle-container {
+      display: flex;
+      margin: 15px 0;
+      align-items: center;
+    }
+    
+    .toggle-label {
+      margin-right: 10px;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 28px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #333;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 4px;
+      bottom: 4px;
+      background-color: #fff;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background-color: #4296f5;
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(32px);
+    }
+    
+    .toggle-text {
+      margin-left: 10px;
+    }
+    
+    pre {
+      background: #2a2a2a;
+      padding: 15px;
+      overflow: auto;
+      max-height: 400px;
+      color: #e0e0e0;
+      border-radius: 4px;
+    }
+  .codec-guide-container {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .codec-section {
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+  }
+  
+  .codec-section h4 {
+    color: #4296f5;
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #444;
+    padding-bottom: 8px;
+  }
+  
+  .usage-block, .tips-block, .note-block, .feature-block {
+    background-color: #333;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .usage-header, .tip-header, .note-header, .feature-header {
+    font-weight: bold;
+    color: #4296f5;
+    margin-bottom: 10px;
+  }
+  
+  .usage-example {
+    font-family: monospace;
+    background-color: #222;
+    padding: 8px 12px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  
+  .options-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 15px;
+  }
+  
+  .option-row {
+    display: flex;
+    border-bottom: 1px solid #444;
+  }
+  
+  .option-row:last-child {
+    border-bottom: none;
+  }
+  
+  .header-row {
+    background-color: #333;
+    font-weight: bold;
+  }
+  
+  .option-cell {
+    padding: 10px;
+    flex: 1;
+  }
+  
+  .option-cell:first-child {
+    flex: 0 0 120px;
+  }
+  
+  .option-cell code {
+    background-color: #222;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+  
+  .tips-list, .note-list, .feature-list {
+    margin: 0;
+    padding-left: 20px;
+  }
+  
+  .tips-list li, .note-list li, .feature-list li {
+    margin-bottom: 8px;
+  }
+  
+  @media (max-width: 768px) {
+    .option-row {
+      flex-direction: column;
+    }
+    
+    .option-cell {
+      padding: 8px;
+    }
+    
+    .option-cell:first-child {
+      flex: 1;
+      background-color: #333;
+      font-weight: bold;
+    }
+    
+    .header-row {
+      display: none;
+    }
+  }
+  </style>
+</head>
+<body>
+  <h1>Video Codec Support Detector</h1>
+  
+  <div class="container">
+    <h2>Codec Detection</h2>
+    <p>This tool detects video and audio codecs supported by your browser and identifies hardware acceleration capabilities for both encoding and decoding.</p>
+    
+    <div class="toggle-container">
+      <span class="toggle-label">Detection Mode:</span>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-mode" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="toggle-text" id="mode-text">Testing Both Encode/Decode</span>
+    </div>
+    
+    <div class="status-bar">
+      <div id="status-progress" class="status-progress" style="width: 0%"></div>
+    </div>
+    
+    <button id="start-detection">Start Comprehensive Detection</button>
+    <div id="error-message"></div>
+  </div>
+  
+  <div class="container">
+    <div class="tabs">
+      <div class="tab active" data-tab="video-codecs">Video Codecs</div>
+      <div class="tab" data-tab="audio-codecs">Audio Codecs</div>
+      <div class="tab" data-tab="raw-data">Raw Data</div>
+	  <div class="tab" data-tab="codec-usage">Codec Usage Guide</div>
+    </div>
+    
+    <div id="video-codecs" class="tab-content active">
+      <h3>Video Codec Support</h3>
+      <div id="video-codec-list" class="codec-list">
+        <p>Click "Start Comprehensive Detection" to begin...</p>
+      </div>
+    </div>
+    
+    <div id="audio-codecs" class="tab-content">
+      <h3>Audio Codec Support</h3>
+      <div id="audio-codec-list" class="codec-list">
+        <p>Click "Start Comprehensive Detection" to begin...</p>
+      </div>
+    </div>
+    
+    <div id="raw-data" class="tab-content">
+      <h3>Raw Detection Data</h3>
+      <pre id="output" style="background: #2a2a2a; padding: 15px; overflow: auto; max-height: 400px;"></pre>
+    </div>
+  </div>
+  
+<div id="codec-usage" class="tab-content">
+  <h3>How to Use Codecs in VDO.Ninja</h3>
+  
+  <div class="codec-guide-container">
+    <div class="codec-section">
+      <h4>Video Codec Selection (&codec)</h4>
+      <p>Control which codec is used to encode and transmit video.</p>
+      
+      <div class="usage-block">
+        <div class="usage-header">Basic Usage</div>
+        <div class="usage-example">https://vdo.ninja/?view=abc123&codec=h264</div>
+        <div class="usage-example">https://vdo.ninja/?room=xxx7654&scene&bitrate=2000&codec=vp9</div>
+      </div>
+      
+      <div class="options-table">
+        <div class="option-row header-row">
+          <div class="option-cell">Option</div>
+          <div class="option-cell">Description</div>
+          <div class="option-cell">Use Case</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>h264</code></div>
+          <div class="option-cell">Request H.264 codec</div>
+          <div class="option-cell">Better battery life on mobile devices, hardware acceleration on many devices</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>vp8</code></div>
+          <div class="option-cell">Request VP8 codec</div>
+          <div class="option-cell">Default codec, works on most devices</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>vp9</code></div>
+          <div class="option-cell">Request VP9 codec</div>
+          <div class="option-cell">Better compression, cleaner image for screen sharing</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>av1</code></div>
+          <div class="option-cell">Request AV1 codec</div>
+          <div class="option-cell">Most advanced compression, requires Chrome v90+</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>h265</code></div>
+          <div class="option-cell">Request H.265/HEVC codec</div>
+          <div class="option-cell">High efficiency codec, <a href="https://vdo.ninja/h265" target="_blank">limited browser support</a></div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>webp</code></div>
+          <div class="option-cell">Request WebP codec</div>
+          <div class="option-cell">Alternative image-based codec</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>hardware</code></div>
+          <div class="option-cell">Android-specific option for hardware encoding</div>
+          <div class="option-cell">Android devices struggling with video quality</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>av1,h264</code></div>
+          <div class="option-cell">Comma-separated fallback options</div>
+          <div class="option-cell">Try AV1 first, fall back to H264 if not supported</div>
+        </div>
+      </div>
+      
+      <div class="tips-block">
+        <div class="tip-header">Selection Tips</div>
+        <ul class="tips-list">
+          <li><strong>H.264:</strong> Hardware accelerated on many devices, good for mobile battery life</li>
+          <li><strong>VP8:</strong> Default choice, software-encoded but compatible with most devices</li>
+          <li><strong>VP9:</strong> Better quality at same bitrate vs VP8, but more CPU intensive</li>
+          <li><strong>AV1:</strong> Best compression ratio but highest CPU usage, limited device support</li>
+          <li><strong>H.265:</strong> Limited browser support, needs <a href="https://vdo.ninja/h265" target="_blank">command-line flags in Chrome</a></li>
+        </ul>
+      </div>
+      
+      <div class="note-block">
+        <div class="note-header">Important Notes</div>
+        <ul class="note-list">
+          <li>The <code>&codec</code> parameter is added to the viewer-side (use with <code>&view</code> or <code>&scene</code>)</li>
+          <li>Hardware encoding capabilities vary by device, OS, and browser.</li>
+          <li>H.264 hardware encoding might use less battery but sometimes has compatibility issues</li>
+          <li>AV1 and VP9 tends to look better for screen sharing but uses more CPU</li>
+		  <li>AV1 tends to offer more accurate colours; useful for chroma green screening</li>
+          <li>Use the detection tool above to see which codecs have hardware acceleration on your device</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="codec-section">
+      <h4>Recording Options (&record)</h4>
+      <p>Configure how video and audio are recorded to disk.</p>
+      
+      <div class="usage-block">
+        <div class="usage-header">Basic Usage</div>
+        <div class="usage-example">https://vdo.ninja/?push=abc123&record=2000</div>
+        <div class="usage-example">https://vdo.ninja/?push=xxx7654&record=0</div>
+      </div>
+      
+      <div class="options-table">
+        <div class="option-row header-row">
+          <div class="option-cell">Option</div>
+          <div class="option-cell">Description</div>
+          <div class="option-cell">Use Case</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>0</code></div>
+          <div class="option-cell">No video, audio recorded as 32bit PCM lossless</div>
+          <div class="option-cell">High-quality audio only recording</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>-120</code> (negative)</div>
+          <div class="option-cell">No video, audio at specified kbps (OPUS)</div>
+          <div class="option-cell">Audio-only recording with specific bitrate</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>2000</code> (positive)</div>
+          <div class="option-cell">Video bitrate in kbps</div>
+          <div class="option-cell">Video recording with specific quality setting</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>false</code> or <code>off</code></div>
+          <div class="option-cell">Disable recording feature</div>
+          <div class="option-cell">Prevents user from recording</div>
+        </div>
+      </div>
+      
+      <div class="note-block">
+        <div class="note-header">Recording Notes</div>
+        <ul class="note-list">
+          <li>Recorded file format is WebM with VP8/H264 video and OPUS/PCM audio</li>
+          <li>Default bitrate is approximately 4000 kbps if not specified</li>
+          <li>The director of a room will be notified when a user is recording</li>
+          <li>The director can trigger recording remotely</li>
+          <li>Video/audio is saved in real-time to the local download folder</li>
+          <li>Recording should be stopped manually before closing the browser</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="codec-section">
+      <h4>Recording Codec Selection (&recordcodec)</h4>
+      <p>Set the specific codec used when recording to disk.</p>
+      
+      <div class="usage-block">
+        <div class="usage-header">Basic Usage</div>
+        <div class="usage-example">https://vdo.ninja/?push=abc123&record=2000&recordcodec=h264</div>
+      </div>
+      
+      <div class="options-table">
+        <div class="option-row header-row">
+          <div class="option-cell">Option</div>
+          <div class="option-cell">Description</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>h264</code></div>
+          <div class="option-cell">Record using H.264 codec</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>vp8</code></div>
+          <div class="option-cell">Record using VP8 codec (default fallback)</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>vp9</code></div>
+          <div class="option-cell">Record using VP9 codec</div>
+        </div>
+        <div class="option-row">
+          <div class="option-cell"><code>av1</code></div>
+          <div class="option-cell">Record using AV1 codec</div>
+        </div>
+      </div>
+      
+      <div class="note-block">
+        <div class="note-header">Important Notes</div>
+        <ul class="note-list">
+          <li>The container format is always WebM regardless of codec, unless using Safari, and maybe then its MP4</li>
+          <li>If a codec is not supported, it will fall back to VP8</li>
+          <li>Especially useful for Chrome on Android where VP8 performance can be poor</li>
+          <li>Remember to add <code>&record</code> to enable the recording function</li>
+          <li>Use <code>&rc</code> as a shorter alias for <code>&recordcodec</code></li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="codec-section">
+      <h4>Advanced WebRTC Features</h4>
+      <p>WebRTC supports additional features like SVC (Scalable Video Coding) and WHiP.</p>
+      
+      <div class="feature-block">
+        <div class="feature-header">SVC (Scalable Video Coding)</div>
+        <p>SVC allows a single bitstream to have multiple resolutions, frame rates, or quality layers.</p>
+        <ul class="feature-list">
+          <li>Improves streaming adaptability for viewers with different connection qualities</li>
+          <li>Support varies by browser and codec</li>
+          <li>Common modes include L1T1 (single layer), L2T1 (2 spatial layers), S2T1 (2 temporal layers)</li>
+          <li>The detection tool above shows supported SVC modes for your browser</li>
+        </ul>
+      </div>
+      
+      <div class="feature-block">
+        <div class="feature-header">WHiP (WebRTC HTTP ingest Protocol)</div>
+        <p>WHiP is a standardized protocol for sending WebRTC streams to a server.</p>
+        <ul class="feature-list">
+          <li>Enables WebRTC streaming to CDNs and streaming platforms</li>
+          <li>Simpler to implement than custom signaling servers</li>
+          <li>Useful for broadcast scenarios with many viewers</li>
+          <li>Check your streaming platform documentation for WHiP support details</li>
+        </ul>
+      </div>
+      <div class="note-block">
+        <div class="note-header">H.265/HEVC Support</div>
+        <p>H.265 (HEVC) offers excellent compression efficiency but has limited browser support. <a href="https://vdo.ninja/h265" target="_blank">Visit our H.265 guide</a> for detailed instructions on:</p>
+        <ul class="note-list">
+          <li>Enabling H.265 in Chrome using command-line flags</li>
+          <li>Browser compatibility information</li>
+          <li>Fallback strategies using comma-separated codec preferences</li>
+          <li>Testing your browser's H.265 support</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+  <script>
+    // Main data object to store all detection results
+    const codecData = {
+      video: {}, // Will store video codec info
+      audio: {}, // Will store audio codec info
+      webrtc: {}, // Will store WebRTC related info
+      webcodec: {}, // Will store WebCodec related info
+      mediaCapabilities: {} // Will store MediaCapabilities info
+    };
+    
+    // Basic DOM manipulation helpers
+    const dom = {
+      get: id => document.getElementById(id),
+      create: tag => document.createElement(tag),
+      append: (parent, child) => parent.appendChild(child)
+    };
+    
+    // Detection mode
+    let detectionMode = {
+      encode: true,
+      decode: true
+    };
+    
+    // Toggle switch for detection mode
+    dom.get('toggle-mode').addEventListener('change', function() {
+      if (this.checked) {
+        detectionMode = { encode: true, decode: true };
+        dom.get('mode-text').textContent = 'Testing Both Encode/Decode';
+      } else {
+        detectionMode = { encode: false, decode: true };
+        dom.get('mode-text').textContent = 'Testing Decode Only';
+      }
+    });
+    
+    // Tab functionality
+    document.querySelectorAll('.tab').forEach(tab => {
+	  tab.addEventListener('click', () => {
+		// Remove active class from all tabs and contents
+		document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+		document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+		
+		// Add active class to clicked tab and corresponding content
+		tab.classList.add('active');
+		dom.get(tab.dataset.tab).classList.add('active');
+	  });
+	});
+	
+	// Add this to the codecs.html file, inside the script tag, near the top
+
+	// Check for results parameter
+	function checkForResultsParam() {
+	  const urlParams = new URLSearchParams(window.location.search);
+	  const resultsId = urlParams.get('results');
+	  
+	  if (resultsId) {
+		loadResultsData(resultsId);
+		
+		// Update the page header
+		const pageHeader = document.querySelector('h1');
+		if (pageHeader) {
+		  pageHeader.textContent = 'Loading Remote User Codec Support...';
+		}
+		
+		// Disable the start button
+		const startButton = dom.get('start-detection');
+		if (startButton) {
+		  startButton.disabled = true;
+		  startButton.textContent = 'Loading Remote Results...';
+		}
+	  }
+	}
+
+	// Load results data from the server
+	async function loadResultsData(resultsId) {
+	  try {
+		// Show progress indicator
+		setProgress(30);
+		
+		// Fetch the results data
+		const response = await fetch(`https://record.vdo.workers.dev/?name=${resultsId}`);
+		
+		if (!response.ok) {
+		  throw new Error(`Failed to load results (${response.status})`);
+		}
+		
+		const results = await response.json();
+		setProgress(60);
+		
+		// Process the results
+		processResultsData(results);
+		
+		// Update the UI with the loaded data
+		updateUI();
+		setProgress(100);
+		
+		// Update the page header
+		const pageHeader = document.querySelector('h1');
+		if (pageHeader) {
+		  pageHeader.textContent = 'Remote User Codec Support';
+		}
+		
+		// Update the button text
+		const startButton = dom.get('start-detection');
+		if (startButton) {
+		  startButton.textContent = 'Run Local Detection Instead';
+		  startButton.disabled = false;
+		}
+		
+		// Add a "back to results" link
+		const container = document.querySelector('.container');
+		if (container) {
+		  const backLink = dom.create('div');
+		  backLink.className = 'back-link';
+		  backLink.innerHTML = `<a href="./results?id=${resultsId}">← Back to Test Results</a>`;
+		  container.insertBefore(backLink, container.firstChild);
+		  
+		  // Add notification that we're viewing remote data
+		  const remoteNotice = dom.create('div');
+		  remoteNotice.className = 'remote-notice';
+		  remoteNotice.textContent = 'You are viewing codec information from a remote user\'s test results';
+		  container.insertBefore(remoteNotice, container.firstChild);
+		  
+		  // Add styles
+		  const style = dom.create('style');
+		  style.textContent = `
+			.back-link {
+			  margin-bottom: 15px;
+			}
+			.back-link a {
+			  color: #4296f5;
+			  text-decoration: none;
+			  display: inline-flex;
+			  align-items: center;
+			}
+			.back-link a:hover {
+			  text-decoration: underline;
+			}
+			.remote-notice {
+			  background-color: #2a2a2a;
+			  border-left: 4px solid #4296f5;
+			  padding: 10px 15px;
+			  margin-bottom: 15px;
+			  font-weight: bold;
+			}
+		  `;
+		  document.head.appendChild(style);
+		}
+		
+	  } catch (error) {
+		console.error('Error loading results:', error);
+		showError(`Failed to load results: ${error.message}`);
+		
+		// Re-enable the start button on error
+		const startButton = dom.get('start-detection');
+		if (startButton) {
+		  startButton.disabled = false;
+		  startButton.textContent = 'Start Comprehensive Detection';
+		}
+	  }
+	}
+
+	// Process the loaded results data
+	function processResultsData(results) {
+	  // Clear existing codec data
+	  codecData.video = {};
+	  codecData.audio = {};
+	  
+	  // Look for codec information in the results
+	  for (const item of results) {
+		// Look for detectedCodecs data (if it exists in the logged data)
+		if (item.detectedCodecs) {
+		  // Copy the codec information
+		  Object.assign(codecData.video, item.detectedCodecs.video || {});
+		  Object.assign(codecData.audio, item.detectedCodecs.audio || {});
+		  
+		  // Log info about the remote browser
+		  if (item.detectedCodecs.browserInfo) {
+			addLog(`Remote Browser: ${item.detectedCodecs.browserInfo.userAgent || "Unknown"}`);
+		  }
+		}
+		
+		// Look for codecs data - the format used in the test data
+		if (item.codecs) {
+		  // Process video codecs
+		  if (item.codecs.video) {
+			Object.keys(item.codecs.video).forEach(codec => {
+			  codecData.video[codec] = codecData.video[codec] || {};
+			  codecData.video[codec].webrtc = true;
+			  codecData.video[codec].canDecode = true;
+			  
+			  // Add a badge or icon for these values in the UI
+			  if (codec === 'h264' || codec === 'vp9') {
+				codecData.video[codec].details = 'Common codec for streaming';
+			  }
+			});
+			
+			addLog(`Remote Video Codecs: ${Object.keys(item.codecs.video).join(', ')}`);
+		  }
+		  
+		  // Process audio codecs
+		  if (item.codecs.audio) {
+			Object.keys(item.codecs.audio).forEach(codec => {
+			  codecData.audio[codec] = codecData.audio[codec] || {};
+			  codecData.audio[codec].webrtc = true;
+			  codecData.audio[codec].canDecode = true;
+			});
+			
+			addLog(`Remote Audio Codecs: ${Object.keys(item.codecs.audio).join(', ')}`);
+		  }
+		}
+		
+		// Look for browser/platform info
+		if (item.info) {
+		  if (item.info.Browser) {
+			addLog(`Browser: ${item.info.Browser}`);
+		  }
+		  if (item.info.platform) {
+			addLog(`Platform: ${item.info.platform}`);
+		  }
+		  if (item.info.gpGPU) {
+			addLog(`GPU: ${item.info.gpGPU}`);
+			
+			// Set additional details for hardware acceleration based on GPU
+			if (codecData.video.h264) {
+			  codecData.video.h264.details = `GPU: ${item.info.gpGPU}`;
+			}
+		  }
+		  if (item.info.CPU) {
+			addLog(`CPU: ${item.info.CPU}`);
+		  }
+		}
+		
+		// Look for encoder used
+		if (item.encoder) {
+		  const encoderName = item.encoder.toLowerCase().replace('libvpx', 'vp8');
+		  addLog(`Encoder used in test: ${encoderName}`);
+		  
+		  // Mark this codec as used in the test
+		  if (codecData.video[encoderName]) {
+			codecData.video[encoderName].usedInTest = true;
+			codecData.video[encoderName].details = `Used during the test`;
+		  }
+		}
+	  }
+	}
+
+	// Call this function when the page loads
+	document.addEventListener('DOMContentLoaded', checkForResultsParam);
+    
+    // Set progress bar
+    function setProgress(percent) {
+      dom.get('status-progress').style.width = `${percent}%`;
+    }
+    
+    // Show error message
+    function showError(message) {
+      dom.get('error-message').textContent = message;
+    }
+    
+    // Add log to raw data tab
+    function addLog(message, isError = false) {
+      const output = dom.get('output');
+      const logEntry = document.createElement('div');
+      logEntry.textContent = message;
+      if (isError) logEntry.style.color = '#ff5252';
+      output.appendChild(logEntry);
+      output.scrollTop = output.scrollHeight;
+    }
+    
+// Create a codec item element with more detailed information
+function createCodecItem(codec, info) {
+  const item = dom.create('div');
+  item.className = 'codec-item';
+  
+  const codecName = dom.create('div');
+  codecName.className = 'codec-name';
+  codecName.textContent = codec;
+  
+  const badgesContainer = dom.create('div');
+  
+  // Add API badges
+  if (info.mediaRecorder) {
+    const badge = dom.create('span');
+    badge.className = 'badge badge-recorder';
+    badge.textContent = 'MediaRecorder';
+    badgesContainer.appendChild(badge);
+  }
+  
+  if (info.webcodec) {
+    const badge = dom.create('span');
+    badge.className = 'badge badge-webcodec';
+    badge.textContent = 'WebCodec';
+    badgesContainer.appendChild(badge);
+  }
+  
+  if (info.webrtc) {
+    const badge = dom.create('span');
+    badge.className = 'badge badge-webrtc';
+    badge.textContent = 'WebRTC';
+    badgesContainer.appendChild(badge);
+  }
+  
+  if (info.mediaCapabilities) {
+    const badge = dom.create('span');
+    badge.className = 'badge badge-mediacapabilities';
+    badge.textContent = 'MediaCapabilities';
+    badgesContainer.appendChild(badge);
+  }
+  
+  // Add encoder/decoder badges with specific API info
+  if (info.canEncode) {
+    const badge = dom.create('span');
+    badge.className = 'badge badge-encoder';
+    badge.textContent = 'Encoder';
+    badgesContainer.appendChild(badge);
+  }
+  
+  if (info.canDecode) {
+    const badge = dom.create('span');
+    badge.className = 'badge badge-decoder';
+    badge.textContent = 'Decoder';
+    badgesContainer.appendChild(badge);
+  }
+  
+  // Create the details container for more specific information
+  const details = dom.create('div');
+  details.className = 'details';
+  
+  // Add more specific hardware acceleration info
+  if (info.webcodecConfig && info.webcodecConfig.encoder && info.webcodecConfig.encoder.hardwareAcceleration === 'prefer-hardware') {
+    const hwEncBadge = dom.create('span');
+    hwEncBadge.className = 'badge badge-hw';
+    hwEncBadge.textContent = 'HW Encoder';
+    details.appendChild(hwEncBadge);
+  }
+  
+  if (info.webcodecConfig && info.webcodecConfig.decoder && info.webcodecConfig.decoder.hardwareAcceleration === 'prefer-hardware') {
+    const hwDecBadge = dom.create('span');
+    hwDecBadge.className = 'badge badge-hw';
+    hwDecBadge.textContent = 'HW Decoder';
+    details.appendChild(hwDecBadge);
+  }
+  
+  if (info.webrtcHwEncoding) {
+    const hwWrtcEncBadge = dom.create('span');
+    hwWrtcEncBadge.className = 'badge badge-hw';
+    hwWrtcEncBadge.textContent = 'WebRTC HW Encoder';
+    details.appendChild(hwWrtcEncBadge);
+  }
+  
+  // Add special details if available
+  if (info.profile) {
+    details.innerHTML += `<div>Profile: ${info.profile}</div>`;
+  }
+  
+  if (info.resolutionLimit) {
+    details.innerHTML += `<div>Resolution Limit: ${info.resolutionLimit}</div>`;
+  }
+  
+  if (info.details) {
+    details.innerHTML += `<div>${info.details}</div>`;
+  }
+  
+  if (info.scalabilityModes && info.scalabilityModes.length) {
+    details.innerHTML += `<div>SVC Modes: ${info.scalabilityModes.join(', ')}</div>`;
+  }
+  
+  item.appendChild(codecName);
+  item.appendChild(badgesContainer);
+  item.appendChild(details);
+  
+  return item;
+}
+    
+    // Get all supported MIME types via MediaRecorder
+    function getSupportedMimeTypes(media, types, codecs) {
+      const supported = [];
+      
+      // First check simple types
+      types.forEach(type => {
+        const mimeType = `${media}/${type}`;
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          supported.push(mimeType);
+        }
+      });
+      
+      // Then check with codecs
+      types.forEach(type => {
+        const mimeType = `${media}/${type}`;
+        
+        codecs.forEach(codec => {
+          if (!codec) return;
+          
+          const variation = `${mimeType};codecs=${codec.toLowerCase()}`;
+          if (MediaRecorder.isTypeSupported(variation)) {
+            supported.push(variation);
+          }
+        });
+        
+        // Check codec combinations for video/webm
+        if (media === 'video' && type === 'webm') {
+          codecs.forEach(videoCodec => {
+            if (!videoCodec) return;
+            
+            const audioCodecs = ['opus', 'vorbis'];
+            audioCodecs.forEach(audioCodec => {
+              const variation = `${mimeType};codecs=${videoCodec.toLowerCase()},${audioCodec}`;
+              if (MediaRecorder.isTypeSupported(variation)) {
+                supported.push(variation);
+              }
+            });
+          });
+        }
+      });
+      
+      return supported;
+    }
+    
+    // Check hardware acceleration via WebRTC
+    async function checkWebRTCHardwareAcceleration(codec) {
+      return new Promise(async (resolve) => {
+        try {
+          // Create peer connection with reasonable config (no TURN servers needed)
+          const config = {
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+            iceCandidatePoolSize: 0
+          };
+          
+          const pc1 = new RTCPeerConnection(config);
+          const pc2 = new RTCPeerConnection(config);
+          
+          // Create data channel to keep connection alive
+          pc1.createDataChannel('test', {ordered: true});
+          
+          // Connect the peers
+          pc1.onicecandidate = e => e.candidate && pc2.addIceCandidate(e.candidate);
+          pc2.onicecandidate = e => e.candidate && pc1.addIceCandidate(e.candidate);
+          
+          // Create a video stream from canvas to avoid permission prompts
+          const canvas = document.createElement('canvas');
+          canvas.width = 1280;
+          canvas.height = 720;
+          
+          // Draw something on the canvas to ensure there's content
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#3498db';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          // Add some animation to ensure proper encoding
+          const startTime = Date.now();
+          function animateCanvas() {
+            const elapsed = Date.now() - startTime;
+            ctx.fillStyle = '#3498db';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw a moving circle
+            ctx.fillStyle = '#e74c3c';
+            const x = 100 + Math.sin(elapsed / 500) * 100;
+            const y = canvas.height / 2 + Math.cos(elapsed / 500) * 100;
+            ctx.beginPath();
+            ctx.arc(x, y, 50, 0, Math.PI * 2);
+            ctx.fill();
+            
+            if (Date.now() - startTime < 3000) {
+              requestAnimationFrame(animateCanvas);
+            }
+          }
+          
+          animateCanvas();
+          const stream = canvas.captureStream(30);
+          
+          // Add tracks to the connection
+          stream.getVideoTracks().forEach(track => {
+            pc1.addTrack(track, stream);
+          });
+          
+          // Create and set the offer with specific codec
+          const transceiver = pc1.getTransceivers()[0];
+          const codecs = RTCRtpSender.getCapabilities('video').codecs;
+          
+          // Find matching codec
+          const targetCodec = codecs.find(c => {
+            return c.mimeType.toLowerCase().includes(codec.toLowerCase());
+          });
+          
+          if (targetCodec) {
+            transceiver.setCodecPreferences([targetCodec]);
+          }
+          
+          const offer = await pc1.createOffer();
+          await pc1.setLocalDescription(offer);
+          await pc2.setRemoteDescription(offer);
+          const answer = await pc2.createAnswer();
+          await pc2.setLocalDescription(answer);
+          await pc1.setRemoteDescription(answer);
+          
+          // Wait a bit for stats to be available
+          setTimeout(async () => {
+            let hardwareAccelerated = false;
+            let profile = null;
+            
+            try {
+              const stats = await pc1.getStats();
+              stats.forEach(stat => {
+                // Check for hardware encoding
+                if (stat.type === 'outbound-rtp' && stat.kind === 'video') {
+                  if (stat.encoderImplementation) {
+                    const implementation = stat.encoderImplementation.toLowerCase();
+                    hardwareAccelerated = implementation.includes('hardware') || 
+                                          implementation === 'externalencoder' || 
+                                          implementation === 'mediafoundationvideoacceleration' ||
+                                          implementation.includes('accelerator');
+                  }
+                  
+                  // Try to get the profile ID
+                  if (stat.codecId) {
+                    stats.forEach(s => {
+                      if (s.id === stat.codecId && s.sdpFmtpLine) {
+                        const match = s.sdpFmtpLine.match(/profile-level-id=([0-9a-f]+)/i);
+                        if (match) {
+                          profile = match[1];
+                        }
+                      }
+                    });
+                  }
+                }
+              });
+            } catch (e) {
+              addLog(`Error getting WebRTC stats: ${e.message}`, true);
+            }
+            
+            // Clean up
+            pc1.close();
+            pc2.close();
+            stream.getTracks().forEach(track => track.stop());
+            
+            resolve({ 
+				hardwareAccelerated, 
+				profile,
+				webrtc: true,
+				canEncode: true,
+				canDecode: true,
+				webrtcHwEncoding: hardwareAccelerated // specific flag for WebRTC encoding
+			  });
+          }, 2000);
+        } catch (error) {
+          addLog(`WebRTC check failed for ${codec}: ${error.message}`, true);
+          resolve({ webrtc: false });
+        }
+      });
+    }
+    
+    // Check hardware acceleration via WebCodec API for encoding
+    async function checkWebCodecEncoder(codec, width = 1280, height = 720, framerate = 30) {
+      if (!('VideoEncoder' in window) || !detectionMode.encode) {
+        return { webcodec: false };
+      }
+      
+      let result = { webcodec: false };
+      
+      try {
+        // Map common codec names to WebCodec format
+        const codecMapping = {
+          'vp8': 'vp8',
+          'vp9': 'vp09.00.10.08',
+          'av1': 'av01.0.04M.08',
+          'h264': 'avc1.42001E',
+          'h265': 'hev1.1.6.L93.B0'
+        };
+        
+        const webcodecFormat = codecMapping[codec.toLowerCase()] || codec;
+        
+        // Check hardware acceleration with prefer-hardware
+        const hwConfig = {
+          codec: webcodecFormat,
+          hardwareAcceleration: 'prefer-hardware',
+          width,
+          height,
+          bitrate: 2000000,
+          framerate
+        };
+        
+        const hwSupport = await VideoEncoder.isConfigSupported(hwConfig);
+        
+        if (hwSupport && hwSupport.supported) {
+          result = { 
+            webcodec: true,
+            hardwareAccelerated: true,
+            config: hwSupport.config,
+            canEncode: true
+          };
+        } else {
+          // Check with prefer-software
+          const swConfig = {
+            codec: webcodecFormat,
+            hardwareAcceleration: 'prefer-software',
+            width,
+            height,
+            bitrate: 2000000,
+            framerate
+          };
+          
+          const swSupport = await VideoEncoder.isConfigSupported(swConfig);
+          
+          if (swSupport && swSupport.supported) {
+            result = { 
+              webcodec: true,
+              hardwareAccelerated: false,
+              config: swSupport.config,
+              canEncode: true
+            };
+          }
+        }
+      } catch (error) {
+        addLog(`WebCodec encoder check failed for ${codec}: ${error.message}`, true);
+      }
+      
+      return result;
+    }
+    
+    // Check hardware acceleration via WebCodec API for decoding
+    async function checkWebCodecDecoder(codec, width = 1280, height = 720, framerate = 30) {
+      if (!('VideoDecoder' in window) || !detectionMode.decode) {
+        return { webcodec: false };
+      }
+      
+      let result = { webcodec: false };
+      
+      try {
+        // Map common codec names to WebCodec format
+        const codecMapping = {
+          'vp8': 'vp8',
+          'vp9': 'vp09.00.10.08',
+          'av1': 'av01.0.04M.08',
+          'h264': 'avc1.42001E',
+          'h265': 'hev1.1.6.L93.B0'
+        };
+        
+        const webcodecFormat = codecMapping[codec.toLowerCase()] || codec;
+        
+        // Check hardware acceleration with prefer-hardware
+        const hwConfig = {
+          codec: webcodecFormat,
+          hardwareAcceleration: 'prefer-hardware',
+          codedWidth: width,
+          codedHeight: height,
+          description: new Uint8Array(0) // Dummy data
+        };
+        
+        const hwSupport = await VideoDecoder.isConfigSupported(hwConfig);
+        
+        if (hwSupport && hwSupport.supported) {
+          result = { 
+            webcodec: true,
+            hardwareAccelerated: true,
+            config: hwSupport.config,
+            canDecode: true
+          };
+        } else {
+          // Check with prefer-software
+          const swConfig = {
+            codec: webcodecFormat,
+            hardwareAcceleration: 'prefer-software',
+            codedWidth: width,
+            codedHeight: height,
+            description: new Uint8Array(0) // Dummy data
+          };
+          
+          const swSupport = await VideoDecoder.isConfigSupported(swConfig);
+          
+          if (swSupport && swSupport.supported) {
+            result = { 
+              webcodec: true,
+              hardwareAccelerated: false,
+              config: swSupport.config,
+              canDecode: true
+            };
+          }
+        }
+      } catch (error) {
+        addLog(`WebCodec decoder check failed for ${codec}: ${error.message}`, true);
+      }
+      
+      return result;
+    }
+    
+		  // Comprehensive codec detection
+		async function detectCodecs() {
+		  setProgress(0);
+		  showError('');
+		  dom.get('output').innerHTML = '';
+		  dom.get('video-codec-list').innerHTML = '<p>Detection in progress...</p>';
+		  dom.get('audio-codec-list').innerHTML = '<p>Detection in progress...</p>';
+		  
+		  // Disable the start button during detection
+		  const startButton = dom.get('start-detection');
+		  startButton.disabled = true;
+		  startButton.textContent = 'Detection in progress...';
+		  
+		  try {
+			// 1. Define codec lists
+			addLog('Starting codec detection...');
+			addLog(`Mode: ${detectionMode.encode ? 'Encoding + ' : ''}${detectionMode.decode ? 'Decoding' : ''}`);
+			
+			const videoTypes = ["webm", "mp4", "x-matroska", "ogg"];
+			const audioTypes = ["webm", "mp4", "ogg", "x-matroska", "wav"];
+			
+			const videoCodecs = [
+			  "vp8", "vp9", "av1", "h264", "h265", 
+			  "vp9.0", "vp8.0", "avc1", "av1x", "h.264", "h.265", 
+			  "av01.0.04M.08", "vp09.00.10.08", "avc1.42001E"
+			];
+			
+			const audioCodecs = [
+			  "opus", "vorbis", "mp3", "aac", "pcm", 
+			  "mp4a.40.2", "mp4a", "L16", "wav", "flac"
+			];
+			
+			setProgress(10);
+			
+			// 2. Detect MediaRecorder support
+			addLog('Checking MediaRecorder support...');
+			
+			const supportedVideoTypes = getSupportedMimeTypes("video", videoTypes, videoCodecs);
+			const supportedAudioTypes = getSupportedMimeTypes("audio", audioTypes, audioCodecs);
+			
+			supportedVideoTypes.forEach(type => {
+			  const codecMatch = type.match(/codecs=([^,]+)/);
+			  const codec = codecMatch ? codecMatch[1] : type.split('/')[1];
+			  
+			  codecData.video[codec] = codecData.video[codec] || {};
+			  codecData.video[codec].mediaRecorder = true;
+			  codecData.video[codec].canEncode = true;
+			  codecData.video[codec].mimeTypes = codecData.video[codec].mimeTypes || [];
+			  codecData.video[codec].mimeTypes.push(type);
+			});
+			
+			supportedAudioTypes.forEach(type => {
+			  const codecMatch = type.match(/codecs=([^,]+)/);
+			  const codec = codecMatch ? codecMatch[1] : type.split('/')[1];
+			  
+			  codecData.audio[codec] = codecData.audio[codec] || {};
+			  codecData.audio[codec].mediaRecorder = true;
+			  codecData.audio[codec].canEncode = true;
+			  codecData.audio[codec].mimeTypes = codecData.audio[codec].mimeTypes || [];
+			  codecData.audio[codec].mimeTypes.push(type);
+			});
+			
+			addLog(`Found ${supportedVideoTypes.length} supported video MediaRecorder formats`);
+			addLog(`Found ${supportedAudioTypes.length} supported audio MediaRecorder formats`);
+			
+			setProgress(30);
+			
+			// 3. Detect WebCodec support
+			if ('VideoEncoder' in window || 'VideoDecoder' in window) {
+			  addLog('Checking WebCodec support...');
+			  
+			  // Check at multiple resolutions to detect resolution-dependent hardware acceleration
+			  const resolutions = [
+				{ width: 640, height: 360 },
+				{ width: 1280, height: 720 },
+				{ width: 1920, height: 1080 }
+			  ];
+			  
+			  for (const codec of ['vp8', 'vp9', 'h264', 'av1', 'h265']) {
+				for (const res of resolutions) {
+				  // Check encoder if enabled
+				  if (detectionMode.encode) {
+					const encoderResult = await checkWebCodecEncoder(codec, res.width, res.height, 30);
+					
+					if (encoderResult.webcodec) {
+					  codecData.video[codec] = codecData.video[codec] || {};
+					  codecData.video[codec].webcodec = true;
+					  codecData.video[codec].canEncode = true;
+					  
+					  // Store specific hardware acceleration for WebCodec encoder
+					  codecData.video[codec].webcodecHwEncoding = encoderResult.hardwareAccelerated;
+					  
+					  // If any resolution has hardware acceleration, we'll mark it as supported
+					  if (encoderResult.hardwareAccelerated) {
+						codecData.video[codec].hardwareAccelerated = true;
+						
+						// Store the min resolution that allows hardware acceleration
+						if (!codecData.video[codec].minHwResolution || 
+							res.width * res.height < 
+							codecData.video[codec].minHwResolution.width * codecData.video[codec].minHwResolution.height) {
+						  codecData.video[codec].minHwResolution = res;
+						  codecData.video[codec].resolutionLimit = `${res.width}x${res.height}+`;
+						}
+					  } 
+					  // Only set hardware as false if it hasn't been set to true already
+					  else if (codecData.video[codec].hardwareAccelerated !== true) {
+						codecData.video[codec].hardwareAccelerated = false;
+					  }
+					  
+					  if (encoderResult.config) {
+						codecData.video[codec].webcodecConfig = codecData.video[codec].webcodecConfig || {};
+						codecData.video[codec].webcodecConfig.encoder = encoderResult.config;
+					  }
+					}
+				  }
+				  
+				  // Check decoder if enabled
+				  if (detectionMode.decode) {
+					const decoderResult = await checkWebCodecDecoder(codec, res.width, res.height, 30);
+					
+					if (decoderResult.webcodec) {
+					  codecData.video[codec] = codecData.video[codec] || {};
+					  codecData.video[codec].webcodec = true;
+					  codecData.video[codec].canDecode = true;
+					  
+					  // Store specific hardware acceleration for WebCodec decoder
+					  codecData.video[codec].webcodecHwDecoding = decoderResult.hardwareAccelerated;
+					  
+					  // If any resolution has hardware acceleration, we'll mark it as supported
+					  if (decoderResult.hardwareAccelerated) {
+						codecData.video[codec].hardwareAccelerated = true;
+						
+						// Store the min resolution that allows hardware acceleration
+						if (!codecData.video[codec].minHwResolution || 
+							res.width * res.height < 
+							codecData.video[codec].minHwResolution.width * codecData.video[codec].minHwResolution.height) {
+						  codecData.video[codec].minHwResolution = res;
+						  codecData.video[codec].resolutionLimit = `${res.width}x${res.height}+`;
+						}
+					  } 
+					  // Only set hardware as false if it hasn't been set to true already
+					  else if (codecData.video[codec].hardwareAccelerated !== true) {
+						codecData.video[codec].hardwareAccelerated = false;
+					  }
+					  
+					  if (decoderResult.config) {
+						codecData.video[codec].webcodecConfig = codecData.video[codec].webcodecConfig || {};
+						codecData.video[codec].webcodecConfig.decoder = decoderResult.config;
+					  }
+					}
+				  }
+				}
+			  }
+			} else {
+			  addLog('WebCodec API not supported by this browser');
+			}
+			
+			setProgress(60);
+			
+			// 4. Detect WebRTC support and hardware acceleration
+			if ('RTCPeerConnection' in window) {
+			  addLog('Checking WebRTC support and hardware acceleration...');
+			  
+			  // Codecs most commonly used in WebRTC
+			  const webrtcCodecs = ['VP8', 'VP9', 'AV1', 'H264'];
+			  
+			  if (detectionMode.encode || detectionMode.decode) {
+				for (const codec of webrtcCodecs) {
+				  const result = await checkWebRTCHardwareAcceleration(codec);
+				  
+				  if (result.webrtc) {
+					const normalizedCodec = codec.toLowerCase();
+					codecData.video[normalizedCodec] = codecData.video[normalizedCodec] || {};
+					codecData.video[normalizedCodec].webrtc = true;
+					
+					if (detectionMode.encode) {
+					  codecData.video[normalizedCodec].canEncode = true;
+					}
+					
+					if (detectionMode.decode) {
+					  codecData.video[normalizedCodec].canDecode = true;
+					}
+					
+					// Only update hardware acceleration if not already set
+					if (result.hardwareAccelerated) {
+					  codecData.video[normalizedCodec].hardwareAccelerated = true;
+					} else if (codecData.video[normalizedCodec].hardwareAccelerated !== true) {
+					  codecData.video[normalizedCodec].hardwareAccelerated = false;
+					}
+					
+					if (result.profile) {
+					  codecData.video[normalizedCodec].profile = result.profile;
+					}
+				  }
+				}
+			  }
+			} else {
+			  addLog('WebRTC not supported by this browser');
+			}
+			
+			setProgress(90);
+			
+			// 5. Update the UI with all collected data
+			updateUI();
+			
+			// 6. Check MediaCapabilities API
+			if ('mediaCapabilities' in navigator) {
+			  addLog('Checking MediaCapabilities API support...');
+			  
+			  const videoTypes = ['vp8', 'vp9', 'av1', 'h264', 'h265', 'avc1'];
+			  const resolutions = [
+				{ width: 640, height: 360 },
+				{ width: 1280, height: 720 },
+				{ width: 1920, height: 1080 }
+			  ];
+			  
+			  // Define scalability modes to test
+			  const scalabilityModes = [
+				"L1T1", "L1T2", "L1T3",
+				"L2T1", "L2T2", "L2T3",
+				"L3T1", "L3T2", "L3T3",
+				"S2T1", "S2T2", "S2T3",
+				"S3T1", "S3T2", "S3T3",
+				"L1T2h", "L1T3h",
+				"L2T1h", "L2T2h", "L2T3h",
+				"L3T1h", "L3T2h", "L3T3h"
+			  ];
+			  
+			  // Check browser-specific capability type
+			  const isFirefox = navigator.userAgent.indexOf("Firefox") >= 0;
+			  const capabilityType = isFirefox ? "transmission" : "webrtc";
+			  
+			  // Check WebRTC codec capabilities
+			  const webrtcCodecs = [];
+			  if ('RTCRtpSender' in window && RTCRtpSender.getCapabilities) {
+				try {
+				  const rtcCodecs = RTCRtpSender.getCapabilities('video').codecs;
+				  rtcCodecs.forEach(codec => {
+					if (!['video/red', 'video/ulpfec', 'video/rtx'].includes(codec.mimeType)) {
+					  const codecName = codec.mimeType.replace("video/", "").toLowerCase();
+					  webrtcCodecs.push({
+						name: codecName,
+						mimeType: codec.mimeType,
+						sdpFmtpLine: codec.sdpFmtpLine,
+						clockRate: codec.clockRate
+					  });
+					}
+				  });
+				  
+				  addLog(`Found ${webrtcCodecs.length} supported WebRTC codecs`);
+				} catch (e) {
+				  addLog(`Error getting RTCRtpSender.getCapabilities: ${e.message}`, true);
+				}
+			  }
+			  
+			  // Process each codec with MediaCapabilities
+			  for (const codec of webrtcCodecs) {
+				try {
+				  const capabilityPromises = [];
+				  const codecScalabilityModes = [];
+				  
+				  // Test different scalability modes
+				  for (const mode of scalabilityModes) {
+					for (const res of resolutions) {
+					  capabilityPromises.push(
+						navigator.mediaCapabilities.encodingInfo({
+						  type: capabilityType,
+						  video: {
+							contentType: codec.mimeType,
+							width: res.width,
+							height: res.height,
+							bitrate: 2000000,
+							framerate: 30,
+							scalabilityMode: mode
+						  }
+						}).then(result => {
+						  return { mode, res, result };
+						}).catch(e => {
+						  return { mode, res, error: e };
+						})
+					  );
+					}
+				  }
+				  
+				  const results = await Promise.all(capabilityPromises);
+				  
+				  // Process results
+				  let isSupported = false;
+				  let isSmooth = false;
+				  let isPowerEfficient = false;
+				  let supportedModes = [];
+				  
+				  results.forEach(({ mode, res, result, error }) => {
+					if (result && !error) {
+					  if (result.supported) {
+						isSupported = true;
+						
+						if (result.smooth) {
+						  isSmooth = true;
+						}
+						
+						if (result.powerEfficient) {
+						  isPowerEfficient = true;
+						}
+						
+						if (!supportedModes.includes(mode)) {
+						  supportedModes.push(mode);
+						}
+					  }
+					}
+				  });
+				  
+				  if (isSupported) {
+					const codecName = codec.name;
+					codecData.video[codecName] = codecData.video[codecName] || {};
+					codecData.video[codecName].mediaCapabilities = true;
+					codecData.video[codecName].scalabilityModes = supportedModes;
+					
+					// Assume MediaCapabilities is testing decoding
+					if (detectionMode.decode) {
+					  codecData.video[codecName].canDecode = true;
+					}
+					
+					// If powerEfficient is true, this is a good indicator of hardware acceleration
+					if (isPowerEfficient && codecData.video[codecName].hardwareAccelerated !== true) {
+					  codecData.video[codecName].hardwareAccelerated = true;
+					  codecData.video[codecName].details = (codecData.video[codecName].details || '') + 
+						'MediaCapabilities reports this codec as power efficient, suggesting hardware acceleration. ';
+					}
+					
+					// Store SDP format parameters if available
+					if (codec.sdpFmtpLine && !codecData.video[codecName].profile) {
+					  const profileMatch = codec.sdpFmtpLine.match(/profile-level-id=([0-9a-f]+)/i);
+					  if (profileMatch) {
+						codecData.video[codecName].profile = profileMatch[1];
+					  }
+					}
+				  }
+				} catch (error) {
+				  addLog(`MediaCapabilities check failed for ${codec.name}: ${error.message}`, true);
+				}
+			  }
+			} else {
+			  addLog('MediaCapabilities API not supported by this browser');
+			}
+			
+			addLog('Detection complete!');
+			setProgress(100);
+			
+			// Re-enable the start button
+			const startButton = dom.get('start-detection');
+			startButton.disabled = false;
+			startButton.textContent = 'Start Comprehensive Detection';
+		  } catch (error) {
+			showError(`Detection failed: ${error.message}`);
+			addLog(`Detection error: ${error.message}`, true);
+			console.error(error);
+			
+			// Re-enable the start button on error
+			const startButton = dom.get('start-detection');
+			startButton.disabled = false;
+			startButton.textContent = 'Start Comprehensive Detection';
+		  }
+		}
+    
+	
+    // Update the UI with detected codec information
+    function updateUI() {
+      // Clear existing content
+      dom.get('video-codec-list').innerHTML = '';
+      dom.get('audio-codec-list').innerHTML = '';
+      
+      // Add video codecs
+      const videoCodecs = Object.keys(codecData.video);
+      if (videoCodecs.length === 0) {
+        dom.get('video-codec-list').innerHTML = '<p>No supported video codecs detected</p>';
+      } else {
+        videoCodecs.forEach(codec => {
+          const info = codecData.video[codec];
+          const item = createCodecItem(codec, info);
+          dom.get('video-codec-list').appendChild(item);
+        });
+      }
+      
+      // Add audio codecs
+      const audioCodecs = Object.keys(codecData.audio);
+      if (audioCodecs.length === 0) {
+        dom.get('audio-codec-list').innerHTML = '<p>No supported audio codecs detected</p>';
+      } else {
+        audioCodecs.forEach(codec => {
+          const info = codecData.audio[codec];
+          const item = createCodecItem(codec, info);
+          dom.get('audio-codec-list').appendChild(item);
+        });
+      }
+      
+		dom.get('output').innerHTML += '\n--- DETECTION SUMMARY ---\n';
+		dom.get('output').innerHTML += `Video Codecs: ${videoCodecs.join(', ')}\n`;
+		dom.get('output').innerHTML += `Audio Codecs: ${audioCodecs.join(', ')}\n`;
+
+		// Log hardware accelerated codecs
+		const hwCodecs = videoCodecs.filter(codec => codecData.video[codec].hardwareAccelerated);
+		dom.get('output').innerHTML += `Hardware Accelerated: ${hwCodecs.join(', ')}\n`;
+
+		// Add H.264 profile information
+		const h264Codecs = videoCodecs.filter(codec => 
+		  codec.toLowerCase().includes('h264') || codec.toLowerCase().includes('avc'));
+		if (h264Codecs.length > 0) {
+		  dom.get('output').innerHTML += '\n--- H.264 PROFILES ---\n';
+		  h264Codecs.forEach(codec => {
+			const profile = codecData.video[codec].profile || 'Unknown';
+			dom.get('output').innerHTML += `${codec}: profile-level-id=${profile}\n`;
+		  });
+		}
+    }
+	
+	let detectionStarted = false;
+	
+	setTimeout(function() {
+	  if (!detectionStarted) {
+		dom.get('start-detection').click();
+		addLog('Auto-starting detection...');
+	  }
+	}, 5000);
+    
+    // Start detection when button is clicked
+    dom.get('start-detection').addEventListener('click', function() {
+	  detectionStarted = true;
+	  detectCodecs();
+	});
+  </script>
+</body>
+</html>

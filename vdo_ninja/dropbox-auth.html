@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Dropbox Authorization · VDO.Ninja</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+				background: #05060a;
+				color: #f4f8ff;
+			}
+			body {
+				margin: 0;
+				min-height: 100vh;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 24px;
+			}
+			main {
+				max-width: 460px;
+				background: rgba(15, 17, 28, 0.9);
+				border: 1px solid rgba(255, 255, 255, 0.08);
+				border-radius: 18px;
+				padding: 24px;
+				box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+			}
+			h1 {
+				font-size: 1.35rem;
+				margin: 0 0 8px;
+			}
+			p {
+				margin: 0;
+				font-size: 0.95rem;
+				line-height: 1.4;
+			}
+			p.status {
+				margin-top: 12px;
+				font-size: 0.88rem;
+				letter-spacing: 0.04em;
+				text-transform: uppercase;
+				opacity: 0.75;
+			}
+			p.status[data-variant="error"] {
+				color: #ff8a84;
+				opacity: 1;
+			}
+			p.status[data-variant="success"] {
+				color: #2fe7a3;
+				opacity: 1;
+			}
+			code {
+				font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+				background: rgba(255, 255, 255, 0.08);
+				padding: 2px 4px;
+				border-radius: 4px;
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Finishing Dropbox link…</h1>
+			<p>Hold tight while we exchange the authorization code for a long-lived token.</p>
+			<p id="dropbox-auth-status" class="status">Authorizing…</p>
+		</main>
+		<script>
+			(() => {
+				const MESSAGE_SOURCE = "vdoninja-dropbox-auth";
+				const TOKEN_URL = "https://api.dropboxapi.com/oauth2/token";
+				const TOKEN_STORAGE_KEY = "dropboxOAuthTokens";
+				const SESSION_KEY = "dropboxOAuthSession";
+				const REFRESH_SKEW_MS = 120000;
+
+				const statusEl = document.getElementById("dropbox-auth-status");
+
+				function setStatus(message, variant = "info") {
+					if (statusEl) {
+						statusEl.textContent = message;
+						statusEl.dataset.variant = variant;
+					}
+				}
+
+				function readSession() {
+					try {
+						const raw = localStorage.getItem(SESSION_KEY);
+						return raw ? JSON.parse(raw) : null;
+					} catch (error) {
+						console.error("Failed to read Dropbox auth session", error);
+						return null;
+					}
+				}
+
+				function clearSession() {
+					try {
+						localStorage.removeItem(SESSION_KEY);
+					} catch (error) {}
+				}
+
+				function storeTokens(tokens) {
+					if (!tokens || !tokens.accessToken) {
+						return;
+					}
+					try {
+						localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+					} catch (error) {
+						console.error("Failed to persist Dropbox tokens", error);
+					}
+				}
+
+				function normalizeTokenResponse(response, fallbackRefreshToken) {
+					if (!response || !response.access_token) {
+						return null;
+					}
+					let expiresIn = 0;
+					if (response.expires_in) {
+						const parsed = parseInt(response.expires_in, 10);
+						if (!isNaN(parsed) && parsed > 0) {
+							expiresIn = parsed * 1000;
+						}
+					}
+					const expiresAt = expiresIn ? Date.now() + Math.max(0, expiresIn - REFRESH_SKEW_MS) : 0;
+					return {
+						accessToken: response.access_token,
+						refreshToken: response.refresh_token || fallbackRefreshToken || null,
+						expiresAt,
+						scope: response.scope || "files.content.write files.metadata.write",
+						tokenType: response.token_type || "bearer"
+					};
+				}
+
+				function postResult(payload) {
+					if (!payload) {
+						return;
+					}
+					try {
+						const targetOrigin = payload.targetOrigin || window.location.origin;
+						if (window.opener && typeof window.opener.postMessage === "function") {
+							window.opener.postMessage(payload, targetOrigin);
+						}
+					} catch (error) {
+						console.error("Failed to post auth result", error);
+					}
+				}
+
+				function closeSoon() {
+					setTimeout(() => {
+						try {
+							window.close();
+						} catch (error) {}
+					}, 1600);
+				}
+
+				async function exchangeCode(sessionData, code) {
+					const params = new URLSearchParams();
+					params.set("code", code);
+					params.set("grant_type", "authorization_code");
+					params.set("redirect_uri", sessionData.redirectUri);
+					params.set("client_id", sessionData.clientId);
+					params.set("code_verifier", sessionData.verifier);
+					const response = await fetch(TOKEN_URL, {
+						method: "POST",
+						headers: { "Content-Type": "application/x-www-form-urlencoded" },
+						body: params.toString()
+					});
+					if (!response.ok) {
+						const text = await response.text().catch(() => "");
+						throw new Error(text || "Dropbox token exchange failed.");
+					}
+					return response.json();
+				}
+
+				function waitForSessionFromOpener(expectedState) {
+					if (!window.opener || typeof window.opener.postMessage !== "function") {
+						return Promise.resolve(null);
+					}
+				return new Promise((resolve) => {
+					let settled = false;
+					let timeoutId = null;
+					function handleMessage(event) {
+						if (!event || !event.data || event.data.source !== MESSAGE_SOURCE || event.data.type !== "session") {
+							return;
+						}
+						window.removeEventListener("message", handleMessage);
+						if (!settled) {
+							settled = true;
+							if (timeoutId) {
+								clearTimeout(timeoutId);
+							}
+							resolve(event.data.session || null);
+						}
+					}
+					window.addEventListener("message", handleMessage);
+					timeoutId = setTimeout(() => {
+						window.removeEventListener("message", handleMessage);
+						if (!settled) {
+							settled = true;
+							resolve(null);
+						}
+					}, 2000);
+					try {
+						window.opener.postMessage({ source: MESSAGE_SOURCE, type: "request-session", state: expectedState || null }, "*");
+					} catch (error) {
+						window.removeEventListener("message", handleMessage);
+						if (timeoutId) {
+							clearTimeout(timeoutId);
+						}
+						if (!settled) {
+							settled = true;
+							resolve(null);
+						}
+					}
+				});
+			}
+
+			async function ensureAuthSession(expectedState) {
+				let session = readSession();
+				if (session) {
+					return session;
+				}
+				const remoteSession = await waitForSessionFromOpener(expectedState);
+				if (remoteSession) {
+					try {
+						localStorage.setItem(SESSION_KEY, JSON.stringify(remoteSession));
+					} catch (error) {}
+				}
+				return remoteSession;
+			}
+
+				async function init() {
+					const query = new URLSearchParams(window.location.search || window.location.hash.replace("?", ""));
+					const errorParam = query.get("error");
+					const code = query.get("code");
+					const state = query.get("state");
+
+					const authSession = await ensureAuthSession(state);
+
+					if (errorParam) {
+						const message = errorParam === "access_denied" ? "Access to Dropbox was denied." : `Dropbox returned an error: ${errorParam}`;
+						setStatus(message, "error");
+						const targetOrigin = authSession?.origin || window.location.origin;
+						postResult({ source: MESSAGE_SOURCE, type: "error", message, clearTokens: false, targetOrigin });
+						clearSession();
+						closeSoon();
+						return;
+					}
+
+					if (!code) {
+						setStatus("No authorization code present in the URL.", "error");
+						const targetOrigin = authSession?.origin || window.location.origin;
+						clearSession();
+						postResult({ source: MESSAGE_SOURCE, type: "error", message: "Missing authorization code.", clearTokens: false, targetOrigin });
+						return;
+					}
+
+					if (!authSession || !authSession.verifier) {
+						setStatus("This tab no longer has a pending authorization session.", "error");
+						const expiredOrigin = authSession?.origin || window.location.origin;
+						postResult({ source: MESSAGE_SOURCE, type: "error", message: "Authorization session expired.", clearTokens: false, targetOrigin: expiredOrigin });
+						clearSession();
+						return;
+					}
+
+					if (authSession.state && state && authSession.state !== state) {
+						setStatus("State mismatch; refusing to continue.", "error");
+						postResult({ source: MESSAGE_SOURCE, type: "error", message: "Dropbox state mismatch.", clearTokens: false, targetOrigin: authSession.origin || window.location.origin });
+						clearSession();
+						return;
+					}
+
+					setStatus("Requesting long-lived Dropbox token…", "info");
+					try {
+						const rawTokens = await exchangeCode(authSession, code);
+						const tokens = normalizeTokenResponse(rawTokens, authSession.refreshToken);
+						if (!tokens) {
+							throw new Error("Dropbox returned an invalid token payload.");
+						}
+						storeTokens(tokens);
+						setStatus("Dropbox linked successfully. You can close this window.", "success");
+						postResult({ source: MESSAGE_SOURCE, type: "tokens", tokens, targetOrigin: authSession.origin || window.location.origin });
+						clearSession();
+						closeSoon();
+					} catch (error) {
+						console.error("Dropbox OAuth failed", error);
+						setStatus(error?.message || "Unable to complete Dropbox authorization.", "error");
+						postResult({ source: MESSAGE_SOURCE, type: "error", message: error?.message || "Dropbox authorization failed.", clearTokens: true, targetOrigin: authSession.origin || window.location.origin });
+						clearSession();
+					}
+				}
+
+				init();
+			})();
+		</script>
+	</body>
+</html>

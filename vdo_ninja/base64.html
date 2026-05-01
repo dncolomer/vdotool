@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VDO.Ninja CSS to Base64 Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1E1E1E;
+            color: #E0E0E0;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #E0E0E0;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 10px;
+            background-color: #2D2D2D;
+            color: #E0E0E0;
+            border: 1px solid #3D3D3D;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+        }
+        #output {
+            height: 100px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4ecca3;
+            color: #1E1E1E;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45b392;
+        }
+        .container {
+            background-color: #2D2D2D;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>VDO.Ninja CSS Base64 Converter</h1>
+        <div style="margin-bottom: 15px;">
+            <label>
+                <input type="radio" name="mode" value="encode" checked onchange="switchMode()"> Encode CSS to Base64
+            </label>
+            <label style="margin-left: 20px;">
+                <input type="radio" name="mode" value="decode" onchange="switchMode()"> Decode Base64 to CSS
+            </label>
+        </div>
+        <textarea id="cssInput" placeholder="Enter your CSS here..."></textarea>
+        <button onclick="processInput()">Convert</button>
+        <button onclick="prettifyCSS()" style="margin-left: 10px;">Prettify</button><br><br>
+		<i>💡Tip: Adding <b>!important</b> after your CSS values can help override existing values.</i>
+		
+        <h2>Output:</h2>
+        <textarea id="output" readonly></textarea>
+        <button onclick="copyToClipboard()">Copy to Clipboard</button>
+    </div>
+    <script>
+        function getMode() {
+            return document.querySelector('input[name="mode"]:checked').value;
+        }
+
+        function switchMode() {
+            const mode = getMode();
+            const input = document.getElementById('cssInput');
+            const output = document.getElementById('output');
+            
+            if (mode === 'encode') {
+                input.placeholder = 'Enter your CSS here...';
+            } else {
+                input.placeholder = 'Enter base64 string (with or without &cssb64= prefix)...';
+            }
+            
+            // Clear output but preserve input
+            output.value = '';
+        }
+
+        function processInput() {
+            const mode = getMode();
+            if (mode === 'encode') {
+                convertToBase64();
+            } else {
+                decodeFromBase64();
+            }
+        }
+
+        function convertToBase64() {
+            const cssInput = document.getElementById('cssInput').value;
+            // Remove tabs and extra spaces
+            const sanitizedCSS = cssInput.replace(/\s+/g, ' ').trim();
+            const base64CSS = btoa(encodeURIComponent(sanitizedCSS));
+            document.getElementById('output').value = '&cssb64=' + base64CSS;
+        }
+
+        function decodeFromBase64() {
+            let base64Input = document.getElementById('cssInput').value.trim();
+            
+            // Remove &cssb64= prefix if present
+            if (base64Input.startsWith('&cssb64=')) {
+                base64Input = base64Input.substring(8);
+            } else if (base64Input.startsWith('cssb64=')) {
+                base64Input = base64Input.substring(7);
+            }
+            
+            try {
+                const decodedCSS = decodeURIComponent(atob(base64Input));
+                document.getElementById('output').value = decodedCSS;
+            } catch (error) {
+                alert('Invalid base64 string. Please check your input.');
+                document.getElementById('output').value = '';
+            }
+        }
+
+        function prettifyCSS() {
+            const outputField = document.getElementById('output');
+            let css = outputField.value;
+            
+            if (!css || css.startsWith('&cssb64=')) {
+                // If output is base64, decode it first
+                if (css.startsWith('&cssb64=')) {
+                    try {
+                        css = decodeURIComponent(atob(css.substring(8)));
+                    } catch (error) {
+                        alert('Cannot prettify base64 output. Decode it first.');
+                        return;
+                    }
+                } else {
+                    alert('No CSS to prettify.');
+                    return;
+                }
+            }
+            
+            // Basic CSS prettification
+            css = css
+                .replace(/\s*{\s*/g, ' {\n  ') // Add newline after opening brace
+                .replace(/;\s*/g, ';\n  ') // Add newline after semicolon
+                .replace(/\s*}\s*/g, '\n}\n') // Add newlines around closing brace
+                .replace(/,\s*/g, ',\n') // Add newline after comma in selectors
+                .replace(/\n\s*\n/g, '\n') // Remove extra blank lines
+                .replace(/\s*:\s*/g, ': ') // Consistent spacing around colons
+                .trim();
+            
+            // Fix indentation for nested rules
+            const lines = css.split('\n');
+            let indentLevel = 0;
+            const prettifiedLines = lines.map(line => {
+                line = line.trim();
+                if (line.endsWith('{')) {
+                    const result = '  '.repeat(indentLevel) + line;
+                    indentLevel++;
+                    return result;
+                } else if (line === '}') {
+                    indentLevel = Math.max(0, indentLevel - 1);
+                    return '  '.repeat(indentLevel) + line;
+                } else if (line) {
+                    return '  '.repeat(indentLevel) + line;
+                }
+                return line;
+            });
+            
+            outputField.value = prettifiedLines.join('\n');
+        }
+
+        function copyToClipboard() {
+            const output = document.getElementById('output');
+            output.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard!');
+        }
+    </script>
+</body>
+</html>
