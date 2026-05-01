@@ -20,6 +20,13 @@
 				if (ctx.state === 'suspended') {
 					try { ctx.resume(); } catch (_e) {}
 				}
+				// Log every state transition. Chromium moves an
+				// AudioContext to 'suspended' when a tab is hidden or
+				// otherwise deprioritized; knowing when this happens
+				// helps diagnose "first clip plays, rest are silent".
+				ctx.onstatechange = function () {
+					console.log('[vdotool speaker page] AudioContext state ->', ctx.state);
+				};
 				var dest = ctx.createMediaStreamDestination();
 
 				// Silent oscillator keeps the track "live" while idle so
@@ -76,10 +83,23 @@
 				// page across the same-origin iframe boundary. We chain
 				// clip playback so consecutive vdotool_say calls don't
 				// overlap.
+				//
+				// Important: Chromium can suspend the AudioContext
+				// when the tab is hidden / when no activity has
+				// happened for a while. If that happens, decodeAudioData
+				// still works, createBufferSource.start() still returns
+				// without error, but src.onended NEVER FIRES — so the
+				// chain is wedged forever and no further clips play.
+				// We defensively resume() before every playback.
 				var __vtChain = Promise.resolve();
 				var __vtPlayingSource = null;
 				window.__vtPlay = function (buf, clipName) {
 					__vtChain = __vtChain.then(function () {
+						if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+							console.log('[vdotool speaker page] AudioContext was', ctx.state, '— resuming before clip', clipName);
+							try { return ctx.resume(); } catch (_e) {}
+						}
+					}).then(function () {
 						return ctx.decodeAudioData(buf).then(function (audioBuf) {
 							return new Promise(function (resolve) {
 								try {
@@ -87,12 +107,28 @@
 									src.buffer = audioBuf;
 									src.connect(dest);
 									__vtPlayingSource = src;
-									src.onended = function () {
+									// Hard-wall timeout: if onended
+									// doesn't fire for any reason
+									// (suspended context, hardware
+									// glitch), force-resolve at
+									// duration + 500ms so the chain
+									// doesn't deadlock forever.
+									var settled = false;
+									var settle = function (reason) {
+										if (settled) return;
+										settled = true;
 										__vtPlayingSource = null;
+										if (reason) console.log('[vdotool speaker page] clip', clipName, 'settled via', reason);
 										resolve();
 									};
+									src.onended = function () { settle('onended'); };
 									src.start();
-									console.log('[vdotool speaker page] playing', clipName, 'duration=', audioBuf.duration.toFixed(2) + 's');
+									console.log('[vdotool speaker page] playing', clipName,
+										'duration=', audioBuf.duration.toFixed(2) + 's',
+										'ctxState=', ctx.state);
+									setTimeout(function () {
+										settle('timeout');
+									}, (audioBuf.duration * 1000) + 1500);
 								} catch (e) {
 									console.log('[vdotool speaker page] playBuffer error', e);
 									resolve();
