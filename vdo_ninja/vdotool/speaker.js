@@ -87,6 +87,9 @@
 
 		// Direct navigation, no srcdoc bootstrap. The receiving page is
 		// VDO.Ninja's index.html with the head-injected speaker hook.
+		// &lanonly forces local-only ICE so the pusher-side peer
+		// connection comes up without depending on STUN/TURN
+		// reachability — both peers are on the same LAN by design.
 		iframe.src = origin + '/?room=' + encodeURIComponent(roomId)
 			+ '&push=' + encodeURIComponent(agentStreamId)
 			+ '&autostart=1'
@@ -94,7 +97,8 @@
 			+ '&videodevice=0'
 			+ '&audiodevice=1'
 			+ '&noaudioprocessing=1'
-			+ '&vdotoolSpeaker=1';
+			+ '&vdotoolSpeaker=1'
+			+ '&lanonly';
 		return iframe;
 	}
 

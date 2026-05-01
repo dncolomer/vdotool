@@ -173,6 +173,18 @@ def _build_links(base_url: str, room_id: str, session_id: str) -> tuple[str, str
     """
     stream_id = f"vt_{session_id}"
     agent_stream_id = f"vt_{session_id}_agent"
+
+    # &lanonly forces VDO.Ninja to use ONLY private-IP ICE candidates,
+    # disabling STUN and TURN entirely. The vdotool deployment is by
+    # design a same-LAN demo (the headless host viewer + the phone are
+    # both on the user's home network behind the launcher's HTTPS
+    # server). Removing the WAN dependency means:
+    #   - peer connections come up faster (no STUN round-trips),
+    #   - they work on networks where vdo.ninja's TURN/STUN servers
+    #     are unreachable (DNS issues seen in viewer logs),
+    #   - the agent stream actually publishes on networks where the
+    #     pusher peer-connection's ICE was timing out waiting for
+    #     STUN candidates.
     push = (
         f"{base_url}/?room={room_id}"
         f"&push={stream_id}"
@@ -181,6 +193,7 @@ def _build_links(base_url: str, room_id: str, session_id: str) -> tuple[str, str
         f"&autostart=1"
         f"&quality=1"
         f"&cleanoutput=1"
+        f"&lanonly"
     )
     view = (
         f"{base_url}/?room={room_id}"
@@ -189,6 +202,7 @@ def _build_links(base_url: str, room_id: str, session_id: str) -> tuple[str, str
         f"&cleanoutput=1"
         f"&vdotool=1"
         f"&sessionId={session_id}"
+        f"&lanonly"
     )
     return push, view
 
