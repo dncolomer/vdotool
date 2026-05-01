@@ -155,14 +155,28 @@ def _frame_timestamp_ms(path: Path) -> int | None:
 def _build_links(base_url: str, room_id: str, session_id: str) -> tuple[str, str]:
     """Build VDO.Ninja push and view URLs for a vdocall.
 
+    Three streams in the room:
+      ``vt_<sid>``         — phone's camera+mic (phone pushes this).
+      ``vt_<sid>_agent``   — agent's TTS (companion pusher iframe on
+                              the host pushes this; ``speaker.js`` +
+                              the speaker bootstrap in index.html).
+      The host's headless viewer subscribes to ``vt_<sid>``.
+
+    The phone URL must be both a publisher (push its own a/v) AND a
+    subscriber to the agent stream (so it actually hears TTS). That's
+    why the URL contains both ``push=`` and ``view=``: VDO.Ninja
+    treats them as orthogonal.
+
     VDO.Ninja sanitizes stream IDs by replacing non-word characters
-    with ``_`` on the push side; we use ``vt_<sid>`` (underscore, no
-    hyphens) so both sides see the same stream id.
+    with ``_`` on the push side; we use ``vt_<sid>`` / ``vt_<sid>_agent``
+    (underscore, no hyphens) so all sides see the same ids.
     """
     stream_id = f"vt_{session_id}"
+    agent_stream_id = f"vt_{session_id}_agent"
     push = (
         f"{base_url}/?room={room_id}"
         f"&push={stream_id}"
+        f"&view={agent_stream_id}"
         f"&webcam=1"
         f"&autostart=1"
         f"&quality=1"
