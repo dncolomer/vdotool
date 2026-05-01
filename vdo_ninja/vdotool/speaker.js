@@ -59,107 +59,21 @@
 	// ------------------------------------------------------------------
 	// Companion pusher iframe.
 	//
-	// Architecture note: previous versions created the AudioContext +
-	// MediaStreamDestinationNode in the parent and tried to postMessage
-	// the resulting MediaStream into the iframe. That doesn't work in
-	// Chromium — `MediaStream` is not structured-cloneable across
-	// realms and `iframe.contentWindow.postMessage(stream, ...)` throws
-	// DataCloneError. The iframe never receives the stream, the
-	// VDO.Ninja inside it hangs forever waiting for getUserMedia, and
-	// no audio reaches the phone.
+	// Architecture: the iframe loads VDO.Ninja's index.html with
+	// ?vdotoolSpeaker=1, which triggers the head-injected bootstrap in
+	// index.html (look for the "vdotool speaker bootstrap" block).
+	// That bootstrap, running INSIDE the same page as VDO.Ninja's
+	// main.js, builds an AudioContext + MediaStreamDestinationNode and
+	// installs a getUserMedia override so VDO.Ninja's pusher gets the
+	// synthetic stream as the "microphone". It also exposes
+	// window.__vtPlay(buf, clipName) and window.__vtStop() so the
+	// parent (this script) can hand off decoded clip bytes via a
+	// direct same-origin function call (no postMessage hop, no
+	// MediaStream cross-realm transfer — those don't work in Chromium).
 	//
-	// Fix: AudioContext + MediaStreamDestinationNode live INSIDE the
-	// iframe, where VDO.Ninja can pick the stream up directly. The
-	// parent only ships clip bytes (ArrayBuffer — structured-cloneable)
-	// to the iframe via postMessage. The iframe decodes and plays them
-	// into its own destination node.
+	// The bootstrap posts {type:'vdotool/speaker-ready'} once it's
+	// done; the parent waits for that before calling __vtPlay.
 	// ------------------------------------------------------------------
-
-	function buildIframeSrcdoc(roomId, agentStreamId, sessionId, origin) {
-		var targetUrl = origin + '/?room=' + encodeURIComponent(roomId)
-			+ '&push=' + encodeURIComponent(agentStreamId)
-			+ '&autostart=1'
-			+ '&cleanoutput=1'
-			+ '&videodevice=0'
-			+ '&audiodevice=1'
-			+ '&noaudioprocessing=1'
-			+ '&vdotoolSpeaker=1';
-
-		// The bootstrap script:
-		//   1. Builds the AudioContext + MediaStreamDestinationNode
-		//      here in the iframe; keeps a silent oscillator on it so
-		//      the track stays "live" while idle (some browsers
-		//      otherwise mark idle MediaStreamTracks as 'ended' and
-		//      VDO.Ninja drops them).
-		//   2. Overrides navigator.mediaDevices.getUserMedia so when
-		//      VDO.Ninja's pusher requests the "microphone" it gets
-		//      our synthetic stream instead.
-		//   3. Exposes window.__vtPlay(arrayBuffer) so the parent can
-		//      schedule decoded clips one at a time.
-		//   4. Notifies the parent it's ready, then redirects to the
-		//      pusher URL (which loads VDO.Ninja, which calls gUM,
-		//      which gets our stream).
-		var bootstrap = ''
-			+ '<!DOCTYPE html><html><head><meta charset="utf-8">'
-			+ '<title>vdotool speaker</title></head><body>'
-			+ '<script>'
-			+ '(function(){'
-			+ '  var ctx = new (window.AudioContext || window.webkitAudioContext)();'
-			+ '  if (ctx.state === "suspended") { try { ctx.resume(); } catch(_e){} }'
-			+ '  var dest = ctx.createMediaStreamDestination();'
-			+ '  var silence = ctx.createConstantSource();'
-			+ '  silence.offset.value = 0;'
-			+ '  var silenceGain = ctx.createGain();'
-			+ '  silenceGain.gain.value = 0;'
-			+ '  silence.connect(silenceGain).connect(dest);'
-			+ '  try { silence.start(); } catch(_e){}'
-			+ '  try { console.log("[vdotool speaker iframe] AudioContext + dest ready", "tracks=", dest.stream.getAudioTracks().length); } catch(_e){}'
-			+ '  var __vtPlayingSource = null;'
-			+ '  var __vtChain = Promise.resolve();'
-			+ '  window.__vtPlay = function(buf, clipName){'
-			+ '    __vtChain = __vtChain.then(function(){'
-			+ '      return ctx.decodeAudioData(buf).then(function(audioBuf){'
-			+ '        return new Promise(function(resolve){'
-			+ '          try {'
-			+ '            var src = ctx.createBufferSource();'
-			+ '            src.buffer = audioBuf;'
-			+ '            src.connect(dest);'
-			+ '            __vtPlayingSource = src;'
-			+ '            src.onended = function(){ __vtPlayingSource = null; resolve(); };'
-			+ '            src.start();'
-			+ '            try { console.log("[vdotool speaker iframe] playing clip", clipName, "duration=", audioBuf.duration.toFixed(2)+"s"); } catch(_e){}'
-			+ '          } catch(e) { try{console.log("[vdotool speaker iframe] playBuffer error", e);}catch(_e){}; resolve(); }'
-			+ '        });'
-			+ '      }).catch(function(e){'
-			+ '        try { console.log("[vdotool speaker iframe] decodeAudioData failed for", clipName, e && e.name, e && e.message); } catch(_e){}'
-			+ '      });'
-			+ '    });'
-			+ '    return __vtChain;'
-			+ '  };'
-			+ '  window.__vtStop = function(){'
-			+ '    if (__vtPlayingSource) { try { __vtPlayingSource.stop(); } catch(_e){} __vtPlayingSource = null; }'
-			+ '    __vtChain = Promise.resolve();'
-			+ '  };'
-			+ '  try {'
-			+ '    var origGum = navigator.mediaDevices && navigator.mediaDevices.getUserMedia'
-			+ '      ? navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)'
-			+ '      : null;'
-			+ '    if (navigator.mediaDevices) {'
-			+ '      navigator.mediaDevices.getUserMedia = function(constraints){'
-			+ '        try { console.log("[vdotool speaker iframe] gUM intercepted", JSON.stringify(constraints)); } catch(_e){}'
-			+ '        if (constraints && constraints.video && origGum) { return origGum(constraints); }'
-			+ '        return Promise.resolve(dest.stream);'
-			+ '      };'
-			+ '      try { console.log("[vdotool speaker iframe] gUM override installed"); } catch(_e){}'
-			+ '    }'
-			+ '  } catch(e) { try{console.log("[vdotool speaker iframe] override failed", e);}catch(_e){} }'
-			+ '  try { window.parent.postMessage({type:"vdotool/iframe-ready"}, "*"); } catch(_e){}'
-			+ '  setTimeout(function(){ location.replace(' + JSON.stringify(targetUrl) + '); }, 10);'
-			+ '})();'
-			+ '<\/script>'
-			+ '</body></html>';
-		return bootstrap;
-	}
 
 	function spawnPusherIframe(roomId, agentStreamId, sessionId, origin) {
 		var iframe = document.createElement('iframe');
@@ -170,7 +84,17 @@
 		iframe.style.top = '-1000px';
 		iframe.style.opacity = '0';
 		iframe.allow = 'autoplay; microphone; camera';
-		iframe.srcdoc = buildIframeSrcdoc(roomId, agentStreamId, sessionId, origin);
+
+		// Direct navigation, no srcdoc bootstrap. The receiving page is
+		// VDO.Ninja's index.html with the head-injected speaker hook.
+		iframe.src = origin + '/?room=' + encodeURIComponent(roomId)
+			+ '&push=' + encodeURIComponent(agentStreamId)
+			+ '&autostart=1'
+			+ '&cleanoutput=1'
+			+ '&videodevice=0'
+			+ '&audiodevice=1'
+			+ '&noaudioprocessing=1'
+			+ '&vdotoolSpeaker=1';
 		return iframe;
 	}
 
@@ -305,16 +229,22 @@
 
 		var iframe = spawnPusherIframe(roomId, agentStreamId, sessionId, location.origin);
 
-		// Wait for the iframe to log iframe-ready (it'll already have
-		// installed __vtPlay by then) before we start polling. The
-		// iframe-ready notice fires BEFORE the iframe redirects to the
-		// pusher URL — VDO.Ninja's gUM-override resolves to dest.stream
-		// after the redirect. The parent doesn't need to do anything
-		// at iframe-ready time anymore — __vtPlay is already callable.
+		// The iframe will load VDO.Ninja's index.html with
+		// ?vdotoolSpeaker=1, which runs the head-injected bootstrap to
+		// install __vtPlay and the gUM-override. Once ready, the
+		// bootstrap posts {type:'vdotool/speaker-ready'} to us.
+		// We don't strictly need to wait for that to start polling
+		// the writer queue — fetchClip is slow enough that __vtPlay
+		// has time to install — but logging it confirms the flow.
+		var sawReady = false;
 		function onMsg(ev) {
-			if (ev.source !== iframe.contentWindow) return;
-			if (!ev.data || ev.data.type !== 'vdotool/iframe-ready') return;
-			log('iframe ready; speaker can now play clips');
+			if (!ev.data) return;
+			if (ev.data.type === 'vdotool/speaker-ready') {
+				if (!sawReady) {
+					sawReady = true;
+					log('speaker page bootstrap ready (gUM override installed in iframe)');
+				}
+			}
 		}
 		window.addEventListener('message', onMsg);
 
