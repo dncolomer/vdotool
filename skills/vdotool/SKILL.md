@@ -12,7 +12,7 @@ Use it whenever live human-in-the-loop context would make you more useful: tutor
 
 2. **AFTER `vdotool_start`, your reply MUST contain the push_link.** The tool response gives you a `user_facing_message` field — send it verbatim to the user (or paraphrase, but the link must be present). Then END the turn. If you don't share the link the user has no way to start their camera and the entire session is dead.
 
-3. **DO NOT call `vdotool_watch`.** It blocks the chat — the user can't type while it runs. The plugin auto-starts a background watcher when you call `vdotool_start`; that watcher pushes `[vdotool auto]` messages into the chat whenever a new frame arrives or the camera state changes. Just respond normally; the watcher will tap you on the shoulder.
+3. **Let the watcher come to you.** The plugin auto-starts a background watcher when you call `vdotool_start`; that watcher pushes `[vdotool auto]` messages into the chat whenever a new frame arrives or the camera state changes. You never need to poll. If you want a frame on-demand between auto messages, call `vdotool_get_latest_frame` — it returns immediately.
 
 4. **When you receive a `[vdotool auto] ...` message with an attached image, LOOK at it.** Comment only if something is actionable. Read `image_quality.classification` first: if `blank`, the plugin has DELIBERATELY OMITTED the image — the camera is dark, so do NOT describe contents; tell the user to wake the phone. If `low_detail`, hedge. If `ok`, you can describe and respond normally.
 
@@ -26,13 +26,12 @@ Use it whenever live human-in-the-loop context would make you more useful: tutor
 
 ---
 
-## Tool Surface (8)
+## Tool Surface (7)
 
 | Tool | When to use |
 |------|-------------|
 | `vdotool_start` | Once per session, after confirming context with the user. Auto-starts the stack, spawns the viewer, and starts the background watcher. |
 | `vdotool_get_latest_frame` | Get the current frame immediately, no waiting. Use mid-conversation when the user says something ambiguous or you want to check progress on demand. |
-| `vdotool_watch` | Rarely. Blocks the chat. The auto-watcher is the recommended path. |
 | `vdotool_say` | Speak to the user's phone. Only if `voice_config.tts.ready`. Keep it short. |
 | `vdotool_status` | Cheap text-only poll — session state, viewer health, stack health, listener status, voice config. |
 | `vdotool_end` | When done, when user asks to stop, or when they've gone silent for ~3 minutes. |

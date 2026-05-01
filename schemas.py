@@ -87,51 +87,6 @@ GET_LATEST_FRAME = {
 
 
 # ---------------------------------------------------------------------------
-# vdotool_watch
-# ---------------------------------------------------------------------------
-
-WATCH = {
-    "name": "vdotool_watch",
-    "description": (
-        "BLOCKING wait for a NEW frame. AVOID this tool when a vdocall "
-        "is active — the background watcher started by vdotool_start "
-        "already pushes `[vdotool auto]` messages into the chat "
-        "whenever something interesting happens, and unlike this tool "
-        "the watcher does NOT lock the agent loop.\n\n"
-        "Use only when you explicitly need to wait for a single new "
-        "frame in-line within one tool turn (rare).\n\n"
-        "Behavior:\n"
-        "  - Blocks until a frame newer than `since_ms` arrives, or "
-        "until `timeout_seconds` elapses.\n"
-        "  - On new frame: returns the same payload as "
-        "vdotool_get_latest_frame.\n"
-        "  - On timeout: returns {timed_out: true}."
-    ),
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "timeout_seconds": {
-                "type": "integer",
-                "description": "Max seconds to wait. Default 10. Hard cap 20.",
-                "default": 10,
-                "minimum": 1,
-                "maximum": 20,
-            },
-            "since_ms": {
-                "type": "integer",
-                "description": (
-                    "Unix-ms of the last frame the agent already saw. "
-                    "If omitted, returns the current latest frame "
-                    "immediately."
-                ),
-            },
-        },
-        "required": [],
-    },
-}
-
-
-# ---------------------------------------------------------------------------
 # vdotool_end
 # ---------------------------------------------------------------------------
 

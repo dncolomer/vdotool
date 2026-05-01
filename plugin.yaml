@@ -15,7 +15,6 @@ homepage: https://github.com/dncolomer/vdotool
 provides_tools:
   - vdotool_start
   - vdotool_get_latest_frame
-  - vdotool_watch
   - vdotool_end
   - vdotool_status
   - vdotool_spawn_viewer

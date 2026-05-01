@@ -16,10 +16,9 @@ Architecture:
     configured in ~/.hermes/config.yaml; the watcher transcribes
     inbound utterances via whatever STT provider is configured.
 
-Tool surface (8):
+Tool surface (7):
   - vdotool_start              Start a vdocall.
   - vdotool_get_latest_frame   Return the newest frame.
-  - vdotool_watch              Block until a new frame (rarely needed).
   - vdotool_end                End the session.
   - vdotool_status             Poll session + voice-config state.
   - vdotool_spawn_viewer       Restart the headless viewer.
@@ -336,10 +335,9 @@ def _on_pre_llm_call(session_id, user_message, **kwargs):
         pass
 
     nudge = (
-        f" {watcher_note}. While the watcher is running, do NOT call "
-        f"vdotool_watch (it blocks the chat). Just respond to the user "
-        f"normally; the watcher will inject [vdotool auto] messages "
-        f"when frames arrive. Before describing any frame, READ "
+        f" {watcher_note}. Just respond to the user normally; the "
+        f"watcher will inject [vdotool auto] messages when frames "
+        f"arrive. Before describing any frame, READ "
         f"image_quality.classification: if 'blank' do NOT describe "
         f"scene contents (camera is covered/asleep); if 'low_detail' hedge."
     )
@@ -363,7 +361,6 @@ def _on_pre_llm_call(session_id, user_message, **kwargs):
 _TOOL_REGISTRY = [
     ("vdotool_start", schemas.START, "_start_wrapper"),
     ("vdotool_get_latest_frame", schemas.GET_LATEST_FRAME, tools.get_latest_frame),
-    ("vdotool_watch", schemas.WATCH, tools.watch),
     ("vdotool_end", schemas.END, "_end_wrapper"),
     ("vdotool_status", schemas.STATUS, tools.get_status),
     ("vdotool_spawn_viewer", schemas.SPAWN_VIEWER, tools.spawn_viewer),
@@ -387,7 +384,6 @@ def register(ctx):
 
         if resolved in (
             tools.get_latest_frame,
-            tools.watch,
             tools.get_status,
             tools.spawn_viewer,
             tools.say,

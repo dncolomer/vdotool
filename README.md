@@ -99,13 +99,12 @@ vdotool/
         └── README.md
 ```
 
-## Tools (8)
+## Tools (7)
 
 | Tool | Purpose |
 |------|---------|
 | `vdotool_start` | Mint a VDO.Ninja room, auto-start the stack, spawn the viewer + watcher, return push/view links. |
 | `vdotool_get_latest_frame` | Newest frame as base64 + metadata, with optional auxiliary-vision text analysis. |
-| `vdotool_watch` | Legacy blocking wait. Usually not needed — the watcher auto-injects. |
 | `vdotool_say` | Speak text to the phone via TTS (configured provider). Supports `interrupt=true`. |
 | `vdotool_end` | Stop viewer, watcher, TTS queue; purge frames. |
 | `vdotool_status` | Poll session state, viewer/stack/listener health, voice config. |

@@ -388,6 +388,17 @@ def _record_tts_chars_window(session_state: dict, chars: int) -> tuple[bool, int
 
 
 def _synthesize_tts(text: str) -> tuple[str | None, str | None]:
+    """Call Hermes' TTS tool and return the path to the generated clip.
+
+    The Hermes ``text_to_speech_tool`` contract:
+
+        JSON string with
+            {"success": bool, "file_path": str, ...}   on success,
+            {"success": false, "error": str, ...}      on failure.
+
+    Anything that doesn't match that shape is treated as a hard error —
+    we don't paper over unexpected return shapes with heuristics.
+    """
     try:
         from tools.tts_tool import text_to_speech_tool  # type: ignore
     except Exception as e:  # noqa: BLE001
@@ -405,15 +416,10 @@ def _synthesize_tts(text: str) -> tuple[str | None, str | None]:
     if not isinstance(result, dict):
         return None, "text_to_speech_tool returned non-dict"
     if not result.get("success"):
-        err = result.get("error") or result.get("message") or "unknown TTS error"
-        return None, f"tts failed: {err}"
+        return None, f"tts failed: {result.get('error') or 'unknown TTS error'}"
 
-    path = result.get("file_path") or result.get("path") or result.get("output_path")
-    if not path:
-        media = result.get("content") or result.get("result") or ""
-        if isinstance(media, str) and "MEDIA:" in media:
-            path = media.split("MEDIA:", 1)[1].strip().split()[0]
-    if not path:
+    path = result.get("file_path")
+    if not isinstance(path, str) or not path:
         return None, f"tts succeeded but no file_path in result: {result!r}"
     return path, None
 
@@ -726,9 +732,9 @@ def start(args: dict, *, session_state: dict, **_kwargs) -> str:
                 "push_link. The user_facing_message already adapts to "
                 "what voice capabilities are available — don't repeat "
                 "or contradict its voice sentence.\n"
-                "DO NOT call vdotool_watch — it blocks the chat. The "
-                "background watcher (see watcher field) auto-injects "
-                "[vdotool auto] messages.\n"
+                "The background watcher (see watcher field) auto-injects "
+                "[vdotool auto] messages when frames arrive; you don't "
+                "need to poll.\n"
                 "When such an auto message arrives with an attached "
                 "image, LOOK at it. If it says the frame is BLANK, do "
                 "NOT describe contents — just tell the user the camera "
@@ -772,72 +778,6 @@ def get_latest_frame(args: dict, *, session_state: dict, **_kwargs) -> str:
             return _ok(_frame_payload(path, session_state))
         except OSError as e:
             return _err("read_failed", f"Could not read latest frame: {e}")
-    except Exception as e:  # noqa: BLE001
-        return _err("plugin_error", str(e))
-
-
-def watch(args: dict, *, session_state: dict, **_kwargs) -> str:
-    try:
-        sid = session_state.get("session_id")
-        if not sid:
-            return _err("no_active_session", "No vdocall is active.")
-
-        timeout = args.get("timeout_seconds", 10)
-        if not isinstance(timeout, (int, float)) or timeout <= 0:
-            return _err("invalid_timeout", "timeout_seconds must be a positive number")
-        timeout = min(int(timeout), 20)
-
-        since_ms = args.get("since_ms")
-        if since_ms is not None and not isinstance(since_ms, (int, float)):
-            return _err("invalid_since_ms", "since_ms must be an integer (unix milliseconds)")
-        since_ms = int(since_ms) if since_ms is not None else None
-
-        deadline = time.monotonic() + timeout
-        poll_interval = 0.5
-        last_seen_ts: int | None = None
-
-        while True:
-            path = _latest_frame_path(session_state)
-            if path is not None:
-                ts = _frame_timestamp_ms(path)
-                if since_ms is None:
-                    try:
-                        return _ok(_frame_payload(path, session_state))
-                    except OSError as e:
-                        return _err("read_failed", f"Could not read frame: {e}")
-                if ts is not None and ts > since_ms:
-                    try:
-                        return _ok(_frame_payload(path, session_state))
-                    except OSError as e:
-                        return _err("read_failed", f"Could not read frame: {e}")
-                last_seen_ts = ts
-
-            if time.monotonic() >= deadline:
-                title = session_state.get("title") or "(untitled)"
-                age = latest_frame_age_seconds(session_state)
-                return _ok(
-                    {
-                        "timed_out": True,
-                        "session_id": sid,
-                        "waited_seconds": timeout,
-                        "since_ms": since_ms,
-                        "last_seen_ts_ms": last_seen_ts,
-                        "latest_frame_age_seconds": round(age, 2) if age is not None else None,
-                        "session_title": title,
-                        "hint": (
-                            f"No new frame in the last {timeout}s. "
-                            + (
-                                f"Camera feed is stale ({int(age)}s old) — "
-                                "user may have moved away or closed the tab."
-                                if age is not None and age > STALE_FRAME_SECONDS
-                                else "User may not have moved much — watch "
-                                "again or ask them what's up."
-                            )
-                        ),
-                    }
-                )
-
-            time.sleep(poll_interval)
     except Exception as e:  # noqa: BLE001
         return _err("plugin_error", str(e))
 
