@@ -21,7 +21,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import signal
 import socket
 import subprocess
 import sys
@@ -33,15 +32,29 @@ from typing import Optional
 LOG = logging.getLogger("vdotool.stack")
 
 
-def _preexec_pdeathsig() -> None:
-    """Linux: die when the parent Hermes process dies. No-op elsewhere."""
-    try:
-        import ctypes
-        PR_SET_PDEATHSIG = 1
-        libc = ctypes.CDLL("libc.so.6", use_errno=True)
-        libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM, 0, 0, 0)
-    except Exception:  # noqa: BLE001
-        pass
+def _preexec_detach() -> None:
+    """Detach the launcher subprocess from the calling thread on Linux.
+
+    Originally this used ``PR_SET_PDEATHSIG`` so the launcher would die
+    if Hermes died. Problem: PDEATHSIG is keyed off the calling
+    *thread*, not the process. Hermes loads the plugin from a worker
+    thread that finishes within seconds of the first vdotool_start
+    call, and the kernel then SIGTERMs the launcher even though Hermes
+    itself is alive and well. That's exactly the "launcher dies ~2s
+    after first contact" bug.
+
+    We rely on:
+      - ``start_new_session=True`` (passed to Popen) to detach from the
+        controlling terminal and put the launcher in its own process
+        group, so it survives the parent's TTY closing.
+      - ``atexit.register(_stack.stop)`` in __init__.py for clean
+        shutdown when Hermes itself exits.
+      - The supervisor's explicit ``stop()`` for end-of-session.
+
+    PDEATHSIG is intentionally NOT used. Leaving this hook as a stub
+    so Popen's preexec_fn signature stays uniform.
+    """
+    return
 
 
 _REPO_ROOT = Path(__file__).resolve().parent
@@ -115,7 +128,7 @@ class StackSupervisor:
                     stdin=subprocess.DEVNULL,
                     cwd=str(_REPO_ROOT),
                     start_new_session=True,
-                    preexec_fn=_preexec_pdeathsig,
+                    preexec_fn=_preexec_detach,
                     env=os.environ.copy(),
                 )
             finally:

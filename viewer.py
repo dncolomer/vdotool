@@ -25,7 +25,6 @@ from __future__ import annotations
 import logging
 import os
 import shutil
-import signal
 import subprocess
 import tempfile
 import threading
@@ -36,18 +35,20 @@ from typing import Optional
 LOG = logging.getLogger("vdotool.viewer")
 
 
-def _preexec_pdeathsig() -> None:
-    """Linux: receive SIGTERM when the parent dies.
+def _preexec_detach() -> None:
+    """Stub kept so Popen's ``preexec_fn`` signature stays uniform.
 
-    Silently a no-op on macOS / Windows / weird libcs.
+    Previous versions used ``PR_SET_PDEATHSIG`` here so headless
+    Chromium would die when Hermes died — but PDEATHSIG triggers when
+    the calling *thread* exits, not the process. Hermes invokes plugin
+    handlers from worker threads that finish in seconds, and the
+    kernel was SIGTERM'ing Chromium prematurely.
+
+    Cleanup is handled by ``stop_all_viewers`` (atexit) and by the
+    explicit ``stop_viewer`` call in ``vdotool_end``. Combined with
+    ``start_new_session=True`` on Popen, that's sufficient.
     """
-    try:
-        import ctypes
-        PR_SET_PDEATHSIG = 1
-        libc = ctypes.CDLL("libc.so.6", use_errno=True)
-        libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM, 0, 0, 0)
-    except Exception:  # noqa: BLE001
-        pass
+    return
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +143,7 @@ class Viewer:
                 stderr=subprocess.STDOUT,
                 stdin=subprocess.DEVNULL,
                 start_new_session=True,
-                preexec_fn=_preexec_pdeathsig,
+                preexec_fn=_preexec_detach,
             )
         finally:
             try:
