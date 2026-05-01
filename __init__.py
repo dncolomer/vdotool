@@ -98,9 +98,23 @@ def _inject_with_image_safe(content: str, image_paths: list) -> bool:
     """Inject a synthetic user message with image attachments.
 
     Hermes' CLI accepts a ``(text, [Path, ...])`` tuple on
-    ``cli._pending_input`` / ``cli._interrupt_queue``; this is exactly
-    how user-pasted images are routed. Built-in image-routing handles
-    delivery to vision vs text-only models.
+    ``cli._pending_input`` (the queue used when the agent is IDLE) for
+    user-pasted images. We use that path when available.
+
+    However, ``cli._interrupt_queue`` (used when the agent is RUNNING)
+    is drained with ``"".join(...)`` semantics — Hermes concatenates
+    queued items into a combined prompt — so putting a
+    ``(text, paths)`` tuple onto it crashes the interrupt handler with
+    ``TypeError: sequence item 0: expected str instance, tuple
+    found`` as soon as a second message arrives. We MUST send plain
+    strings on the interrupt queue.
+
+    When the agent is running and we have an image to attach, fall
+    back to ``inject_message`` (which routes through the safe text
+    path). The agent loses the inline image attachment for that one
+    injection, but the message text still contains the timestamp and
+    quality info, and the agent can call
+    ``vdotool_get_latest_frame`` if it wants the bytes.
     """
     if not image_paths:
         return _inject_message_safe(content, role="user")
@@ -120,24 +134,25 @@ def _inject_with_image_safe(content: str, image_paths: list) -> bool:
         return _inject_message_safe(content, role="user")
 
     pending = getattr(cli, "_pending_input", None)
-    interrupt = getattr(cli, "_interrupt_queue", None)
-    if pending is None and interrupt is None:
+    if pending is None:
         return _inject_message_safe(content, role="user")
 
     paths = [Path(p) for p in image_paths if p is not None]
     if not paths:
         return _inject_message_safe(content, role="user")
 
+    # If the agent is running, the only queue available is the
+    # interrupt queue, which can't carry tuple payloads (see
+    # docstring). Fall back to a plain-text injection.
+    if getattr(cli, "_agent_running", False):
+        return _inject_message_safe(content, role="user")
+
+    # Agent is idle — put the image-bearing tuple on _pending_input.
     payload = (content, paths)
     try:
-        if getattr(cli, "_agent_running", False) and interrupt is not None:
-            interrupt.put(payload)
-        elif pending is not None:
-            pending.put(payload)
-        else:
-            return _inject_message_safe(content, role="user")
+        pending.put(payload)
     except Exception:  # noqa: BLE001
-        logger.exception("inject_with_image: queue.put failed")
+        logger.exception("inject_with_image: pending.put failed")
         return _inject_message_safe(content, role="user")
 
     return True
