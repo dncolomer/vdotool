@@ -137,24 +137,48 @@ class _Handler(http.server.SimpleHTTPRequestHandler):
     writer_host: str = "127.0.0.1"
     writer_port: int = DEFAULT_WRITER_PORT
 
-    # Any request path that should be proxied to the writer sidecar
-    # instead of served as static files from the fork's doc-root. All
-    # /vdotool/* routes are plugin-managed endpoints served by the
-    # writer; the base index.html + VDO.Ninja JS are static.
-    _WRITER_PREFIX = "/vdotool/"
+    # The /vdotool/ URL space is shared between two backends:
+    #   - dynamic plugin-managed endpoints implemented by the writer
+    #     sidecar (/vdotool/frame, /vdotool/audio-*, /vdotool/listener-*,
+    #     /vdotool/healthz). These get proxied.
+    #   - static browser-side scripts that live at vdo_ninja/vdotool/*.js
+    #     on disk (capture.js, speaker.js, listener.js) and must be
+    #     served by the static file handler. These are loaded by
+    #     index.html when ?vdotool=1 is in the URL.
+    #
+    # We can't proxy by prefix alone because both share /vdotool/. We
+    # whitelist the writer's exact paths (and the audio-serve subtree)
+    # and let everything else fall through to static.
+    _WRITER_EXACT_PATHS = frozenset({
+        "/vdotool/frame",
+        "/vdotool/audio-queue",
+        "/vdotool/audio-ack",
+        "/vdotool/audio-in",
+        "/vdotool/listener-mute",
+        "/vdotool/listener-status",
+        "/vdotool/healthz",
+    })
+    _WRITER_PATH_PREFIXES = ("/vdotool/audio/",)
 
     # Quieter access log
     def log_message(self, fmt, *args):  # noqa: D401
         LOG.info("%s - %s", self.address_string(), fmt % args)
 
+    def _is_writer_path(self) -> bool:
+        # Strip the query string before matching.
+        path = self.path.split("?", 1)[0]
+        if path in self._WRITER_EXACT_PATHS:
+            return True
+        return any(path.startswith(p) for p in self._WRITER_PATH_PREFIXES)
+
     def do_POST(self):  # noqa: N802
-        if self.path.startswith(self._WRITER_PREFIX):
+        if self._is_writer_path():
             self._proxy_to_writer(method="POST")
             return
         self.send_error(405, "Method not allowed")
 
     def do_GET(self):  # noqa: N802
-        if self.path.startswith(self._WRITER_PREFIX):
+        if self._is_writer_path():
             self._proxy_to_writer(method="GET")
             return
         super().do_GET()
