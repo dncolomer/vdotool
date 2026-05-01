@@ -153,13 +153,23 @@ class StackSupervisor:
         )
 
     def stop(self, timeout: float = 4.0) -> None:
+        # Debug-trace where the kill came from. The launcher should
+        # only die at end of session, not mid-session, so any caller
+        # of stop() during an active vdocall is interesting.
+        import traceback
+        stack_summary = "".join(traceback.format_stack(limit=8))
         with self._lock:
             proc = self._proc
             self._proc = None
             self._base_url = None
             self._frames_dir = None
         if proc is None or proc.poll() is not None:
+            LOG.info("StackSupervisor.stop() called but no live proc; trace:\n%s", stack_summary)
             return
+        LOG.warning(
+            "StackSupervisor.stop() terminating launcher pid=%s; trace:\n%s",
+            proc.pid, stack_summary,
+        )
         try:
             proc.terminate()
         except ProcessLookupError:
