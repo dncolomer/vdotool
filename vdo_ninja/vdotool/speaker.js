@@ -57,31 +57,22 @@
 	}
 
 	// ------------------------------------------------------------------
-	// Synthetic audio: AudioContext + destination node from which we
-	// publish a single MediaStreamTrack. TTS clips are decoded into
-	// AudioBuffers and scheduled on this node sequentially.
-	// ------------------------------------------------------------------
-
-	function createSyntheticAudioStream() {
-		var ctx = new (window.AudioContext || window.webkitAudioContext)();
-		if (ctx.state === 'suspended') {
-			ctx.resume().catch(function () {});
-		}
-		var dest = ctx.createMediaStreamDestination();
-		// A persistent silent oscillator keeps the track live even when
-		// no clip is playing. Without this, some browsers mark the track
-		// as "ended" during idle and VDO.Ninja drops it.
-		var silence = ctx.createConstantSource();
-		silence.offset.value = 0;
-		var gain = ctx.createGain();
-		gain.gain.value = 0;
-		silence.connect(gain).connect(dest);
-		silence.start();
-		return { ctx: ctx, dest: dest };
-	}
-
-	// ------------------------------------------------------------------
 	// Companion pusher iframe.
+	//
+	// Architecture note: previous versions created the AudioContext +
+	// MediaStreamDestinationNode in the parent and tried to postMessage
+	// the resulting MediaStream into the iframe. That doesn't work in
+	// Chromium — `MediaStream` is not structured-cloneable across
+	// realms and `iframe.contentWindow.postMessage(stream, ...)` throws
+	// DataCloneError. The iframe never receives the stream, the
+	// VDO.Ninja inside it hangs forever waiting for getUserMedia, and
+	// no audio reaches the phone.
+	//
+	// Fix: AudioContext + MediaStreamDestinationNode live INSIDE the
+	// iframe, where VDO.Ninja can pick the stream up directly. The
+	// parent only ships clip bytes (ArrayBuffer — structured-cloneable)
+	// to the iframe via postMessage. The iframe decodes and plays them
+	// into its own destination node.
 	// ------------------------------------------------------------------
 
 	function buildIframeSrcdoc(roomId, agentStreamId, sessionId, origin) {
@@ -94,33 +85,70 @@
 			+ '&noaudioprocessing=1'
 			+ '&vdotoolSpeaker=1';
 
+		// The bootstrap script:
+		//   1. Builds the AudioContext + MediaStreamDestinationNode
+		//      here in the iframe; keeps a silent oscillator on it so
+		//      the track stays "live" while idle (some browsers
+		//      otherwise mark idle MediaStreamTracks as 'ended' and
+		//      VDO.Ninja drops them).
+		//   2. Overrides navigator.mediaDevices.getUserMedia so when
+		//      VDO.Ninja's pusher requests the "microphone" it gets
+		//      our synthetic stream instead.
+		//   3. Exposes window.__vtPlay(arrayBuffer) so the parent can
+		//      schedule decoded clips one at a time.
+		//   4. Notifies the parent it's ready, then redirects to the
+		//      pusher URL (which loads VDO.Ninja, which calls gUM,
+		//      which gets our stream).
 		var bootstrap = ''
 			+ '<!DOCTYPE html><html><head><meta charset="utf-8">'
 			+ '<title>vdotool speaker</title></head><body>'
 			+ '<script>'
 			+ '(function(){'
-			+ '  var __vtStreamResolver = null;'
-			+ '  var __vtStreamPromise = new Promise(function(res){__vtStreamResolver = res;});'
-			+ '  window.addEventListener("message", function(ev){'
-			+ '    if (ev.source !== window.parent) return;'
-			+ '    if (!ev.data || ev.data.type !== "vdotool/stream") return;'
-			+ '    if (__vtStreamResolver && ev.data.stream) {'
-			+ '      __vtStreamResolver(ev.data.stream);'
-			+ '      __vtStreamResolver = null;'
-			+ '      try { console.log("[vdotool speaker iframe] received stream from parent"); } catch(_e){}'
-			+ '    }'
-			+ '  });'
+			+ '  var ctx = new (window.AudioContext || window.webkitAudioContext)();'
+			+ '  if (ctx.state === "suspended") { try { ctx.resume(); } catch(_e){} }'
+			+ '  var dest = ctx.createMediaStreamDestination();'
+			+ '  var silence = ctx.createConstantSource();'
+			+ '  silence.offset.value = 0;'
+			+ '  var silenceGain = ctx.createGain();'
+			+ '  silenceGain.gain.value = 0;'
+			+ '  silence.connect(silenceGain).connect(dest);'
+			+ '  try { silence.start(); } catch(_e){}'
+			+ '  try { console.log("[vdotool speaker iframe] AudioContext + dest ready", "tracks=", dest.stream.getAudioTracks().length); } catch(_e){}'
+			+ '  var __vtPlayingSource = null;'
+			+ '  var __vtChain = Promise.resolve();'
+			+ '  window.__vtPlay = function(buf, clipName){'
+			+ '    __vtChain = __vtChain.then(function(){'
+			+ '      return ctx.decodeAudioData(buf).then(function(audioBuf){'
+			+ '        return new Promise(function(resolve){'
+			+ '          try {'
+			+ '            var src = ctx.createBufferSource();'
+			+ '            src.buffer = audioBuf;'
+			+ '            src.connect(dest);'
+			+ '            __vtPlayingSource = src;'
+			+ '            src.onended = function(){ __vtPlayingSource = null; resolve(); };'
+			+ '            src.start();'
+			+ '            try { console.log("[vdotool speaker iframe] playing clip", clipName, "duration=", audioBuf.duration.toFixed(2)+"s"); } catch(_e){}'
+			+ '          } catch(e) { try{console.log("[vdotool speaker iframe] playBuffer error", e);}catch(_e){}; resolve(); }'
+			+ '        });'
+			+ '      }).catch(function(e){'
+			+ '        try { console.log("[vdotool speaker iframe] decodeAudioData failed for", clipName, e && e.name, e && e.message); } catch(_e){}'
+			+ '      });'
+			+ '    });'
+			+ '    return __vtChain;'
+			+ '  };'
+			+ '  window.__vtStop = function(){'
+			+ '    if (__vtPlayingSource) { try { __vtPlayingSource.stop(); } catch(_e){} __vtPlayingSource = null; }'
+			+ '    __vtChain = Promise.resolve();'
+			+ '  };'
 			+ '  try {'
 			+ '    var origGum = navigator.mediaDevices && navigator.mediaDevices.getUserMedia'
 			+ '      ? navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices)'
 			+ '      : null;'
 			+ '    if (navigator.mediaDevices) {'
 			+ '      navigator.mediaDevices.getUserMedia = function(constraints){'
-			+ '        try { console.log("[vdotool speaker iframe] gUM intercepted", constraints); } catch(_e){}'
-			+ '        if (constraints && constraints.video && origGum) {'
-			+ '          return origGum(constraints);'
-			+ '        }'
-			+ '        return __vtStreamPromise;'
+			+ '        try { console.log("[vdotool speaker iframe] gUM intercepted", JSON.stringify(constraints)); } catch(_e){}'
+			+ '        if (constraints && constraints.video && origGum) { return origGum(constraints); }'
+			+ '        return Promise.resolve(dest.stream);'
 			+ '      };'
 			+ '      try { console.log("[vdotool speaker iframe] gUM override installed"); } catch(_e){}'
 			+ '    }'
@@ -150,8 +178,11 @@
 	// Audio-queue polling loop.
 	// ------------------------------------------------------------------
 
-	function speaker(sessionId, audioCtx, audioDest) {
-		var playingSource = null;
+	function speaker(sessionId, iframe) {
+		// All audio playback happens inside the iframe (the
+		// MediaStreamDestinationNode lives there so VDO.Ninja's
+		// gUM-override can hand it directly to its pusher). The parent
+		// only ferries clip bytes via iframe.contentWindow.__vtPlay.
 		var playedClips = Object.create(null);
 		var lastInterruptEpoch = 0;
 
@@ -180,31 +211,27 @@
 				.catch(function (e) { log('ack failed', e); });
 		}
 
-		function playBuffer(buffer) {
-			return new Promise(function (resolve) {
-				try {
-					var src = audioCtx.createBufferSource();
-					src.buffer = buffer;
-					src.connect(audioDest);
-					playingSource = src;
-					src.onended = function () {
-						playingSource = null;
-						resolve();
-					};
-					src.start();
-				} catch (e) {
-					log('playBuffer error', e);
-					playingSource = null;
-					resolve();
+		function iframePlay(buf, clipName) {
+			// Same-origin iframe → cross-window function call works.
+			// __vtPlay is installed by buildIframeSrcdoc above.
+			try {
+				var w = iframe.contentWindow;
+				if (w && typeof w.__vtPlay === 'function') {
+					return w.__vtPlay(buf, clipName);
 				}
-			});
+			} catch (e) {
+				log('iframePlay failed', e);
+			}
+			return Promise.resolve();
 		}
 
-		function stopCurrent() {
-			if (playingSource) {
-				try { playingSource.stop(); } catch (_e) {}
-				playingSource = null;
-			}
+		function iframeStop() {
+			try {
+				var w = iframe.contentWindow;
+				if (w && typeof w.__vtStop === 'function') {
+					w.__vtStop();
+				}
+			} catch (_e) {}
 		}
 
 		var busy = false;
@@ -216,7 +243,7 @@
 				if (q && typeof q.interrupt_epoch_ms === 'number' && q.interrupt_epoch_ms > lastInterruptEpoch) {
 					lastInterruptEpoch = q.interrupt_epoch_ms;
 					log('interrupt epoch advanced -> aborting current clip');
-					stopCurrent();
+					iframeStop();
 				}
 				var pending = (q && Array.isArray(q.pending)) ? q.pending : [];
 				for (var i = 0; i < pending.length; i++) {
@@ -224,11 +251,10 @@
 					if (!entry || !entry.clip) continue;
 					if (playedClips[entry.clip]) continue;
 					playedClips[entry.clip] = true;
-					log('playing clip', entry.clip, 'text=', JSON.stringify(entry.text || '').slice(0, 60));
+					log('handing clip to iframe', entry.clip, 'text=', JSON.stringify(entry.text || '').slice(0, 60));
 					try {
 						var bytes = await fetchClip(entry.clip);
-						var buf = await audioCtx.decodeAudioData(bytes);
-						await playBuffer(buf);
+						await iframePlay(bytes, entry.clip);
 					} catch (e) {
 						log('clip playback failed', entry.clip, e);
 					}
@@ -269,16 +295,6 @@
 	};
 
 	function beginSpeaker(sessionId) {
-		var synth;
-		try {
-			synth = createSyntheticAudioStream();
-		} catch (e) {
-			log('could not create AudioContext', e);
-			return;
-		}
-		var tracks = synth.dest.stream.getAudioTracks();
-		log('synthetic audio track ready:', tracks[0] && tracks[0].label);
-
 		var params = new URLSearchParams(location.search);
 		var roomId = params.get('room') || '';
 		if (!roomId) {
@@ -289,26 +305,23 @@
 
 		var iframe = spawnPusherIframe(roomId, agentStreamId, sessionId, location.origin);
 
+		// Wait for the iframe to log iframe-ready (it'll already have
+		// installed __vtPlay by then) before we start polling. The
+		// iframe-ready notice fires BEFORE the iframe redirects to the
+		// pusher URL — VDO.Ninja's gUM-override resolves to dest.stream
+		// after the redirect. The parent doesn't need to do anything
+		// at iframe-ready time anymore — __vtPlay is already callable.
 		function onMsg(ev) {
 			if (ev.source !== iframe.contentWindow) return;
 			if (!ev.data || ev.data.type !== 'vdotool/iframe-ready') return;
-			try {
-				iframe.contentWindow.postMessage(
-					{ type: 'vdotool/stream', stream: synth.dest.stream },
-					location.origin,
-					[]
-				);
-				log('handed MediaStream to pusher iframe');
-			} catch (e) {
-				log('failed to post MediaStream to iframe', e);
-			}
+			log('iframe ready; speaker can now play clips');
 		}
 		window.addEventListener('message', onMsg);
 
 		document.body.appendChild(iframe);
 		log('spawned pusher iframe; room=' + roomId + ' agent_stream=' + agentStreamId);
 
-		var sp = speaker(sessionId, synth.ctx, synth.dest);
+		var sp = speaker(sessionId, iframe);
 		sp.tick();
 		setInterval(sp.tick, POLL_INTERVAL_MS);
 	}
