@@ -57,7 +57,10 @@ AUTOSTART_ENABLED = _flag("VDOTOOL_AUTOSTART_STACK", "1")
 
 
 class StackSupervisor:
-    __slots__ = ("_proc", "_base_url", "_frames_dir", "_lock", "_launched_log")
+    __slots__ = (
+        "_proc", "_base_url", "_frames_dir", "_lock", "_launched_log",
+        "_consecutive_unhealthy",
+    )
 
     def __init__(self) -> None:
         self._proc: Optional[subprocess.Popen] = None
@@ -65,6 +68,10 @@ class StackSupervisor:
         self._frames_dir: Optional[str] = None
         self._lock = threading.Lock()
         self._launched_log: Optional[Path] = None
+        # Counter so a single transient probe failure doesn't trigger
+        # an auto-restart. The pre_llm_call hook checks this counter
+        # rather than the raw health_check result.
+        self._consecutive_unhealthy = 0
 
     def ensure_running(self, timeout_seconds: float = 15.0) -> tuple[str, str]:
         """Start the stack if not running; return (base_url, frames_dir)."""
@@ -221,8 +228,15 @@ class StackSupervisor:
                 writer_port = data["writer_port"]
         except (ValueError, OSError):
             pass
-        info["https_reachable"] = self._port_open("127.0.0.1", https_port)
-        info["writer_reachable"] = self._port_open("127.0.0.1", writer_port)
+        # Be generous with the connect timeout: under load, the HTTPS
+        # server's 32 worker threads can all be busy serving frame
+        # uploads / queue polls, and a 1s connect can fail spuriously.
+        # 5s is far more than the LLM hook can afford to wait on the
+        # critical path, but health_check() is supposed to be cheap so
+        # we keep 2.0 here and rely on the pre_llm_call hook's
+        # consecutive-failure threshold below to debounce flakes.
+        info["https_reachable"] = self._port_open("127.0.0.1", https_port, timeout=2.0)
+        info["writer_reachable"] = self._port_open("127.0.0.1", writer_port, timeout=2.0)
         if not info["https_reachable"]:
             info["reason"] = f"https port {https_port} not responding"
         elif not info["writer_reachable"]:
@@ -230,6 +244,24 @@ class StackSupervisor:
         elif info["managed"] and not info["alive"]:
             info["reason"] = "managed subprocess exited"
         return info
+
+    # Number of consecutive failed probes before we believe the stack
+    # is actually dead. One failed probe under load is normal; three in
+    # a row across pre_llm_call invocations is real.
+    UNHEALTHY_THRESHOLD = 3
+
+    def record_health_probe(self, healthy: bool) -> int:
+        """Update the consecutive-failure counter; return current value.
+
+        Callers (the pre_llm_call hook) should only auto-restart when
+        the returned count >= UNHEALTHY_THRESHOLD.
+        """
+        with self._lock:
+            if healthy:
+                self._consecutive_unhealthy = 0
+            else:
+                self._consecutive_unhealthy += 1
+            return self._consecutive_unhealthy
 
     # -----------------------------------------------------------------
 

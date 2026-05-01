@@ -255,24 +255,43 @@ def _on_pre_llm_call(session_id, user_message, **kwargs):
     description = sess.get("description") or ""
 
     # Stack health probe + auto-restart.
+    #
+    # The probe is a TCP connect on the HTTPS + writer ports. Under
+    # heavy frame/audio load the HTTPS server's worker threads can all
+    # be busy and a single connect() can fail transiently — that's
+    # normal, not "the stack is down". We only auto-restart after
+    # ``UNHEALTHY_THRESHOLD`` consecutive bad probes across separate
+    # pre_llm_call invocations.
     stack_warning = ""
     try:
         h = _stack.health_check()
-        if h and (not h.get("https_reachable") or not h.get("writer_reachable")):
-            reason = h.get("reason") or "unknown"
-            logger.warning("vdotool stack unhealthy (%s); auto-restarting", reason)
+        healthy = bool(h and h.get("https_reachable") and h.get("writer_reachable"))
+        consecutive = _stack.record_health_probe(healthy)
+        if not healthy and consecutive >= _stack.StackSupervisor.UNHEALTHY_THRESHOLD:
+            reason = h.get("reason") if h else "unknown"
+            logger.warning(
+                "vdotool stack unhealthy for %d consecutive probes (%s); auto-restarting",
+                consecutive, reason,
+            )
             try:
                 _stack.stop()
             except Exception:  # noqa: BLE001
                 pass
             try:
                 _stack.ensure_running()
+                _stack.record_health_probe(True)  # reset counter after a successful restart
                 stack_warning = f" (Stack subprocess was unhealthy: {reason}; auto-restarted.)"
             except Exception as e:  # noqa: BLE001
                 stack_warning = (
                     f" (WARNING: stack is down: {reason}. Auto-restart failed: {e}. "
                     "Tell the user vdotool is temporarily offline.)"
                 )
+        elif not healthy:
+            logger.info(
+                "vdotool stack probe %d/%d failed (%s); not restarting yet",
+                consecutive, _stack.StackSupervisor.UNHEALTHY_THRESHOLD,
+                (h.get("reason") if h else "unknown"),
+            )
     except Exception:  # noqa: BLE001
         pass
 
