@@ -169,19 +169,42 @@ class StackSupervisor:
         # Debug-trace where the kill came from. The launcher should
         # only die at end of session, not mid-session, so any caller
         # of stop() during an active vdocall is interesting.
+        import sys
         import traceback
-        stack_summary = "".join(traceback.format_stack(limit=8))
+        # Full stack — at limit=8 we were getting truncated traces that
+        # only showed frames inside stack.py and atexit, hiding who in
+        # Hermes/__init__.py originated the call.
+        stack_summary = "".join(traceback.format_stack(limit=50))
+        # Also dump the names of every other live thread, because if
+        # the killer is a thread that has since exited we won't see it
+        # in format_stack but we'll see it in enumerate().
+        try:
+            import threading
+            thread_names = [t.name for t in threading.enumerate()]
+        except Exception:  # noqa: BLE001
+            thread_names = []
+        # Identify the immediate caller frame (one above stop()).
+        try:
+            frame = sys._getframe(1)
+            caller = f"{frame.f_code.co_filename}:{frame.f_lineno} {frame.f_code.co_name}"
+        except Exception:  # noqa: BLE001
+            caller = "<unknown>"
         with self._lock:
             proc = self._proc
             self._proc = None
             self._base_url = None
             self._frames_dir = None
         if proc is None or proc.poll() is not None:
-            LOG.info("StackSupervisor.stop() called but no live proc; trace:\n%s", stack_summary)
+            LOG.info(
+                "StackSupervisor.stop() called but no live proc; "
+                "caller=%s; live_threads=%r; trace:\n%s",
+                caller, thread_names, stack_summary,
+            )
             return
         LOG.warning(
-            "StackSupervisor.stop() terminating launcher pid=%s; trace:\n%s",
-            proc.pid, stack_summary,
+            "StackSupervisor.stop() terminating launcher pid=%s; "
+            "caller=%s; live_threads=%r; trace:\n%s",
+            proc.pid, caller, thread_names, stack_summary,
         )
         try:
             proc.terminate()
