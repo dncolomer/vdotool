@@ -87,14 +87,32 @@
 
 		// Direct navigation, no srcdoc bootstrap. The receiving page is
 		// VDO.Ninja's index.html with the head-injected speaker hook.
-		// &lanonly forces local-only ICE so the pusher-side peer
-		// connection comes up without depending on STUN/TURN
-		// reachability — both peers are on the same LAN by design.
+		//
+		// Params:
+		//   push=<id>         — publish as this stream id
+		//   miconly           — "share just your microphone" UI path
+		//                       (main.js line ~2040). Also sets
+		//                       session.videoDevice=0 internally, so
+		//                       no camera gets requested even though
+		//                       we still intercept gUM to substitute
+		//                       our synthetic stream for the mic.
+		//   autostart=1       — don't wait for a click, just join.
+		//   audiodevice=1     — default audio device; our gUM override
+		//                       (installed by the head-injected
+		//                       bootstrap in index.html) returns the
+		//                       synthetic stream instead.
+		//   noaudioprocessing — disable AGC/echo-cancel that would
+		//                       mangle TTS clips.
+		//   lanonly           — disable STUN/TURN (same-LAN topology).
+		//   cleanoutput       — hide UI (no human will look at this).
+		//   vdotoolSpeaker=1  — trigger our head-injected bootstrap
+		//                       that installs the gUM override +
+		//                       window.__vtPlay.
 		iframe.src = origin + '/?room=' + encodeURIComponent(roomId)
 			+ '&push=' + encodeURIComponent(agentStreamId)
+			+ '&miconly=1'
 			+ '&autostart=1'
 			+ '&cleanoutput=1'
-			+ '&videodevice=0'
 			+ '&audiodevice=1'
 			+ '&noaudioprocessing=1'
 			+ '&vdotoolSpeaker=1'

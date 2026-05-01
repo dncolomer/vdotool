@@ -31,11 +31,22 @@
 				silence.connect(silenceGain).connect(dest);
 				try { silence.start(); } catch (_e) {}
 
-				console.log('[vdotool speaker page] AudioContext ready, tracks=', dest.stream.getAudioTracks().length);
+				console.log('[vdotool speaker page] AudioContext ready, tracks=', dest.stream.getAudioTracks().length,
+					'enabled=', dest.stream.getAudioTracks()[0] && dest.stream.getAudioTracks()[0].enabled,
+					'muted=', dest.stream.getAudioTracks()[0] && dest.stream.getAudioTracks()[0].muted,
+					'readyState=', dest.stream.getAudioTracks()[0] && dest.stream.getAudioTracks()[0].readyState);
 
 				// Override getUserMedia so VDO.Ninja's pusher gets our
 				// synthetic stream as the "microphone" instead of a real
 				// mic. Video requests still go to the real device list.
+				// We clone the MediaStream on each gUM call because
+				// VDO.Ninja may call gUM more than once during the
+				// session (e.g. on device-change or reconnect) and
+				// expects a fresh stream each time. The cloned
+				// MediaStreamTrack still references the same underlying
+				// source (our MediaStreamDestinationNode) so audio
+				// scheduled via __vtPlay continues to reach every
+				// clone.
 				try {
 					var md = navigator.mediaDevices;
 					if (md) {
@@ -45,7 +56,15 @@
 							if (constraints && constraints.video && origGum) {
 								return origGum(constraints);
 							}
-							return Promise.resolve(dest.stream);
+							var cloned = new MediaStream();
+							dest.stream.getAudioTracks().forEach(function (t) {
+								try { t.enabled = true; } catch (_e) {}
+								cloned.addTrack(t.clone());
+							});
+							console.log('[vdotool speaker page] gUM returning cloned stream, tracks=',
+								cloned.getAudioTracks().length,
+								'enabled=', cloned.getAudioTracks()[0] && cloned.getAudioTracks()[0].enabled);
+							return Promise.resolve(cloned);
 						};
 						console.log('[vdotool speaker page] gUM override installed');
 					}
