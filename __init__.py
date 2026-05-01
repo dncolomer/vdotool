@@ -196,7 +196,19 @@ def _start_wrapper(args: dict, **kwargs) -> str:
 
 
 def _end_wrapper(args: dict, **kwargs) -> str:
+    # Track who/why the LLM called end. Combined with the stop()
+    # traceback in stack.py, this triangulates whether the launcher
+    # is being killed because:
+    #   - the LLM autonomously called vdotool_end (this branch logs)
+    #   - the pre_llm_call hook auto-restart fired (stack.py logs that)
+    #   - or something else (no log in either place)
+    import traceback
     sid_before = _active_session.get("session_id")
+    logger.warning(
+        "_end_wrapper called for session=%s args=%r; trace:\n%s",
+        sid_before, args,
+        "".join(traceback.format_stack(limit=8)),
+    )
     result_json = tools.end(args, session_state=_active_session, **kwargs)
     try:
         result = json.loads(result_json)
@@ -267,6 +279,14 @@ def _on_pre_llm_call(session_id, user_message, **kwargs):
         h = _stack.health_check()
         healthy = bool(h and h.get("https_reachable") and h.get("writer_reachable"))
         consecutive = _stack.record_health_probe(healthy)
+        # One log line per probe so we can correlate with launcher logs.
+        logger.info(
+            "vdotool stack probe healthy=%s consecutive_unhealthy=%d "
+            "https_reachable=%s writer_reachable=%s",
+            healthy, consecutive,
+            h.get("https_reachable") if h else None,
+            h.get("writer_reachable") if h else None,
+        )
         if not healthy and consecutive >= _stack.StackSupervisor.UNHEALTHY_THRESHOLD:
             reason = h.get("reason") if h else "unknown"
             logger.warning(
