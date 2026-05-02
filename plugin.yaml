@@ -1,19 +1,24 @@
 name: vdotool
-version: 0.3.0
+version: 0.4.0
 description: >-
   Live two-way WebRTC session tool for Hermes. Pairs a forked VDO.Ninja
   with a Hermes plugin so the agent can see, hear, and talk to a remote
   device (typically the user's phone) over a bidirectional WebRTC room.
   Generic: use it for anything where Hermes benefits from live human-
   in-the-loop context — cooking, tutoring, workouts, assembly, DIY
-  help, remote expert walkthroughs, live transcription, etc. The
-  plugin auto-starts everything (HTTPS server, frame writer sidecar,
-  headless Chromium viewer, background frame-watcher thread) on first
-  use so ``hermes chat`` is all the operator needs to run.
+  help, remote expert walkthroughs, live transcription, etc. A
+  screen-share variant (vdotool_start_screenshare) publishes the
+  remote device's display instead of its camera, keeping the same
+  bidirectional audio and watcher plumbing — useful for debugging,
+  pair-programming, or walking through an on-screen UI. The plugin
+  auto-starts everything (HTTPS server, frame writer sidecar, headless
+  Chromium viewer, background frame-watcher thread) on first use so
+  ``hermes chat`` is all the operator needs to run.
 author: vdotool contributors
 homepage: https://github.com/dncolomer/vdotool
 provides_tools:
   - vdotool_start
+  - vdotool_start_screenshare
   - vdotool_get_latest_frame
   - vdotool_end
   - vdotool_status
@@ -94,6 +99,19 @@ requires_env:
     description: >-
       Optional. JPEG byte-size below which a frame is 'low_detail'.
       Default 15000.
+    secret: false
+  - name: VDOTOOL_SCREEN_BLANK_BYTES_THRESHOLD
+    description: >-
+      Optional. JPEG byte-size below which a screen-share frame is
+      classified as 'blank'. Separate from the camera threshold because
+      an idle desktop with a wallpaper still compresses to ~tens of kB
+      while a fully locked/black screen collapses much lower. Default
+      3000.
+    secret: false
+  - name: VDOTOOL_SCREEN_LOW_DETAIL_BYTES_THRESHOLD
+    description: >-
+      Optional. JPEG byte-size below which a screen-share frame is
+      'low_detail'. Default 6000.
     secret: false
   - name: VDOTOOL_MAX_FRAME_BYTES
     description: >-

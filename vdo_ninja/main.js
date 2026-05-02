@@ -5090,6 +5090,19 @@ async function main() {
 		session.screensharecursor = true;
 	}
 
+	// vdotool patch: &addmic (aliases: &micinscreen, &ssm) forces the
+	// auto-start screen-share path to also enumerate the default
+	// microphone and mix it into the outgoing stream. Upstream VDO.Ninja
+	// only captures the mic when the user manually clicks through the
+	// audio-device UI; with &autostart=1 + &screenshare=1 that UI is
+	// skipped, so by default no mic track goes out. The patch in
+	// publishScreen() (lib.js) picks the first audioinput device when
+	// this flag is set and passes it into publishScreen2()'s audioList
+	// so its existing mic-merge code path runs.
+	if (urlParams.has("addmic") || urlParams.has("micinscreen") || urlParams.has("ssm")) {
+		session.addMicToScreenshare = true;
+	}
+
 	if (urlParams.has("distort")) {
 		session.voicechanger = 1;
 	}

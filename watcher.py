@@ -85,7 +85,7 @@ class FrameWatcher:
         frames_dir: Path,
         session_state: dict,
         inject_fn: Callable[[str, str], bool],
-        frame_quality_fn: Callable[[bytes], dict],
+        frame_quality_fn: Callable[..., dict],
         frame_payload_fn: Callable[[Path, dict], dict],
         inject_with_image_fn: Optional[Callable[[str, list], bool]] = None,
         transcribe_fn: Optional[Callable[[Path], tuple]] = None,
@@ -290,7 +290,12 @@ class FrameWatcher:
             data = path.read_bytes()
         except OSError:
             return
-        quality = self.frame_quality_fn(data)
+        source_kind = self.session_state.get("source_kind") or "camera"
+        try:
+            quality = self.frame_quality_fn(data, source_kind=source_kind)
+        except TypeError:
+            # Backward compat: older quality fn that doesn't accept source_kind.
+            quality = self.frame_quality_fn(data)
         cls = quality.get("classification", "ok")
 
         now = time.monotonic()
@@ -327,41 +332,82 @@ class FrameWatcher:
 
         attach_image = False
         if cls == "blank":
-            msg = (
-                f"[vdotool auto] New frame at timestamp_ms={ts_ms} is BLANK "
-                f"({len(data)} bytes — camera tab is asleep, covered, or "
-                f"screen-locked). Session {session_hint}. Tell the user "
-                "their camera feed went dark and ask them to wake the "
-                "phone / uncover the lens. Do NOT describe any scene "
-                "contents — there is nothing to see. Then go silent "
-                "until the next auto message arrives."
-            )
+            if source_kind == "screen":
+                msg = (
+                    f"[vdotool auto] New frame at timestamp_ms={ts_ms} "
+                    f"is BLANK ({len(data)} bytes — the shared screen "
+                    f"is locked, display is asleep, or no window is "
+                    f"selected). Session {session_hint}. Tell the user "
+                    "their screen share went dark and ask them to wake "
+                    "the device or re-pick a window. Do NOT describe "
+                    "any UI contents — there is nothing to see. Then "
+                    "go silent until the next auto message arrives."
+                )
+            else:
+                msg = (
+                    f"[vdotool auto] New frame at timestamp_ms={ts_ms} is BLANK "
+                    f"({len(data)} bytes — camera tab is asleep, covered, or "
+                    f"screen-locked). Session {session_hint}. Tell the user "
+                    "their camera feed went dark and ask them to wake the "
+                    "phone / uncover the lens. Do NOT describe any scene "
+                    "contents — there is nothing to see. Then go silent "
+                    "until the next auto message arrives."
+                )
             self._last_blank_reminder_t = now
         elif cls == "low_detail":
-            msg = (
-                f"[vdotool auto] New low-detail frame attached "
-                f"(timestamp_ms={ts_ms}, {len(data)} bytes). Session "
-                f"{session_hint}. The frame may be dark or out of focus — "
-                "only describe details you can clearly see. If you can't "
-                "make out the scene, ask the user to adjust the camera. "
-                "ONLY comment if there is something actionable. Otherwise "
-                "reply with a SHORT acknowledgement (<= 8 words) or stay "
-                "silent."
-            )
+            if source_kind == "screen":
+                msg = (
+                    f"[vdotool auto] New low-detail screen frame attached "
+                    f"(timestamp_ms={ts_ms}, {len(data)} bytes). Session "
+                    f"{session_hint}. The shared window may be mostly "
+                    "empty or uniform — only describe UI elements you "
+                    "can clearly see. If you can't make out the screen, "
+                    "ask the user to pick a different window. ONLY "
+                    "comment if there is something actionable. Otherwise "
+                    "reply with a SHORT acknowledgement (<= 8 words) or "
+                    "stay silent."
+                )
+            else:
+                msg = (
+                    f"[vdotool auto] New low-detail frame attached "
+                    f"(timestamp_ms={ts_ms}, {len(data)} bytes). Session "
+                    f"{session_hint}. The frame may be dark or out of focus — "
+                    "only describe details you can clearly see. If you can't "
+                    "make out the scene, ask the user to adjust the camera. "
+                    "ONLY comment if there is something actionable. Otherwise "
+                    "reply with a SHORT acknowledgement (<= 8 words) or stay "
+                    "silent."
+                )
             attach_image = True
         else:
-            msg = (
-                f"[vdotool auto] New frame attached (timestamp_ms={ts_ms}, "
-                f"{len(data)} bytes, looks ok). Session {session_hint}. "
-                "Look at the attached image and ONLY comment if there is "
-                "something actionable (user's context changed, safety "
-                "concern, they look stuck). If nothing actionable, reply "
-                "with a SHORT acknowledgement (<= 8 words) so the user "
-                "knows you're watching, or stay silent. Do not narrate "
-                "every frame. You do NOT need to call "
-                "vdotool_get_latest_frame — the frame is already "
-                "attached."
-            )
+            if source_kind == "screen":
+                msg = (
+                    f"[vdotool auto] New screen frame attached "
+                    f"(timestamp_ms={ts_ms}, {len(data)} bytes, looks "
+                    f"ok). Session {session_hint}. Look at the attached "
+                    "image — it is the user's SCREEN (a window, tab, "
+                    "or desktop), not a view of a physical space. ONLY "
+                    "comment if there is something actionable (error "
+                    "on screen, they look stuck, a task is complete). "
+                    "If nothing actionable, reply with a SHORT "
+                    "acknowledgement (<= 8 words) or stay silent. Do "
+                    "not narrate every frame. You do NOT need to call "
+                    "vdotool_get_latest_frame — the frame is already "
+                    "attached."
+                )
+            else:
+                msg = (
+                    f"[vdotool auto] New frame attached (timestamp_ms={ts_ms}, "
+                    f"{len(data)} bytes, looks ok). Session {session_hint}. "
+                    "Look at the attached image and ONLY comment if there is "
+                    "something actionable (user's context changed, safety "
+                    "concern, they look stuck). If nothing actionable, reply "
+                    "with a SHORT acknowledgement (<= 8 words) so the user "
+                    "knows you're watching, or stay silent. Do not narrate "
+                    "every frame. You do NOT need to call "
+                    "vdotool_get_latest_frame — the frame is already "
+                    "attached."
+                )
             attach_image = True
 
         try:
@@ -394,7 +440,7 @@ def start_watcher(
     frames_dir: Path,
     session_state: dict,
     inject_fn: Callable[[str, str], bool],
-    frame_quality_fn: Callable[[bytes], dict],
+    frame_quality_fn: Callable[..., dict],
     frame_payload_fn: Callable[[Path, dict], dict],
     inject_with_image_fn: Optional[Callable[[str, list], bool]] = None,
     transcribe_fn: Optional[Callable[[Path], tuple]] = None,

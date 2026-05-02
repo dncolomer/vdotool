@@ -40200,6 +40200,46 @@ async function publishScreen2(constraints, audioList = [], audio = true, overrid
 			.catch(errorlog);
 	}
 
+	// vdotool patch: when &addmic (session.addMicToScreenshare) is set
+	// and no specific audioinput deviceIds were passed in (the auto-start
+	// path skips VDO.Ninja's device-picker UI, so selectedScreenShareAudioDevices
+	// is []), grab the browser's default microphone with a plain
+	// getUserMedia({audio: true}) and merge it into `streams` so the
+	// block below that does `streams[i].getAudioTracks().forEach(addTrack)`
+	// picks it up and the outgoing WebRTC stream carries mic audio.
+	// Without this, auto-started screen-share sessions are video-only
+	// and STT on the receiving side gets nothing.
+	if (session.addMicToScreenshare && (!audioList || audioList.length === 0) && !session.screenshareVideoOnly) {
+		try {
+			var __vdotoolMicConstraint = {
+				video: false,
+				audio: {
+					echoCancellation: session.echoCancellation === false ? false : true,
+					autoGainControl: session.autoGainControl === false ? false : true,
+					noiseSuppression: session.noiseSuppression === false ? false : true,
+				},
+			};
+			if (session.voiceIsolation === true) {
+				__vdotoolMicConstraint.audio.voiceIsolation = true;
+			}
+			if (Firefox) {
+				__vdotoolMicConstraint = toFirefoxConstraint(__vdotoolMicConstraint);
+			}
+			warnlog("[vdotool] addmic: requesting default mic with audio:true");
+			var __vdotoolMicStream = await navigator.mediaDevices.getUserMedia(__vdotoolMicConstraint);
+			if (__vdotoolMicStream && __vdotoolMicStream.getAudioTracks().length) {
+				streams.push(__vdotoolMicStream);
+				log("[vdotool] addmic: default mic captured, "
+					+ __vdotoolMicStream.getAudioTracks().length + " track(s)");
+			} else {
+				warnlog("[vdotool] addmic: gUM returned no audio tracks");
+			}
+		} catch (e) {
+			warnlog("[vdotool] addmic: getUserMedia({audio:true}) failed: "
+				+ (e && e.message ? e.message : e));
+		}
+	}
+
 	if (session.audioDevice === 0) {
 		constraints.audio = false;
 	}

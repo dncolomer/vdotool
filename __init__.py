@@ -16,8 +16,9 @@ Architecture:
     configured in ~/.hermes/config.yaml; the watcher transcribes
     inbound utterances via whatever STT provider is configured.
 
-Tool surface (7):
-  - vdotool_start              Start a vdocall.
+Tool surface (8):
+  - vdotool_start              Start a vdocall (camera source).
+  - vdotool_start_screenshare  Start a vdocall (screen-share source).
   - vdotool_get_latest_frame   Return the newest frame.
   - vdotool_end                End the session.
   - vdotool_status             Poll session + voice-config state.
@@ -57,6 +58,8 @@ _active_session: dict = {
     "title": None,
     "description": None,
     "camera_hint": None,
+    "screen_hint": None,
+    "source_kind": None,
     "push_link": None,
     "view_link": None,
     "frames_dir": None,
@@ -164,7 +167,17 @@ def _inject_with_image_safe(content: str, image_paths: list) -> bool:
 
 
 def _start_wrapper(args: dict, **kwargs) -> str:
-    """Start a vdocall, auto-start the stack, auto-spawn watcher."""
+    """Start a camera-source vdocall, auto-start the stack, auto-spawn watcher."""
+    return _start_common(tools.start, args, **kwargs)
+
+
+def _start_screenshare_wrapper(args: dict, **kwargs) -> str:
+    """Start a screen-share vdocall, auto-start the stack, auto-spawn watcher."""
+    return _start_common(tools.start_screenshare, args, **kwargs)
+
+
+def _start_common(handler, args: dict, **kwargs) -> str:
+    """Shared pre/post-hook logic for both start variants."""
     # Ensure the LAN stack (HTTPS + writer) is up first.
     try:
         base_url, frames_dir = _stack.ensure_running()
@@ -180,15 +193,16 @@ def _start_wrapper(args: dict, **kwargs) -> str:
             "vdotool stack autostart failed (%s); proceeding with existing env", e,
         )
 
-    result_json = tools.start(args, session_state=_active_session, **kwargs)
+    result_json = handler(args, session_state=_active_session, **kwargs)
     try:
         result = json.loads(result_json)
         if "error" not in result:
             sid = _active_session.get("session_id")
             frames_dir = _active_session.get("frames_dir")
             logger.info(
-                "vdotool session started: %s (title=%r)",
+                "vdotool session started: %s (title=%r source_kind=%r)",
                 sid, _active_session.get("title"),
+                _active_session.get("source_kind"),
             )
             if sid and frames_dir:
                 try:
@@ -388,15 +402,28 @@ def _on_pre_llm_call(session_id, user_message, **kwargs):
     except Exception:  # noqa: BLE001
         pass
 
+    if source_kind == "screen":
+        blank_hint = (
+            "if 'blank' do NOT describe contents (screen is locked / "
+            "no window selected / display asleep); if 'low_detail' "
+            "hedge — the shared window may be mostly empty."
+        )
+    else:
+        blank_hint = (
+            "if 'blank' do NOT describe scene contents (camera is "
+            "covered/asleep); if 'low_detail' hedge."
+        )
     nudge = (
         f" {watcher_note}. Just respond to the user normally; the "
         f"watcher will inject [vdotool auto] messages when frames "
         f"arrive. Before describing any frame, READ "
-        f"image_quality.classification: if 'blank' do NOT describe "
-        f"scene contents (camera is covered/asleep); if 'low_detail' hedge."
+        f"image_quality.classification: {blank_hint}"
     )
 
     title_line = f'Active vdocall "{title}"'
+    source_kind = sess.get("source_kind") or "camera"
+    if source_kind == "screen":
+        title_line += " [screen-share]"
     if description:
         title_line += f" — {description[:80]}"
 
@@ -414,6 +441,7 @@ def _on_pre_llm_call(session_id, user_message, **kwargs):
 
 _TOOL_REGISTRY = [
     ("vdotool_start", schemas.START, "_start_wrapper"),
+    ("vdotool_start_screenshare", schemas.START_SCREENSHARE, "_start_screenshare_wrapper"),
     ("vdotool_get_latest_frame", schemas.GET_LATEST_FRAME, tools.get_latest_frame),
     ("vdotool_end", schemas.END, "_end_wrapper"),
     ("vdotool_status", schemas.STATUS, tools.get_status),
@@ -429,6 +457,7 @@ def register(ctx):
 
     _wrappers = {
         "_start_wrapper": _start_wrapper,
+        "_start_screenshare_wrapper": _start_screenshare_wrapper,
         "_end_wrapper": _end_wrapper,
         "_start_watcher_wrapper": _start_watcher_wrapper,
     }

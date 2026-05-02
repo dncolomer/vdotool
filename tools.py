@@ -56,8 +56,18 @@ SESSION_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 ROOM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 
 # Blank-frame / low-detail heuristics — see plugin.yaml for details.
+#
+# Camera frames (JPEG) are usually 30–200 kB; a covered lens or
+# asleep/locked phone collapses to a few kB of uniform color. Screen
+# captures are very different — even an idle desktop with a wallpaper
+# is often dozens of kB, but a fully locked/black screen can still
+# compress down below the camera threshold. We carry two separate
+# threshold pairs and select at classification time based on the
+# session's source_kind ("camera" | "screen").
 BLANK_BYTES_THRESHOLD = int(os.environ.get("VDOTOOL_BLANK_BYTES_THRESHOLD", "8000"))
 LOW_DETAIL_BYTES_THRESHOLD = int(os.environ.get("VDOTOOL_LOW_DETAIL_BYTES_THRESHOLD", "15000"))
+SCREEN_BLANK_BYTES_THRESHOLD = int(os.environ.get("VDOTOOL_SCREEN_BLANK_BYTES_THRESHOLD", "3000"))
+SCREEN_LOW_DETAIL_BYTES_THRESHOLD = int(os.environ.get("VDOTOOL_SCREEN_LOW_DETAIL_BYTES_THRESHOLD", "6000"))
 
 VISION_ANALYZE_ENABLED = os.environ.get("VDOTOOL_VISION_ANALYZE", "1") not in (
     "0", "false", "no", "off",
@@ -152,7 +162,13 @@ def _frame_timestamp_ms(path: Path) -> int | None:
     return None
 
 
-def _build_links(base_url: str, room_id: str, session_id: str) -> tuple[str, str]:
+def _build_links(
+    base_url: str,
+    room_id: str,
+    session_id: str,
+    *,
+    source_kind: str = "camera",
+) -> tuple[str, str]:
     """Build VDO.Ninja push and view URLs for a vdocall.
 
     Three streams in the room:
@@ -170,6 +186,22 @@ def _build_links(base_url: str, room_id: str, session_id: str) -> tuple[str, str
     VDO.Ninja sanitizes stream IDs by replacing non-word characters
     with ``_`` on the push side; we use ``vt_<sid>`` / ``vt_<sid>_agent``
     (underscore, no hyphens) so all sides see the same ids.
+
+    ``source_kind``:
+      ``"camera"`` — append ``&webcam=1`` so VDO.Ninja skips the
+          camera/screenshare selection screen and auto-picks the
+          webcam. This is the default vdotool_start behavior.
+      ``"screen"`` — append ``&screenshare=1`` instead; VDO.Ninja
+          will skip camera selection and go straight to the browser's
+          screen/tab/window picker. We also pass ``&addmic=1`` —
+          a vdotool-only URL parameter (handled in our patched
+          ``vdo_ninja/main.js`` + ``lib.js``) that tells VDO.Ninja to
+          enumerate audio input devices and mix the default mic into
+          the outgoing screen-share stream. Without that flag,
+          VDO.Ninja's auto-start screen-share path only publishes the
+          display surface's video + optional tab/system audio; the
+          user's microphone is NOT captured, which breaks STT.
+          ``&screensharecursor=1`` keeps the mouse pointer visible.
     """
     stream_id = f"vt_{session_id}"
     agent_stream_id = f"vt_{session_id}_agent"
@@ -185,11 +217,20 @@ def _build_links(base_url: str, room_id: str, session_id: str) -> tuple[str, str
     #   - the agent stream actually publishes on networks where the
     #     pusher peer-connection's ICE was timing out waiting for
     #     STUN candidates.
+    if source_kind == "screen":
+        source_params = (
+            "&screenshare=1"
+            "&addmic=1"
+            "&screensharecursor=1"
+        )
+    else:
+        source_params = "&webcam=1"
+
     push = (
         f"{base_url}/?room={room_id}"
         f"&push={stream_id}"
         f"&view={agent_stream_id}"
-        f"&webcam=1"
+        f"{source_params}"
         f"&autostart=1"
         f"&quality=1"
         f"&cleanoutput=1"
@@ -457,31 +498,54 @@ def _synthesize_tts(text: str) -> tuple[str | None, str | None]:
 # ---------------------------------------------------------------------------
 
 
-def _assess_frame_quality(data: bytes) -> dict:
+def _assess_frame_quality(data: bytes, source_kind: str = "camera") -> dict:
     n = len(data)
-    quality = {
-        "size_bytes": n,
-        "classification": "ok",
-        "reason": None,
-        "blank_threshold_bytes": BLANK_BYTES_THRESHOLD,
-        "low_detail_threshold_bytes": LOW_DETAIL_BYTES_THRESHOLD,
-    }
-    if n < BLANK_BYTES_THRESHOLD:
-        quality["classification"] = "blank"
-        quality["reason"] = (
-            f"Frame is only {n} bytes (threshold {BLANK_BYTES_THRESHOLD}) — "
-            "almost certainly a uniform color (camera covered, tab "
+    if source_kind == "screen":
+        blank_threshold = SCREEN_BLANK_BYTES_THRESHOLD
+        low_detail_threshold = SCREEN_LOW_DETAIL_BYTES_THRESHOLD
+        blank_reason_template = (
+            "Frame is only {n} bytes (threshold {thr}) — almost "
+            "certainly a uniform image (screen locked, display asleep, "
+            "no window selected for sharing, or the shared tab is "
+            "fully obscured). DO NOT describe scene contents; tell "
+            "the user their screen share appears blank and ask them "
+            "to wake the device or re-pick a window."
+        )
+        low_detail_reason_template = (
+            "Frame is small ({n} bytes, low-detail threshold {thr}); "
+            "the shared screen may be mostly empty or uniform. Hedge "
+            "any description."
+        )
+    else:
+        blank_threshold = BLANK_BYTES_THRESHOLD
+        low_detail_threshold = LOW_DETAIL_BYTES_THRESHOLD
+        blank_reason_template = (
+            "Frame is only {n} bytes (threshold {thr}) — almost "
+            "certainly a uniform color (camera covered, tab "
             "backgrounded, screen locked, or device sleeping). DO NOT "
             "describe scene contents; tell the user their camera went "
             "dark and ask them to check it."
         )
-    elif n < LOW_DETAIL_BYTES_THRESHOLD:
-        quality["classification"] = "low_detail"
-        quality["reason"] = (
-            f"Frame is small ({n} bytes, low-detail threshold "
-            f"{LOW_DETAIL_BYTES_THRESHOLD}); scene may be dark, uniform, "
-            "or out of focus. Hedge any description."
+        low_detail_reason_template = (
+            "Frame is small ({n} bytes, low-detail threshold {thr}); "
+            "scene may be dark, uniform, or out of focus. Hedge any "
+            "description."
         )
+
+    quality = {
+        "size_bytes": n,
+        "classification": "ok",
+        "reason": None,
+        "source_kind": source_kind,
+        "blank_threshold_bytes": blank_threshold,
+        "low_detail_threshold_bytes": low_detail_threshold,
+    }
+    if n < blank_threshold:
+        quality["classification"] = "blank"
+        quality["reason"] = blank_reason_template.format(n=n, thr=blank_threshold)
+    elif n < low_detail_threshold:
+        quality["classification"] = "low_detail"
+        quality["reason"] = low_detail_reason_template.format(n=n, thr=low_detail_threshold)
     return quality
 
 
@@ -492,8 +556,9 @@ def _frame_payload(path: Path, session_state: dict, *, run_vision: bool = True) 
 
     title = session_state.get("title")
     description = session_state.get("description")
+    source_kind = session_state.get("source_kind") or "camera"
 
-    quality = _assess_frame_quality(data)
+    quality = _assess_frame_quality(data, source_kind=source_kind)
     is_blank = quality["classification"] == "blank"
 
     payload: dict = {
@@ -504,21 +569,34 @@ def _frame_payload(path: Path, session_state: dict, *, run_vision: bool = True) 
         "timestamp_ms": ts_ms,
         "session_title": title,
         "session_description": description,
+        "source_kind": source_kind,
         "image_quality": quality,
     }
 
     warnings: list[str] = []
 
     if is_blank:
-        no_image_msg = (
-            f"[vdotool] CAMERA FEED IS BLANK. The frame on disk is "
-            f"{len(data)} bytes — effectively a uniform-color image "
-            "(camera covered, browser tab backgrounded, screen locked, "
-            "or device sleeping). Image data DELIBERATELY OMITTED so "
-            "you cannot accidentally describe scene contents. Tell the "
-            "user their camera feed appears blank and ask them to wake "
-            "the device / uncover the lens."
-        )
+        if source_kind == "screen":
+            no_image_msg = (
+                f"[vdotool] SCREEN-SHARE FEED IS BLANK. The frame on "
+                f"disk is {len(data)} bytes — effectively a uniform "
+                "image (screen locked, display asleep, no window "
+                "selected, or the shared tab is fully obscured). Image "
+                "data DELIBERATELY OMITTED so you cannot accidentally "
+                "describe scene contents. Tell the user their screen "
+                "share appears blank and ask them to wake the device "
+                "or re-pick a window."
+            )
+        else:
+            no_image_msg = (
+                f"[vdotool] CAMERA FEED IS BLANK. The frame on disk is "
+                f"{len(data)} bytes — effectively a uniform-color image "
+                "(camera covered, browser tab backgrounded, screen locked, "
+                "or device sleeping). Image data DELIBERATELY OMITTED so "
+                "you cannot accidentally describe scene contents. Tell the "
+                "user their camera feed appears blank and ask them to wake "
+                "the device / uncover the lens."
+            )
         payload["image_omitted"] = True
         payload["image_omitted_reason"] = "blank_frame"
         payload["content"] = [{"type": "text", "text": no_image_msg}]
@@ -594,9 +672,16 @@ def _frame_payload(path: Path, session_state: dict, *, run_vision: bool = True) 
             )
         else:
             payload["warning"] = "stale_frame"
+            if source_kind == "screen":
+                stale_hint = (
+                    "check that their screen-share tab is still open "
+                    "and the shared window is still visible"
+                )
+            else:
+                stale_hint = "check that their camera tab is still open"
             payload["warning_message"] = (
                 f"Latest frame is {int(age)}s old. Ask the user to "
-                "check that their camera tab is still open."
+                f"{stale_hint}."
             )
         warnings.append("stale_frame")
 
@@ -611,7 +696,28 @@ def _frame_payload(path: Path, session_state: dict, *, run_vision: bool = True) 
 
 
 def start(args: dict, *, session_state: dict, **_kwargs) -> str:
-    """Start a new vdocall."""
+    """Start a new vdocall with the phone's CAMERA as the source."""
+    return _start_impl(args, session_state=session_state, source_kind="camera")
+
+
+def start_screenshare(args: dict, *, session_state: dict, **_kwargs) -> str:
+    """Start a new vdocall where the remote device SCREEN-SHARES.
+
+    Same bidirectional-audio machinery as ``start`` (TTS down, STT up),
+    but the phone/laptop publishes its display surface instead of its
+    camera. Useful for walking through an app UI, debugging a live
+    screen, pair-programming, etc.
+
+    Known platform limitation: ``getDisplayMedia`` is NOT available on
+    iOS Safari. iPhone/iPad users must either use a secondary
+    laptop/desktop browser or AirPlay their iPhone screen to a Mac and
+    screen-share that Mac's display. Android Chrome works.
+    """
+    return _start_impl(args, session_state=session_state, source_kind="screen")
+
+
+def _start_impl(args: dict, *, session_state: dict, source_kind: str) -> str:
+    """Shared implementation for camera + screen-share session start."""
     try:
         prior_sid = session_state.get("session_id")
         if prior_sid and not bool(args.get("force")):
@@ -646,9 +752,11 @@ def start(args: dict, *, session_state: dict, **_kwargs) -> str:
             for k in session_state:
                 session_state[k] = None
 
-        title = (args.get("title") or "").strip() or "vdocall"
+        title_default = "vdocall" if source_kind == "camera" else "screenshare"
+        title = (args.get("title") or "").strip() or title_default
         description = (args.get("description") or "").strip()
-        camera_hint = (args.get("camera_hint") or "").strip()
+        # camera_hint for camera sessions, screen_hint for screen-share.
+        hint = (args.get("camera_hint") or args.get("screen_hint") or "").strip()
 
         session_id = uuid.uuid4().hex
         _alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -669,13 +777,17 @@ def start(args: dict, *, session_state: dict, **_kwargs) -> str:
         except OSError as e:
             return _err("frames_dir_create_failed", f"Cannot create session dir {session_dir}: {e}")
 
-        push_link, view_link = _build_links(_base_url(), room_id, session_id)
+        push_link, view_link = _build_links(
+            _base_url(), room_id, session_id, source_kind=source_kind,
+        )
 
         session_state["session_id"] = session_id
         session_state["room_id"] = room_id
         session_state["title"] = title
         session_state["description"] = description
-        session_state["camera_hint"] = camera_hint
+        session_state["camera_hint"] = hint if source_kind == "camera" else ""
+        session_state["screen_hint"] = hint if source_kind == "screen" else ""
+        session_state["source_kind"] = source_kind
         session_state["push_link"] = push_link
         session_state["view_link"] = view_link
         session_state["frames_dir"] = str(session_dir)
@@ -699,37 +811,58 @@ def start(args: dict, *, session_state: dict, **_kwargs) -> str:
         # Voice-config introspection (provider-agnostic).
         voice_report = _voice_config.get_voice_config_report()
 
-        # Build a message the agent can paste to the user verbatim.
-        camera_hint_text = camera_hint or "a relevant area (whatever you want me to look at)"
         voice_line = ""
         if voice_report["overall_ready"]:
             voice_line = (
                 "\n\nVoice is set up both ways — I'll speak any "
-                "time-sensitive nudges to your phone, and if you say "
-                "something out loud I'll hear it. Typing still works too."
+                "time-sensitive nudges, and if you say something out "
+                "loud I'll hear it. Typing still works too."
             )
         elif voice_report["tts"].get("ready"):
             voice_line = (
-                "\n\nI can speak to your phone but can't hear you via "
-                "the mic right now, so just type if you want to reply."
+                "\n\nI can speak to you but can't hear you via the mic "
+                "right now, so just type if you want to reply."
             )
         elif voice_report["stt"].get("ready"):
             voice_line = (
                 "\n\nIf you speak out loud I'll hear you through the "
-                "phone's mic, but I'll reply in this chat (voice "
-                "output isn't set up yet)."
+                "mic, but I'll reply in this chat (voice output isn't "
+                "set up yet)."
             )
 
-        message_to_send_to_user = (
-            f"Session '{title}' started. Open this link on your phone:\n\n"
-            f"{push_link}\n\n"
-            "When prompted, allow camera access and prop the phone so "
-            f"it can see {camera_hint_text}.\n\n"
-            "I'll watch automatically once frames start coming in — "
-            "no need to ping me, I'll chime in when I see something "
-            "worth saying."
-            f"{voice_line}"
-        )
+        # Build a message the agent can paste to the user verbatim.
+        if source_kind == "screen":
+            hint_text = hint or "the window, tab, or whole desktop you want me to see"
+            message_to_send_to_user = (
+                f"Session '{title}' started. Open this link on a "
+                f"**desktop/laptop browser or Android Chrome**:\n\n"
+                f"{push_link}\n\n"
+                "When the page loads, your browser will pop up the "
+                "native screen-share picker — choose "
+                f"{hint_text}.\n\n"
+                "Heads up: iPhone/iPad Safari can NOT share its screen "
+                "from a web page. If you're on iPhone/iPad, either open "
+                "this link on a laptop or AirPlay your phone to a Mac "
+                "and share that Mac's display.\n\n"
+                "Allow microphone access when prompted — I mix your "
+                "mic into the shared stream so we can still talk while "
+                "you're showing me the screen. I'll watch automatically "
+                "once frames start coming in — no need to ping me, I'll "
+                "chime in when I see something worth saying."
+                f"{voice_line}"
+            )
+        else:
+            hint_text = hint or "a relevant area (whatever you want me to look at)"
+            message_to_send_to_user = (
+                f"Session '{title}' started. Open this link on your phone:\n\n"
+                f"{push_link}\n\n"
+                "When prompted, allow camera access and prop the phone so "
+                f"it can see {hint_text}.\n\n"
+                "I'll watch automatically once frames start coming in — "
+                "no need to ping me, I'll chime in when I see something "
+                "worth saying."
+                f"{voice_line}"
+            )
 
         response = {
             "push_link": push_link,
@@ -740,7 +873,9 @@ def start(args: dict, *, session_state: dict, **_kwargs) -> str:
             "frames_dir": str(session_dir),
             "title": title,
             "description": description,
-            "camera_hint": camera_hint or None,
+            "source_kind": source_kind,
+            "camera_hint": hint if source_kind == "camera" else None,
+            "screen_hint": hint if source_kind == "screen" else None,
             "viewer": viewer_info,
             "viewer_error": viewer_error,
             "next_required_action": {
@@ -760,12 +895,20 @@ def start(args: dict, *, session_state: dict, **_kwargs) -> str:
                 "push_link. The user_facing_message already adapts to "
                 "what voice capabilities are available — don't repeat "
                 "or contradict its voice sentence.\n"
-                "The background watcher (see watcher field) auto-injects "
+                + (
+                    "This is a SCREEN-SHARE session. If the user is on "
+                    "iPhone/iPad, steer them to a laptop — iOS Safari "
+                    "cannot screen-share from the web. Also remember: "
+                    "the 'frame' you'll see is their screen, not their "
+                    "room, so describe UI elements, not physical ones.\n"
+                    if source_kind == "screen" else ""
+                )
+                + "The background watcher (see watcher field) auto-injects "
                 "[vdotool auto] messages when frames arrive; you don't "
                 "need to poll.\n"
                 "When such an auto message arrives with an attached "
                 "image, LOOK at it. If it says the frame is BLANK, do "
-                "NOT describe contents — just tell the user the camera "
+                "NOT describe contents — just tell the user the feed "
                 "went dark.\n"
                 "About voice: read voice_config.suggestion_for_user for "
                 "a ready-to-speak summary. If voice_config.tts.ready is "
@@ -1030,6 +1173,7 @@ def get_status(args: dict, *, session_state: dict, **_kwargs) -> str:
             "room_id": session_state.get("room_id"),
             "title": title,
             "description": description,
+            "source_kind": session_state.get("source_kind") or "camera",
             "latest_frame_age_seconds": round(age, 2) if age is not None else None,
             "stale_frame": (age is not None and age > STALE_FRAME_SECONDS),
             "push_link": session_state.get("push_link"),

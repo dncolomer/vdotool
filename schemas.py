@@ -64,6 +64,75 @@ START = {
 
 
 # ---------------------------------------------------------------------------
+# vdotool_start_screenshare
+# ---------------------------------------------------------------------------
+
+START_SCREENSHARE = {
+    "name": "vdotool_start_screenshare",
+    "description": (
+        "Start a new vdocall where the remote device publishes its "
+        "SCREEN instead of its camera. Uses the same bidirectional "
+        "machinery as vdotool_start (the agent can speak via "
+        "vdotool_say; the mic is still on so the user can talk back; "
+        "frames of the shared screen stream back through the watcher). "
+        "Only one vdocall can be active at a time; pass force=true to "
+        "replace an existing one.\n\n"
+        "Use this when seeing the user's screen is more useful than "
+        "seeing their room: debugging an app, pair-programming, "
+        "walking through a spreadsheet, reviewing a design tool, "
+        "showing a setting buried in a menu, etc.\n\n"
+        "Platform limitation (IMPORTANT): the Web API used for screen "
+        "sharing (getDisplayMedia) is NOT available on iOS Safari. "
+        "iPhone / iPad users MUST either open the push_link on a "
+        "laptop/desktop browser or on Android Chrome. A usable "
+        "workaround for iPhone users: AirPlay the phone's display to a "
+        "Mac, then open the push_link on that Mac and share its "
+        "screen. When you hand the push_link to the user, explicitly "
+        "mention this limitation."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "title": {
+                "type": "string",
+                "description": (
+                    "Short human-readable title for this session "
+                    "(e.g. 'Debugging React error', 'Excel formulas', "
+                    "'IDE pair-programming'). Surfaced to the user and "
+                    "logged."
+                ),
+            },
+            "description": {
+                "type": "string",
+                "description": (
+                    "Optional longer note about what this session is "
+                    "for. Shown to the agent on every turn via the "
+                    "pre_llm_call hook so you stay oriented."
+                ),
+            },
+            "screen_hint": {
+                "type": "string",
+                "description": (
+                    "Optional hint for the user about WHICH screen / "
+                    "window / tab to share (e.g. 'pick the VS Code "
+                    "window', 'share your browser tab with the app', "
+                    "'share your whole desktop')."
+                ),
+            },
+            "force": {
+                "type": "boolean",
+                "description": (
+                    "If true, end any currently-active vdocall before "
+                    "starting this one. Defaults to false."
+                ),
+            },
+        },
+        "required": [],
+    },
+}
+
+
+# ---------------------------------------------------------------------------
 # vdotool_get_latest_frame
 # ---------------------------------------------------------------------------
 
